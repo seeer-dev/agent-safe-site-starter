@@ -1,0 +1,21 @@
+{
+  "name": "@sitecore/admin-theme-mint",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/theme-mint.css": "./src/styles/theme-mint.css",
+    "./styles/mint-tokens.css": "./src/styles/mint-tokens.css",
+    "./styles/mint-dark.css": "./src/styles/mint-dark.css",
+    "./styles/mint-overrides.css": "./src/styles/mint-overrides.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sitecore/admin-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

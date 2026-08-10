@@ -1,0 +1,21 @@
+{
+  "name": "@sitecore/admin-theme-nippon",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/theme-nippon.css": "./src/styles/theme-nippon.css",
+    "./styles/nippon-tokens.css": "./src/styles/nippon-tokens.css",
+    "./styles/nippon-dark.css": "./src/styles/nippon-dark.css",
+    "./styles/nippon-overrides.css": "./src/styles/nippon-overrides.css"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@sitecore/admin-ui": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3"
+  }
+}

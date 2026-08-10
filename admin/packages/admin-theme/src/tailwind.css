@@ -1,0 +1,8 @@
+@import "tailwindcss" source(none);
+@import "./tokens.css";
+@import "./components.css";
+@import "./shell.css";
+
+@source "../../admin-fields/src";
+@source "../../admin-shell/src";
+@source "../../admin-ui/src";

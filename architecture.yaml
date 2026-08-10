@@ -1,0 +1,69 @@
+version: 1
+name: ai-site-starter
+
+principles:
+  - static-site-first
+  - one-go-backend
+  - explicit-dependencies
+  - vertical-modules
+  - local-first
+  - ai-safe-change
+
+runtime:
+  site:
+    source: site/
+    renderer: server/internal/render
+    output: dist/
+    production: cloudflare-pages
+  api:
+    source: server/
+    production: railway
+  database:
+    local: sqlite
+    production_default: postgres
+  identity:
+    production_default: supabase-auth
+  object_storage:
+    production_default: cloudflare-r2
+  email:
+    production_default: resend
+
+layers:
+  bootstrap:
+    path: server/internal/bootstrap
+    may_depend_on: [modules, platform, auth]
+  modules:
+    path: server/internal/modules
+    rule: modules_must_not_import_other_modules
+  platform:
+    path: server/internal/platform
+    rule: platform_must_not_import_modules
+  render:
+    path: server/internal/render
+    purpose: cms_models_to_static_html
+
+modules:
+  content:
+    path: server/internal/modules/content
+    owns: [articles]
+    purpose: published content and CMS-facing article writes
+  contact:
+    path: server/internal/modules/contact
+    owns: [contact_inquiries]
+    purpose: public inquiry submission and notification
+  media:
+    path: server/internal/modules/media
+    owns: []
+    purpose: authenticated R2 upload authorization
+
+tools:
+  human_entrypoint: natural-language-via-agent
+  deterministic:
+    - server/tools/dev
+    - server/tools/migrate
+    - server/tools/render
+    - server/tools/publish
+    - server/tools/verify
+    - server/tools/archcheck
+    - server/tools/scopecheck
+  optional_context_engine: codegraph

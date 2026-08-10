@@ -1,0 +1,11 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["server/**", "db/**", "go.mod", "go.sum", "Dockerfile", "railway.toml"]
+
+[deploy]
+preDeployCommand = ["migrate"]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 120
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

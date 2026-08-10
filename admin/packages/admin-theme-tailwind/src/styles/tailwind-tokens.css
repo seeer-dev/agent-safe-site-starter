@@ -1,0 +1,175 @@
+/* ============================================================
+ * Tailwind Theme — Light Tokens
+ * Standard Tailwind zinc palette — traditional web colors.
+ * Activated via <html data-theme-style="tailwind">
+ * ============================================================ */
+[data-theme-style="tailwind"] {
+  --surface-0: #ffffff;
+  --surface-50: #f9fafb;
+  --surface-100: #f3f4f6;
+  --surface-200: #e5e7eb;
+  --surface-300: #d1d5db;
+  --surface-400: #9ca3af;
+  --surface-500: #6b7280;
+  --surface-600: #4b5563;
+  --surface-700: #374151;
+  --surface-800: #1f2937;
+  --surface-900: #111827;
+  --surface-950: #030712;
+
+  --sidebar-bg: #ffffff;
+  --sidebar-border: #e5e7eb;
+  --brand-50-base: #eff6ff; --brand-100-base: #dbeafe; --brand-200-base: #bfdbfe;
+  --brand-300-base: #93c5fd; --brand-400-base: #60a5fa; --brand-500-base: #3b82f6;
+  --brand-600-base: #2563eb; --brand-700-base: #1d4ed8; --brand-800-base: #1e40af; --brand-900-base: #1e3a8a;
+  --brand-50: var(--brand-50-base); --brand-100: var(--brand-100-base); --brand-200: var(--brand-200-base);
+  --brand-300: var(--brand-300-base); --brand-400: var(--brand-400-base); --brand-500: var(--brand-500-base);
+  --brand-600: var(--brand-600-base); --brand-700: var(--brand-700-base); --brand-800: var(--brand-800-base); --brand-900: var(--brand-900-base);
+  --brand: var(--brand-600);
+
+  /* ---- Admin semantic variables (derived from Tailwind zinc scale) ---- */
+  /* BEGIN ADMIN TOKENS — generated, do not edit */
+  --admin-canvas: var(--surface-50);
+  --admin-surface: var(--surface-0);
+  --admin-surface-subtle: var(--surface-100);
+  --admin-text-primary: var(--surface-800);
+  --admin-text-secondary: var(--surface-600);
+  --admin-text-muted: var(--surface-500);
+  --admin-text-inverse: var(--surface-0);
+  --admin-border: var(--surface-200);
+  --admin-border-strong: var(--surface-300);
+  --admin-focus-ring: var(--brand-500);
+  --admin-brand: var(--brand-600);
+  --admin-on-brand: var(--surface-0);
+  --admin-success-bg: #ecfdf5;
+  --admin-success-fg: #047857;
+  --admin-success-border: #a7f3d0;
+  --admin-warning-bg: #fffbeb;
+  --admin-warning-fg: #b45309;
+  --admin-warning-border: #fde68a;
+  --admin-danger-bg: #fff1f2;
+  --admin-danger-fg: #be123c;
+  --admin-danger-border: #fecdd3;
+  --admin-info-bg: #eff6ff;
+  --admin-info-fg: #1d4ed8;
+  --admin-info-border: #bfdbfe;
+  --admin-radius-sm: 2px;
+  --admin-radius-md: 6px;
+  --admin-radius-lg: 8px;
+  --admin-shadow-sm: 0 1px 2px rgb(17 24 39 / .04);
+  --admin-shadow-md: 0 4px 12px rgb(17 24 39 / .06);
+  --admin-shadow-lg: 0 4px 24px rgb(17 24 39 / .12);
+  --admin-font-sans: "Inter", "Noto Sans TC", system-ui, sans-serif;
+  --admin-font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --admin-numeric-variant: tabular-nums;
+  --admin-control-height: 40px;
+  --admin-row-padding-y: .625rem;
+  --admin-page-gap: 1.5rem;
+  --admin-content-width: 1536px;
+  --admin-overlay-backdrop: rgba(17, 24, 39, 0.42);
+  --admin-sidebar-bg: var(--sidebar-bg);
+  --admin-sidebar-border: var(--sidebar-border);
+  --admin-sidebar-text: var(--surface-600);
+  --admin-sidebar-muted: var(--surface-400);
+  --admin-sidebar-hover-bg: var(--surface-100);
+  --admin-sidebar-hover-fg: var(--surface-800);
+  --admin-sidebar-active-bg: var(--brand-50);
+  --admin-sidebar-active-fg: var(--brand-600);
+  --admin-transition-duration: 150ms;
+  --admin-accent-fg: #7c3aed;
+  --admin-accent-bg: color-mix(in srgb, #7c3aed 9%, transparent);
+  --admin-density-control-height: 32px;
+  --admin-density-row-padding-y: 10px;
+  --admin-duration-fast: var(--duration-fast);
+  --admin-duration-normal: var(--duration-normal);
+  --admin-duration-slow: var(--duration-slow);
+  --admin-duration-slower: var(--duration-slower);
+  --admin-anim-duration-fast: var(--anim-duration-fast);
+  --admin-anim-duration-normal: var(--anim-duration-normal);
+  --admin-anim-duration-slow: var(--anim-duration-slow);
+  --admin-anim-duration-slowest: var(--anim-duration-slowest);
+  --admin-easing-default: var(--easing-default);
+  --admin-easing-ease: var(--easing-ease);
+  --admin-easing-bounce: var(--easing-bounce);
+  --admin-letter-spacing-heading: var(--letter-spacing-tight);
+  --admin-letter-spacing-body: var(--letter-spacing-normal);
+  --admin-letter-spacing-snug: var(--letter-spacing-snug);
+  --admin-font-feature-settings: "cv11", "ss01", "tnum";
+  --admin-focus-ring-offset: 0;
+  --admin-focus-ring-shadow: 0 0 0 var(--admin-focus-ring-width) var(--admin-focus-ring);
+  --admin-scale-in: var(--scale-97);
+  --admin-scale-tab: var(--scale-96);
+  --admin-scale-pop: var(--scale-92);
+  --admin-scale-rest: var(--scale-100);
+  --admin-translate-tab-y: calc(-1 * var(--translate-xs));
+  --admin-translate-subtab-y: var(--translate-sm);
+  --admin-translate-pop-y: var(--translate-md);
+  --admin-translate-news-x: calc(-1 * var(--translate-lg));
+  --admin-translate-content-x: var(--translate-xl);
+  --admin-rotate-chevron: var(--rotate-180);
+  --admin-backdrop-blur: var(--blur-md);
+  --admin-gradient-brand: linear-gradient(var(--gradient-diagonal), var(--admin-brand), var(--brand-600));
+  --admin-gradient-placeholder: linear-gradient(var(--gradient-diagonal), var(--surface-300, var(--surface-3)), var(--surface-200, var(--surface-2)));
+  --admin-skeleton-bg: var(--surface-200);
+  --admin-skeleton-shimmer-start: var(--surface-200);
+  --admin-skeleton-shimmer-mid: var(--surface-100);
+  --admin-skeleton-shimmer-end: var(--surface-200);
+  --admin-skeleton-bar-height: var(--skeleton-bar-height);
+  --admin-skeleton-circle-size: var(--skeleton-circle-size);
+  --admin-skeleton-line-height: var(--skeleton-line-height);
+  --admin-skeleton-duration: var(--anim-duration-slowest);
+  --admin-skeleton-easing: var(--easing-default);
+  --admin-skeleton-shimmer-gradient: linear-gradient(90deg, var(--admin-skeleton-shimmer-start) 0%, var(--admin-skeleton-shimmer-mid) 50%, var(--admin-skeleton-shimmer-end) 100%);
+  --admin-skeleton-shimmer-size: var(--skeleton-shimmer-size);
+  --admin-progress-height: var(--progress-height);
+  --admin-progress-max-width: var(--progress-max-width);
+  --admin-progress-track-bg: var(--surface-200);
+  --admin-progress-fill-bg: var(--admin-brand);
+/* END ADMIN TOKENS */
+}
+
+/* ============================================================
+ * Tailwind Brand Presets — 8 common colors
+ * Each preset only needs to override -base vars; tailwind-dark.css
+ * lifts them inside this pack's own scoped dark selector.
+ * ============================================================ */
+[data-theme-style="tailwind"][data-brand="blue"] {
+  --brand-50-base: #eff6ff; --brand-100-base: #dbeafe; --brand-200-base: #bfdbfe;
+  --brand-300-base: #93c5fd; --brand-400-base: #60a5fa; --brand-500-base: #3b82f6;
+  --brand-600-base: #2563eb; --brand-700-base: #1d4ed8; --brand-800-base: #1e40af; --brand-900-base: #1e3a8a;
+}
+[data-theme-style="tailwind"][data-brand="indigo"] {
+  --brand-50-base: #eef2ff; --brand-100-base: #e0e7ff; --brand-200-base: #c7d2fe;
+  --brand-300-base: #a5b4fc; --brand-400-base: #818cf8; --brand-500-base: #6366f1;
+  --brand-600-base: #4f46e5; --brand-700-base: #4338ca; --brand-800-base: #3730a3; --brand-900-base: #312e81;
+}
+[data-theme-style="tailwind"][data-brand="violet"] {
+  --brand-50-base: #f5f3ff; --brand-100-base: #ede9fe; --brand-200-base: #ddd6fe;
+  --brand-300-base: #c4b5fd; --brand-400-base: #a78bfa; --brand-500-base: #8b5cf6;
+  --brand-600-base: #7c3aed; --brand-700-base: #6d28d9; --brand-800-base: #5b21b6; --brand-900-base: #4c1d95;
+}
+[data-theme-style="tailwind"][data-brand="emerald"] {
+  --brand-50-base: #ecfdf5; --brand-100-base: #d1fae5; --brand-200-base: #a7f3d0;
+  --brand-300-base: #6ee7b7; --brand-400-base: #34d399; --brand-500-base: #10b981;
+  --brand-600-base: #059669; --brand-700-base: #047857; --brand-800-base: #065f46; --brand-900-base: #064e3b;
+}
+[data-theme-style="tailwind"][data-brand="rose"] {
+  --brand-50-base: #fff1f2; --brand-100-base: #ffe4e6; --brand-200-base: #fecdd3;
+  --brand-300-base: #fda4af; --brand-400-base: #fb7185; --brand-500-base: #f43f5e;
+  --brand-600-base: #e11d48; --brand-700-base: #be123c; --brand-800-base: #9f1239; --brand-900-base: #881337;
+}
+[data-theme-style="tailwind"][data-brand="amber"] {
+  --brand-50-base: #fffbeb; --brand-100-base: #fef3c7; --brand-200-base: #fde68a;
+  --brand-300-base: #fcd34d; --brand-400-base: #fbbf24; --brand-500-base: #f59e0b;
+  --brand-600-base: #d97706; --brand-700-base: #b45309; --brand-800-base: #92400e; --brand-900-base: #78350f;
+}
+[data-theme-style="tailwind"][data-brand="cyan"] {
+  --brand-50-base: #ecfeff; --brand-100-base: #cffafe; --brand-200-base: #a5f3fc;
+  --brand-300-base: #67e8f9; --brand-400-base: #22d3ee; --brand-500-base: #06b6d4;
+  --brand-600-base: #0891b2; --brand-700-base: #0e7490; --brand-800-base: #155e75; --brand-900-base: #164e63;
+}
+[data-theme-style="tailwind"][data-brand="slate"] {
+  --brand-50-base: #f8fafc; --brand-100-base: #f1f5f9; --brand-200-base: #e2e8f0;
+  --brand-300-base: #cbd5e1; --brand-400-base: #94a3b8; --brand-500-base: #64748b;
+  --brand-600-base: #475569; --brand-700-base: #334155; --brand-800-base: #1e293b; --brand-900-base: #0f172a;
+}

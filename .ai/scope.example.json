@@ -1,0 +1,10 @@
+{
+  "task": "add a hero image to article pages",
+  "allowed_paths": [
+    "server/internal/modules/content/**",
+    "server/internal/render/**",
+    "site/templates/**",
+    "site/assets/**",
+    "contracts/openapi.yaml"
+  ]
+}

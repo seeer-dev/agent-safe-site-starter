@@ -1,0 +1,399 @@
+/* ============================================================
+ * Admin Design System — Token Scale
+ *
+ * Three layers, matching the mockup's token chain:
+ *   1. Primitives — immutable base values (spacing, font, radius…)
+ *   2. Slot contract — semantic --admin-* slots that map to primitives
+ *   3. Theme pack — colour values live in admin-theme-mint / nippon /
+ *      tailwind packages, activated via <html data-theme-style="…">.
+ *
+ * This file MUST NOT contain raw colour literals for a specific palette.
+ * Only structural primitives and slot→primitive mappings live here.
+ * ============================================================ */
+
+/* ---- Layer 1: Primitive token scale ---------------------------- */
+:root {
+  /* Spacing (4px base, full + quarter steps) */
+  --space-0: 0;
+  --space-px: 1px;
+  --space-0-half: 2px;
+  --space-0-three-quarter: 3px;
+  --space-1: 4px;
+  --space-1-quarter: 5px;
+  --space-1-half: 6px;
+  --space-1-three-quarter: 7px;
+  --space-2: 8px;
+  --space-2-quarter: 9px;
+  --space-2-half: 10px;
+  --space-2-three-quarter: 11px;
+  --space-3: 12px;
+  --space-3-quarter: 13px;
+  --space-3-half: 14px;
+  --space-3-three-quarter: 15px;
+  --space-4: 16px;
+  --space-4-half: 18px;
+  --space-5: 20px;
+  --space-5-half: 22px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* Font size scale */
+  --font-size-xs: 10px;
+  --font-size-sm: 11px;
+  --font-size-sm-plus: 11.5px;
+  --font-size-base: 12px;
+  --font-size-base-plus: 12.5px;
+  --font-size-md: 13px;
+  --font-size-md-plus: 13.5px;
+  --font-size-lg: 14px;
+  --font-size-lg-plus: 14.5px;
+  --font-size-xl: 15px;
+  --font-size-2xl: 16px;
+  --font-size-3xl: 19px;
+  --font-size-4xl: 20px;
+  --font-size-5xl: 21px;
+  --font-size-5xl-plus: 24px;
+  --font-size-6xl: 28px;
+
+  /* Font weight scale */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-semibold-plus: 650;
+  --weight-bold: 700;
+  --weight-bold-plus: 750;
+
+  /* Radius scale */
+  --radius-px: 1px;
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-sm-plus: 4px;
+  --radius-md: 5px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 9px;
+  --radius-3xl: 10px;
+  --radius-4xl: 11px;
+  --radius-5xl: 12px;
+  --radius-pill: 20px;
+  --radius-full: 9999px;
+
+  /* Line height scale */
+  --leading-none: 1;
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.55;
+  --leading-relaxed-plus: 1.6;
+  --leading-loose: 1.7;
+
+  /* Transition duration scale */
+  --duration-fast: 0.1s;
+  --duration-normal: 0.15s;
+  --duration-slow: 0.2s;
+  --duration-slower: 0.25s;
+  --duration-slowest: 0.3s;
+
+  /* Animation duration scale */
+  --anim-duration-fast: 0.15s;
+  --anim-duration-normal: 0.2s;
+  --anim-duration-slow: 0.25s;
+  --anim-duration-slowest: 0.3s;
+
+  /* Easing scale */
+  --easing-default: ease-out;
+  --easing-ease: ease;
+  --easing-bounce: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Letter-spacing scale */
+  --letter-spacing-normal: 0;
+  --letter-spacing-tight: -0.01em;
+  --letter-spacing-snug: -0.005em;
+
+  /* Transform scale scale */
+  --scale-100: 1;
+  --scale-97: 0.97;
+  --scale-96: 0.96;
+  --scale-92: 0.92;
+
+  /* Transform translate scale (px) */
+  --translate-xs: 4px;
+  --translate-sm: 6px;
+  --translate-md: 8px;
+  --translate-lg: 12px;
+  --translate-xl: 16px;
+
+  /* Transform rotate */
+  --rotate-180: 180deg;
+
+  /* Blur scale */
+  --blur-sm: 4px;
+  --blur-md: 8px;
+  --blur-lg: 16px;
+
+  /* Gradient angle */
+  --gradient-diagonal: 135deg;
+
+  /* Skeleton shimmer */
+  --skeleton-bar-height: 12px;
+  --skeleton-circle-size: 40px;
+  --skeleton-line-height: 14px;
+  --skeleton-shimmer-size: 200%;
+
+  /* Progress bar */
+  --progress-height: 6px;
+  --progress-max-width: 340px;
+
+  /* Focus ring */
+  --admin-focus-ring-width: 3px;
+}
+
+/* ---- Layer 2: Slot contract (semantic → primitive) ------------- */
+:root {
+  /* Button spacing */
+  --admin-space-btn-pad-y: 6px;
+  --admin-space-btn-pad-x: 11px;
+  --admin-space-btn-sm-pad-y: 4px;
+  --admin-space-btn-sm-pad-x: 8px;
+
+  /* Input spacing */
+  --admin-space-input-pad-y: var(--space-2);
+  --admin-space-input-pad-x: var(--space-3);
+
+  /* Chip spacing */
+  --admin-space-chip-pad-y: var(--space-1);
+  --admin-space-chip-pad-x: 11px;
+
+  /* Card spacing */
+  --admin-space-card-pad: 16px;
+  --admin-space-card-gap: var(--space-2);
+
+  /* Panel spacing */
+  --admin-space-panel-pad: var(--space-4);
+  --admin-space-panel-hd-pad-y: 12px;
+  --admin-space-panel-hd-pad-x: var(--space-4);
+
+  /* Page layout */
+  --admin-space-page-pad: var(--space-5);
+  --admin-space-page-gap: var(--space-5);
+
+  /* Nav / sidebar */
+  --admin-space-nav-pad-y: 10px;
+  --admin-space-nav-pad-x: 14px;
+  --admin-space-nav-gap: 10px;
+
+  /* Status pill */
+  --admin-space-status-pill-pad-y: 2px;
+  --admin-space-status-pill-pad-x: 9px;
+
+  /* Font size slots */
+  --admin-text-btn: var(--font-size-md);
+  --admin-text-btn-sm: var(--font-size-base);
+  --admin-text-chip: var(--font-size-base-plus);
+  --admin-text-chip-count: var(--font-size-sm);
+  --admin-text-nav: var(--font-size-lg);
+  --admin-text-page-title: var(--font-size-5xl);
+  --admin-text-panel-title: var(--font-size-lg);
+  --admin-text-card-num: var(--font-size-5xl-plus);
+  --admin-text-card-label: var(--font-size-md);
+  --admin-text-body-sm: var(--font-size-base-plus);
+  --admin-text-back-link: var(--font-size-md);
+
+  /* Font weight slots */
+  --admin-weight-btn: var(--weight-medium);
+  --admin-weight-title: var(--weight-semibold);
+  --admin-weight-page-title: var(--weight-semibold);
+
+  /* Radius slots */
+  --admin-radius-btn: var(--radius-lg);
+  --admin-radius-input: var(--radius-xl);
+  --admin-radius-chip: var(--radius-pill);
+  --admin-radius-card: var(--radius-xl);
+  --admin-radius-panel: var(--radius-5xl);
+  --admin-radius-status-pill: var(--radius-pill);
+  --admin-radius-nav-item: var(--radius-lg);
+  --admin-radius-note: var(--radius-3xl);
+
+  /* Shell */
+  --shell-sidebar-w: 242px;
+  --shell-header-h: 62px;
+}
+
+/* ---- Legacy tokens (backward compatibility) -------------------- */
+/* These alias the semantic --admin-* slots so existing component CSS
+ * that reads --admin-color-canvas etc. keeps working once a theme
+ * pack is loaded. They do NOT define colour values themselves. */
+:root {
+  --admin-font-family: var(--admin-font-sans);
+  --admin-font-size-page-title: var(--font-size-5xl);
+  --admin-line-height-page-title: var(--leading-normal);
+  --admin-font-weight-page-title: var(--weight-bold);
+  --admin-color-canvas: var(--admin-canvas);
+  --admin-color-surface: var(--admin-surface);
+  --admin-color-surface-muted: var(--admin-surface-subtle);
+  --admin-color-text: var(--admin-text-primary);
+  --admin-color-text-muted: var(--admin-text-muted);
+  --admin-color-border: var(--admin-border);
+  --admin-color-border-strong: var(--admin-border-strong);
+  --admin-color-accent: var(--admin-brand);
+  --admin-color-accent-soft: var(--brand-50);
+  --admin-color-danger: var(--admin-danger-fg);
+  --admin-color-danger-soft: var(--admin-danger-bg);
+  --admin-color-focus: var(--admin-focus-ring);
+  --admin-space-1: var(--space-1);
+  --admin-space-2: var(--space-2);
+  --admin-space-3: var(--space-3);
+  --admin-space-4: var(--space-4);
+  --admin-space-5: var(--space-5);
+  --admin-space-6: var(--space-6);
+  --admin-shell-sidebar-width: var(--shell-sidebar-w);
+}
+
+/* ---- Tailwind @theme inline: expose tokens as utilities --------- */
+@theme inline {
+  --color-*: initial;
+
+  /* Legacy admin-* utilities (backward compatibility) */
+  --font-admin: var(--admin-font-family);
+  --font-weight-admin-page-title: var(--admin-font-weight-page-title);
+  --text-admin-page-title: var(--admin-font-size-page-title);
+  --text-admin-page-title--line-height: var(--admin-line-height-page-title);
+  --color-admin-canvas: var(--admin-color-canvas);
+  --color-admin-surface: var(--admin-color-surface);
+  --color-admin-surface-muted: var(--admin-color-surface-muted);
+  --color-admin-text: var(--admin-color-text);
+  --color-admin-muted: var(--admin-color-text-muted);
+  --color-admin-border: var(--admin-color-border);
+  --color-admin-border-strong: var(--admin-color-border-strong);
+  --color-admin-accent: var(--admin-color-accent);
+  --color-admin-accent-soft: var(--admin-color-accent-soft);
+  --color-admin-danger: var(--admin-color-danger);
+  --color-admin-danger-soft: var(--admin-color-danger-soft);
+  --color-admin-focus: var(--admin-color-focus);
+  --radius-admin-sm: var(--admin-radius-sm);
+  --radius-admin-md: var(--admin-radius-md);
+  --spacing-admin-1: var(--admin-space-1);
+  --spacing-admin-2: var(--admin-space-2);
+  --spacing-admin-3: var(--admin-space-3);
+  --spacing-admin-4: var(--admin-space-4);
+  --spacing-admin-5: var(--admin-space-5);
+  --spacing-admin-6: var(--admin-space-6);
+
+  /* Brand scale */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+  --color-brand: var(--admin-brand);
+  --color-on-brand: var(--admin-on-brand);
+
+  /* Surface scale */
+  --color-surface-0: var(--surface-0);
+  --color-surface-50: var(--surface-50);
+  --color-surface-100: var(--surface-100);
+  --color-surface-200: var(--surface-200);
+  --color-surface-300: var(--surface-300);
+  --color-surface-400: var(--surface-400);
+  --color-surface-500: var(--surface-500);
+  --color-surface-600: var(--surface-600);
+  --color-surface-700: var(--surface-700);
+  --color-surface-800: var(--surface-800);
+  --color-surface-900: var(--surface-900);
+  --color-surface: var(--admin-surface);
+  --color-surface-subtle: var(--admin-surface-subtle);
+  --color-canvas: var(--admin-canvas);
+
+  /* Text */
+  --color-text-primary: var(--admin-text-primary);
+  --color-text-secondary: var(--admin-text-secondary);
+  --color-text-muted: var(--admin-text-muted);
+  --color-text-inverse: var(--admin-text-inverse);
+
+  /* Border */
+  --color-border: var(--admin-border);
+  --color-border-strong: var(--admin-border-strong);
+
+  /* Status: success */
+  --color-success-bg: var(--admin-success-bg);
+  --color-success-fg: var(--admin-success-fg);
+  --color-success-border: var(--admin-success-border);
+
+  /* Status: warning */
+  --color-warning-bg: var(--admin-warning-bg);
+  --color-warning-fg: var(--admin-warning-fg);
+  --color-warning-border: var(--admin-warning-border);
+
+  /* Status: danger */
+  --color-danger-bg: var(--admin-danger-bg);
+  --color-danger-fg: var(--admin-danger-fg);
+  --color-danger-border: var(--admin-danger-border);
+
+  /* Status: info */
+  --color-info-bg: var(--admin-info-bg);
+  --color-info-fg: var(--admin-info-fg);
+  --color-info-border: var(--admin-info-border);
+
+  /* Accent */
+  --color-accent-fg: var(--admin-accent-fg);
+  --color-accent-bg: var(--admin-accent-bg);
+
+  /* Radius */
+  --radius-btn: var(--admin-radius-btn);
+  --radius-input: var(--admin-radius-input);
+  --radius-chip: var(--admin-radius-chip);
+  --radius-card: var(--admin-radius-card);
+  --radius-panel: var(--admin-radius-panel);
+
+  /* Shadow */
+  --shadow-sm: var(--admin-shadow-sm);
+  --shadow-md: var(--admin-shadow-md);
+  --shadow-lg: var(--admin-shadow-lg);
+
+  /* Font */
+  --font-sans: var(--admin-font-sans);
+  --font-mono: var(--admin-font-mono);
+
+  /* Spacing: pin to 4px so numeric utilities match the primitive scale */
+  --spacing: 4px;
+
+  /* Font size (fs- prefix) */
+  --text-fs-xs: var(--font-size-xs);
+  --text-fs-sm: var(--font-size-sm);
+  --text-fs-sm-plus: var(--font-size-sm-plus);
+  --text-fs-base: var(--font-size-base);
+  --text-fs-base-plus: var(--font-size-base-plus);
+  --text-fs-md: var(--font-size-md);
+  --text-fs-md-plus: var(--font-size-md-plus);
+  --text-fs-lg: var(--font-size-lg);
+  --text-fs-lg-plus: var(--font-size-lg-plus);
+  --text-fs-xl: var(--font-size-xl);
+  --text-fs-2xl: var(--font-size-2xl);
+  --text-fs-3xl: var(--font-size-3xl);
+  --text-fs-4xl: var(--font-size-4xl);
+  --text-fs-5xl: var(--font-size-5xl);
+  --text-fs-5xl-plus: var(--font-size-5xl-plus);
+  --text-fs-6xl: var(--font-size-6xl);
+
+  /* Font weight */
+  --font-weight-regular: var(--weight-regular);
+  --font-weight-medium: var(--weight-medium);
+  --font-weight-semibold: var(--weight-semibold);
+  --font-weight-bold: var(--weight-bold);
+
+  /* Line height */
+  --leading-none: 1;
+  --leading-tight: 1.2;
+  --leading-snug: 1.4;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.55;
+  --leading-loose: 1.7;
+}

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.SiteName}}</title>
+  <meta name="description" content="A tiny AI-first Go + Cloudflare Pages starter.">
+  <link rel="canonical" href="{{.PublicSiteURL}}/">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <header class="shell header">
+    <a class="brand" href="/">{{.SiteName}}</a>
+    <nav><a href="#articles">文章</a><a href="#contact">聯絡</a></nav>
+  </header>
+
+  <main>
+    <section class="shell hero">
+      <p class="eyebrow">Static Publish Starter</p>
+      <h1>內容由 Go 產生 HTML，成品放 Cloudflare Pages。</h1>
+      <p>互動功能才呼叫 Railway Go API；本地預設 SQLite。</p>
+    </section>
+
+    <section class="shell section" id="articles">
+      <h2>文章</h2>
+      <div class="cards">
+        {{range .Articles}}
+        <article class="card">
+          <h3><a href="/articles/{{.Slug}}/">{{.Title}}</a></h3>
+          <p>{{.Excerpt}}</p>
+        </article>
+        {{else}}
+        <p>目前沒有已發布文章。</p>
+        {{end}}
+      </div>
+    </section>
+
+    <section class="shell section" id="contact">
+      <h2>聯絡</h2>
+      <form class="contact" data-contact-form>
+        <label>姓名<input name="name" required maxlength="120"></label>
+        <label>Email<input name="email" type="email" required maxlength="254"></label>
+        <label>訊息<textarea name="message" required maxlength="5000"></textarea></label>
+        <button type="submit">送出</button>
+        <p data-form-status aria-live="polite"></p>
+      </form>
+    </section>
+  </main>
+  <script src="/assets/site.js" defer></script>
+</body>
+</html>

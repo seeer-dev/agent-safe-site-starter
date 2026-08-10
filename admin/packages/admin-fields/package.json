@@ -1,0 +1,17 @@
+{
+  "name": "@sitecore/admin-fields",
+  "private": true,
+  "type": "module",
+  "exports": "./src/index.ts",
+  "peerDependencies": {
+    "vue": "3.5.41"
+  },
+  "scripts": {
+    "typecheck": "vue-tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "vue": "3.5.41",
+    "vue-tsc": "3.3.6",
+    "typescript": "6.0.3"
+  }
+}

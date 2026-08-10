@@ -1,0 +1,128 @@
+openapi: 3.1.0
+info:
+  title: AI Site Starter API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      operationId: health
+      responses:
+        '200':
+          description: Healthy
+          content:
+            text/plain:
+              schema: {type: string}
+  /api/articles:
+    get:
+      operationId: listPublishedArticles
+      responses:
+        '200':
+          description: Published articles
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [articles]
+                properties:
+                  articles:
+                    type: array
+                    items: {$ref: '#/components/schemas/Article'}
+  /api/admin/articles:
+    post:
+      operationId: upsertArticle
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ArticleInput'}
+      responses:
+        '200':
+          description: Saved article
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Article'}
+        '401': {description: Unauthorized}
+        '403': {description: Admin role required}
+  /api/contact:
+    post:
+      operationId: submitContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, message]
+              properties:
+                name: {type: string, maxLength: 120}
+                email: {type: string, format: email, maxLength: 254}
+                message: {type: string, maxLength: 5000}
+      responses:
+        '201':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: {type: boolean}
+  /api/media/presign:
+    post:
+      operationId: presignMediaUpload
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [filename, content_type]
+              properties:
+                filename: {type: string}
+                content_type: {type: string}
+      responses:
+        '200':
+          description: Presigned R2 upload request
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url, method, key]
+                properties:
+                  url: {type: string, format: uri}
+                  method: {type: string, const: PUT}
+                  key: {type: string}
+                  headers:
+                    type: object
+                    additionalProperties: {type: string}
+        '503': {description: R2 not configured}
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Article:
+      type: object
+      required: [id, slug, title, excerpt, body_html, published, updated_unix]
+      properties:
+        id: {type: string}
+        slug: {type: string}
+        title: {type: string}
+        excerpt: {type: string}
+        body_html: {type: string}
+        published: {type: boolean}
+        updated_unix: {type: integer, format: int64}
+    ArticleInput:
+      type: object
+      required: [slug, title, published]
+      properties:
+        slug: {type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$'}
+        title: {type: string, maxLength: 160}
+        excerpt: {type: string, maxLength: 500}
+        body_html: {type: string}
+        published: {type: boolean}

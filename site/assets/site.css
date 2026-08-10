@@ -1,0 +1,25 @@
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #171717; background: #fafafa; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: inherit; }
+.shell { width: min(960px, calc(100% - 40px)); margin-inline: auto; }
+.header { min-height: 72px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.header nav { display: flex; gap: 18px; }
+.brand { font-weight: 750; text-decoration: none; }
+.hero { padding: 96px 0 72px; }
+.hero h1 { max-width: 760px; font-size: clamp(2.4rem, 7vw, 5rem); line-height: .98; letter-spacing: -.055em; margin: 12px 0 24px; }
+.hero p { max-width: 650px; font-size: 1.15rem; line-height: 1.7; }
+.eyebrow { text-transform: uppercase; letter-spacing: .12em; font-size: .8rem !important; }
+.section { padding: 48px 0 72px; border-top: 1px solid #ddd; }
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; }
+.card { padding: 22px; background: #fff; border: 1px solid #ddd; border-radius: 14px; }
+.contact { max-width: 620px; display: grid; gap: 16px; }
+.contact label { display: grid; gap: 7px; font-weight: 600; }
+input, textarea, button { font: inherit; }
+input, textarea { width: 100%; border: 1px solid #bbb; border-radius: 9px; padding: 12px; background: #fff; }
+textarea { min-height: 150px; resize: vertical; }
+button { width: fit-content; border: 0; border-radius: 999px; padding: 11px 18px; background: #171717; color: white; cursor: pointer; }
+.article { padding: 72px 0 120px; max-width: 760px; }
+.article h1 { font-size: clamp(2.4rem, 6vw, 4.4rem); line-height: 1; letter-spacing: -.045em; }
+.lead { font-size: 1.2rem; color: #555; line-height: 1.6; }
+.prose { font-size: 1.08rem; line-height: 1.8; }

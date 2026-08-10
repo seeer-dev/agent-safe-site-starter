@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.Article.Title}} · {{.SiteName}}</title>
+  <meta name="description" content="{{.Article.Excerpt}}">
+  <link rel="canonical" href="{{.PublicSiteURL}}/articles/{{.Article.Slug}}/">
+  <link rel="stylesheet" href="/assets/site.css">
+</head>
+<body>
+  <header class="shell header"><a class="brand" href="/">{{.SiteName}}</a></header>
+  <main class="shell article">
+    <p><a href="/">← 回首頁</a></p>
+    <h1>{{.Article.Title}}</h1>
+    <p class="lead">{{.Article.Excerpt}}</p>
+    <div class="prose">{{.Body}}</div>
+  </main>
+</body>
+</html>

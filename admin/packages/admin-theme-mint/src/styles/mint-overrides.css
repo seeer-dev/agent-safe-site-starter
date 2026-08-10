@@ -1,0 +1,70 @@
+﻿/* ============================================================
+ * Mint Theme — Component Overrides
+ * Style corrections that need theme-scoped specificity to
+ * override the base component definitions correctly.
+ * ============================================================ */
+
+/* Layer order must be stated by every file that opens a layer: layers are
+ * ordered by first appearance in the document, so whichever package
+ * stylesheet the consumer happens to load first decides it. Without this
+ * a bare `@layer components` here would register components ahead of
+ * base, and Tailwind's preflight would then override every rule below. */
+@layer theme, base, components, utilities, shell-state;
+
+/* Wrapped in @layer components so consumer Tailwind utilities can override
+ * these rules. Unlayered CSS beats layered CSS regardless of specificity,
+ * which made every utility written against these classes a silent no-op. */
+@layer components {
+html[data-theme-style="admin-mint"] body {
+  letter-spacing: -0.005em;
+}
+
+html[data-theme-style="admin-mint"] .card {
+  box-shadow: var(--admin-shadow-sm);
+}
+html[data-theme-style="admin-mint"] .card:hover {
+  box-shadow: var(--admin-shadow-lg);
+}
+
+/* Button hover — use admin tokens for consistent theme coloring */
+html[data-theme-style="admin-mint"] .btn-ghost:hover {
+  background: transparent;
+  color: var(--admin-text-secondary);
+}
+html[data-theme-style="admin-mint"] .btn-danger:hover {
+  background: var(--admin-danger-fg);
+  border-color: var(--admin-danger-fg);
+}
+
+/* Chip hover — keep subtle, don't fill with surface */
+html[data-theme-style="admin-mint"] .chip:hover {
+  background: var(--admin-surface);
+  color: var(--admin-text-secondary);
+}
+html[data-theme-style="admin-mint"] .chip-active:hover {
+  background: var(--brand-50);
+  color: var(--admin-brand);
+}
+html[data-theme-style="admin-mint"] .chip-add:hover {
+  background: var(--admin-surface);
+  color: var(--admin-text-muted);
+}
+
+/* Tab item hover — keep muted, don't go dark */
+html[data-theme-style="admin-mint"] .tab-item:hover {
+  color: var(--admin-text-secondary);
+}
+html[data-theme-style="admin-mint"] .tab-item-active:hover {
+  color: var(--admin-brand);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme-style="admin-mint"] *,
+  html[data-theme-style="admin-mint"] *::before,
+  html[data-theme-style="admin-mint"] *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+}

@@ -1,0 +1,14 @@
+/* ============================================================
+ * theme-mint.css — entry point
+ * Mint semantic pack — full --admin-* token set with
+ * light/dark + component style overrides.
+ * Activated via <html data-theme-style="admin-mint">
+ *
+ * @import sub-modules:
+ *   - mint-tokens.css    (light --admin-* + surface + brand + sidebar)
+ *   - mint-dark.css      (.dark --admin-* + surface + brand + sidebar)
+ *   - mint-overrides.css (component style corrections)
+ * ============================================================ */
+@import "./mint-tokens.css";
+@import "./mint-dark.css";
+@import "./mint-overrides.css";

@@ -1,0 +1,20 @@
+@import "@sitecore/admin-theme/tailwind.css";
+@import "@sitecore/admin-theme-mint/styles/theme-mint.css";
+@source "./";
+
+@layer base {
+  :root {
+    font-family: var(--admin-font-family);
+    color: var(--admin-color-text);
+    background: var(--admin-color-canvas);
+  }
+
+  body {
+    min-width: 320px;
+    min-height: 100vh;
+  }
+
+  a {
+    color: inherit;
+  }
+}

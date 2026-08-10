@@ -1,0 +1,2 @@
+import { defineStore } from 'pinia'
+export const useSessionStore=defineStore('session',{state:()=>({siteId:'reference',principalId:'demo-admin',capabilities:['orders.read','products.write','commissions.read','messaging.read','announcement.write','system.read','campaigns.write','content.read','settings.read','influencers.read','influencers.write'] as string[]}),actions:{has(capability:string){return this.capabilities.includes(capability)}}})

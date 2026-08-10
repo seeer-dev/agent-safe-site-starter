@@ -1,0 +1,15 @@
+/* ============================================================
+ * theme-tailwind.css — entry point
+ * Tailwind zinc palette — traditional web colors.
+ * Activated via <html data-theme-style="tailwind">
+ *
+ * @import sub-modules:
+ *   - tailwind-tokens.css   (light tokens + 8 Tailwind brand presets)
+ *   - tailwind-dark.css     (.dark overrides)
+ *   - tailwind-overrides.css (component style corrections)
+ *
+ * Dark brand lift is self-contained in tailwind-dark.css.
+ * ============================================================ */
+@import "./tailwind-tokens.css";
+@import "./tailwind-dark.css";
+@import "./tailwind-overrides.css";
