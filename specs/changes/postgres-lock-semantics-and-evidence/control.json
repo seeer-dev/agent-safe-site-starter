@@ -1,0 +1,72 @@
+{
+  "change_id": "postgres-lock-semantics-and-evidence",
+  "revision": 1,
+  "status": "Ready",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved opening and delegating this next phase on 2026-08-14 after reviewing the exact fresh-migration, lock-semantics, and named-test evidence outcomes.",
+  "repository_baseline": "f8053f8ea3ac640586384e24667933e5f556b689",
+  "supersedes": [
+    "postgres-execution-gate"
+  ],
+  "applies_to": [
+    ".github/workflows/ci.yml",
+    "server/internal/migrate/migrate.go",
+    "server/internal/migrate/postgres_integration_test.go",
+    "server/internal/modules/media/postgres_integration_test.go",
+    "server/internal/modules/media/store_sql.go",
+    "server/internal/modules/staff/postgres_integration_test.go",
+    "server/internal/modules/staff/store.go",
+    "server/tools/postgres-live-gate/**",
+    "server/tools/verify/main_test.go",
+    "specs/changes/postgres-lock-semantics-and-evidence/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": [
+      "consumer-reachability"
+    ],
+    "AC-002": [
+      "consumer-reachability",
+      "independent-review"
+    ],
+    "AC-003": [
+      "consumer-reachability",
+      "independent-review"
+    ],
+    "AC-005": [
+      "consumer-reachability",
+      "independent-review"
+    ],
+    "AC-007": [
+      "independent-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
+    "REQ-002": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
+    "REQ-003": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
+    "REQ-004": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
+    "AC-001": { "proof": "Pending fresh-schema consumer reachability evidence for revision 1.", "status": "pending" },
+    "AC-002": { "proof": "Pending live PostgreSQL staff-lock reachability and independent review for revision 1.", "status": "pending" },
+    "AC-003": { "proof": "Pending live PostgreSQL media-lock reachability and independent review for revision 1.", "status": "pending" },
+    "AC-004": { "proof": "Pending exact named-test gate implementation and negative-path verification for revision 1.", "status": "pending" },
+    "AC-005": { "proof": "Pending observed live CI run, consumer reachability, and independent review for revision 1.", "status": "pending" },
+    "AC-006": { "proof": "Pending verifier wiring regression implementation for revision 1.", "status": "pending" },
+    "AC-007": { "proof": "Pending mutation-sensitive independent review for revision 1.", "status": "pending" }
+  }
+}
