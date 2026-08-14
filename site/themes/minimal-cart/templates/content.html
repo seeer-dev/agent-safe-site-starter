@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.Title}} — {{.SiteName}}</title>
+  <meta name="description" content="{{.Title}}">
+  <link rel="canonical" href="{{.PublicSiteURL}}/content/{{.Key}}">
+  <link rel="stylesheet" href="/assets/islands/islands-{{.IslandsCSSHash}}.css">
+</head>
+<body class="min-h-screen bg-background text-foreground antialiased">
+  <div data-vue-island="AnnouncementBar"></div>
+  <div data-vue-island="Header"></div>
+
+  <main class="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
+    <h1 class="text-2xl font-semibold tracking-tight">{{.Title}}</h1>
+    <div class="mt-6 prose prose-stone max-w-none">{{.Body}}</div>
+  </main>
+
+  <div data-vue-island="Footer"></div>
+
+  <div data-vue-island="CartDrawer"></div>
+  <div data-vue-island="AccountDialog"></div>
+  <div data-vue-island="TrackOrderDialog"></div>
+  <div data-vue-island="CheckoutDialog"></div>
+  <div data-vue-island="FooterPageDialog"></div>
+  <div data-vue-island="ProductDetailDialog"></div>
+  <div data-vue-island="WelcomePopup"></div>
+  <div data-vue-island="Toaster"></div>
+
+  <script type="module" src="/assets/islands/islands.js"></script>
+</body>
+</html>

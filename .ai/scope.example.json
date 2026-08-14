@@ -1,6 +1,7 @@
 {
   "task": "add a hero image to article pages",
   "allowed_paths": [
+    "specs/changes/add-article-hero/**",
     "server/internal/modules/content/**",
     "server/internal/render/**",
     "site/templates/**",

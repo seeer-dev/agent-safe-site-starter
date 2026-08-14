@@ -1,0 +1,41 @@
+{
+  "name": "site-theme-minimal-cart",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Minimal-cart Vue Islands theme for AI-go-starter. Go renderer produces static HTML with data-vue-island mount points; Vite builds the island bundles.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:check": "vue-tsc --noEmit && node scripts/check-dialog-a11y.mjs && node scripts/check-category-hydration.mjs && vite build",
+    "build:only": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "check:browser-authority": "node scripts/check-browser-authority.mjs",
+    "check:openapi-contracts": "node scripts/check-openapi-contracts.mjs",
+    "check:checkout-idempotency": "node scripts/check-checkout-idempotency.mjs",
+    "check:auth-session": "node scripts/check-auth-session.mjs",
+    "check:dialog-a11y": "node scripts/check-dialog-a11y.mjs",
+    "check:category-hydration": "node scripts/check-category-hydration.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "@vueuse/core": "^11.3.0",
+    "clsx": "^2.1.1",
+    "lucide-vue-next": "^0.525.0",
+    "pinia": "^2.2.6",
+    "tailwind-merge": "^2.6.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "tailwindcss-animate": "^1.0.7",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vue-tsc": "^2.2.0"
+  }
+}

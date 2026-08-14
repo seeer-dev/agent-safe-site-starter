@@ -53,8 +53,12 @@ modules:
     purpose: public inquiry submission and notification
   media:
     path: server/internal/modules/media
-    owns: []
-    purpose: authenticated R2 upload authorization
+    owns: [media_objects]
+    purpose: authenticated R2 upload authorization and post-upload media verification registry
+  commerce:
+    path: server/internal/modules/commerce
+    owns: [products, product_images, orders, order_events, returns, members, staff_members, promos, payment_methods]
+    purpose: catalog, orders, fulfillment, returns, and product image association
 
 tools:
   human_entrypoint: natural-language-via-agent
@@ -63,6 +67,7 @@ tools:
     - server/tools/migrate
     - server/tools/render
     - server/tools/publish
+    - server/tools/speccheck
     - server/tools/verify
     - server/tools/archcheck
     - server/tools/scopecheck

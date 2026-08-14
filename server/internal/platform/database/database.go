@@ -89,3 +89,33 @@ func ensureSQLiteDir(dsn string) error {
 	}
 	return os.MkdirAll(dir, 0o755)
 }
+
+// IsUniqueViolation returns true if err is a unique constraint violation
+// from either SQLite or PostgreSQL. This is used to detect concurrent
+// duplicate-key inserts and convert them to application-level conflicts.
+func IsUniqueViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	// SQLite: "constraint failed: UNIQUE constraint failed: ..."
+	// PostgreSQL (pgx): "unique violation" or SQLSTATE 23505
+	return strings.Contains(msg, "unique constraint") ||
+		strings.Contains(msg, "constraint failed: unique") ||
+		strings.Contains(msg, "duplicate key value violates unique constraint") ||
+		strings.Contains(msg, "23505")
+}
+
+// IsForeignKeyViolation recognizes foreign-key constraint errors from both
+// supported drivers. It is used where a concurrent parent-row deletion turns
+// an otherwise verified media association into a safe validation failure.
+func IsForeignKeyViolation(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "foreign key constraint failed") ||
+		strings.Contains(msg, "violates foreign key constraint") ||
+		strings.Contains(msg, "sqlstate 23503") ||
+		strings.Contains(msg, "23503")
+}

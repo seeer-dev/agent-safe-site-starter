@@ -34,6 +34,13 @@ type Config struct {
 	ContactNotifyTo string
 
 	CFPagesProject string
+
+	// CFDeployHookURL is the Cloudflare Pages Deploy Hook URL. When set,
+	// the publish tool POSTs to this URL after a successful render to
+	// trigger a deployment. The response is logged as a receipt.
+	CFDeployHookURL string
+
+	SiteTheme string
 }
 
 func Load() Config {
@@ -65,6 +72,10 @@ func Load() Config {
 		ContactNotifyTo: os.Getenv("CONTACT_NOTIFY_TO"),
 
 		CFPagesProject: os.Getenv("CF_PAGES_PROJECT"),
+
+		CFDeployHookURL: os.Getenv("CF_DEPLOY_HOOK_URL"),
+
+		SiteTheme: env("SITE_THEME", ""),
 	}
 }
 

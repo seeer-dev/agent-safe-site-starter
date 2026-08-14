@@ -1,22 +1,35 @@
 {
-  "name": "ai-site-starter-admin",
+  "name": "admin-minimal-cart",
   "private": true,
-  "packageManager": "pnpm@10.24.0",
+  "version": "0.1.0",
+  "type": "module",
   "scripts": {
-    "dev:admin": "pnpm --filter @sitecore/admin dev",
-    "build:admin": "pnpm --filter @sitecore/admin build",
-    "typecheck": "pnpm -r typecheck",
-    "lint": "eslint . --max-warnings 0",
-    "test:unit": "pnpm -r --if-present test:unit",
-    "check": "pnpm typecheck && pnpm lint && pnpm test:unit"
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "build:only": "vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "check:resource-contracts": "node scripts/check-resource-contracts.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "lucide-vue-next": "^0.460.0",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0"
   },
   "devDependencies": {
-    "@eslint/js": "10.0.1",
-    "@vue/compiler-sfc": "3.5.41",
-    "eslint": "10.8.1",
-    "eslint-plugin-vue": "10.10.0",
-    "globals": "17.9.0",
-    "typescript-eslint": "8.66.0",
-    "typescript": "6.0.3"
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/test-utils": "^2.4.11",
+    "autoprefixer": "^10.4.20",
+    "jsdom": "^25.0.1",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5",
+    "vitest": "^2.1.9",
+    "vue-tsc": "^2.2.0"
   }
 }

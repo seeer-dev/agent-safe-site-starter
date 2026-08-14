@@ -10,6 +10,7 @@ import (
 func main() {
 	steps := [][]string{
 		{"go", "run", "./server/tools/archcheck"},
+		{"go", "run", "./server/tools/speccheck"},
 		{"go", "run", "./server/tools/scopecheck"},
 		{"go", "test", "./..."},
 		{"go", "vet", "./..."},

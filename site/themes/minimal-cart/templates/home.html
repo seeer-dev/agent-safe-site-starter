@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.SiteName}}</title>
+  <meta name="description" content="少一點，更好一點。">
+  <link rel="canonical" href="{{.PublicSiteURL}}/">
+  <link rel="stylesheet" href="/assets/islands/islands-{{.IslandsCSSHash}}.css">
+</head>
+<body class="min-h-screen bg-background text-foreground antialiased">
+  <!-- Island: AnnouncementBar -->
+  <div data-vue-island="AnnouncementBar"></div>
+
+  <!-- Island: Header. Static brand is the no-JS / SEO name; Vue replaces this on mount. -->
+  <div data-vue-island="Header">
+    <a href="{{.PublicSiteURL}}/">質物選物</a>
+  </div>
+
+  <!-- Island: Hero -->
+  <div data-vue-island="Hero"></div>
+
+  <!-- Static: Features section (no interaction needed) -->
+  <section class="border-y border-border/60 bg-muted/20">
+    <div class="mx-auto grid max-w-7xl grid-cols-2 gap-px overflow-hidden bg-border/60 lg:grid-cols-2">
+      <div class="flex items-start gap-3 bg-background px-5 py-6">
+        <svg class="mt-0.5 h-5 w-5 shrink-0 text-cta" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <div>
+          <p class="text-sm font-medium">宅配到府</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">台灣本島配送</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 bg-background px-5 py-6">
+        <svg class="mt-0.5 h-5 w-5 shrink-0 text-cta" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l2-5h14l2 5"/><path d="M3 9v11h18V9"/><path d="M3 9h18"/></svg>
+        <div>
+          <p class="text-sm font-medium">超商取貨</p>
+          <p class="mt-0.5 text-xs text-muted-foreground">7-11 / 全家超商取貨</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Static: server-rendered product grid for SEO and no-JS fallback.
+       The ProductGrid island progressively enhances this section with
+       filtering, search, and pagination. During loading/error the island
+       must NOT hide this static baseline — only on successful load does
+       the island replace it with the interactive grid. -->
+  <section id="shop-static" class="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+    <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+      <div>
+        <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">線上商品</p>
+        <h2 class="mt-2 text-2xl font-semibold tracking-tight sm:text-3xl">全部商品</h2>
+      </div>
+      <!-- Static category navigation (no-JS accessible links) -->
+      <nav class="flex flex-wrap items-center gap-1 rounded-full border border-border/60 bg-muted/40 p-1" aria-label="商品分類">
+        <a href="{{.PublicSiteURL}}/" class="relative z-10 inline-flex h-9 items-center rounded-full px-4 text-sm font-medium text-foreground hover:bg-background/70">全部</a>
+        {{range .Categories}}
+        <a href="{{$.PublicSiteURL}}/categories/{{.}}/" class="relative z-10 inline-flex h-9 items-center rounded-full px-4 text-sm font-medium text-foreground hover:bg-background/70">{{index $.CategoryLabels .}}</a>
+        {{end}}
+      </nav>
+    </div>
+
+    <!-- Server-rendered product cards (visible without JS) -->
+    <div class="mt-10 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      {{range .Products}}
+      <article class="group relative flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card transition-colors hover:border-border hover:shadow-lg">
+        <div class="relative aspect-[4/5] overflow-hidden bg-muted/40">
+          {{if .Image}}<img src="{{.Image}}" alt="{{.Name}}" loading="lazy" class="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]">{{end}}
+          {{if and (gt .Stock 0) (le .Stock 5)}}
+          <span class="absolute right-3 top-12 inline-flex h-6 items-center rounded-full bg-red-500 px-2 text-[10px] font-medium text-white backdrop-blur">剩 {{.Stock}} 件</span>
+          {{end}}
+        </div>
+        <div class="flex flex-1 flex-col p-4">
+          <h3 class="text-sm font-medium leading-snug">{{.Name}}</h3>
+          <p class="mt-1.5 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{{.Description}}</p>
+          <div class="mt-3 flex items-end justify-between">
+            <div class="flex items-baseline gap-2">
+              <span class="text-base font-semibold tracking-tight text-cta">NT$ {{.Price}}</span>
+              {{if gt .OriginalPrice 0}}
+                {{if gt .OriginalPrice .Price}}
+                <span class="text-xs text-muted-foreground line-through">NT$ {{.OriginalPrice}}</span>
+                {{end}}
+              {{end}}
+            </div>
+            <span class="text-[11px] text-muted-foreground">{{if gt .Stock 0}}尚有 {{.Stock}} 件{{else}}已售完{{end}}</span>
+          </div>
+          <a href="{{$.PublicSiteURL}}/products/{{.Slug}}/" class="mt-3 inline-flex h-9 items-center justify-center rounded-full bg-cta px-5 text-sm font-medium text-cta-foreground transition-colors hover:brightness-95">查看商品</a>
+        </div>
+      </article>
+      {{end}}
+    </div>
+
+    {{if eq (len .Products) 0}}
+    <div class="mt-16 flex flex-col items-center justify-center rounded-2xl border border-dashed border-border/60 py-20 text-center">
+      <p class="text-sm font-medium">目前沒有已發布商品</p>
+    </div>
+    {{end}}
+  </section>
+
+  <!-- Island: ProductGrid (progressively enhances #shop-static with
+       filtering, search, pagination. Hides #shop-static only on
+       successful load; during loading/error the static baseline remains
+       visible for no-JS users and graceful degradation.) -->
+  <div data-vue-island="ProductGrid"></div>
+
+  <!-- Island: Footer -->
+  <div data-vue-island="Footer"></div>
+
+  <!-- Islands: Dialogs (always present on page, but invisible until opened) -->
+  <div data-vue-island="CartDrawer"></div>
+  <div data-vue-island="AccountDialog"></div>
+  <div data-vue-island="TrackOrderDialog"></div>
+  <div data-vue-island="CheckoutDialog"></div>
+  <div data-vue-island="FooterPageDialog"></div>
+  <div data-vue-island="ProductDetailDialog"></div>
+  <div data-vue-island="WelcomePopup"></div>
+  <div data-vue-island="Toaster"></div>
+
+  <!-- Islands bootstrap: scans for data-vue-island and mounts -->
+  <script type="module" src="/assets/islands/islands.js"></script>
+</body>
+</html>

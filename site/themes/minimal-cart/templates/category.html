@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.CategoryLabel}} — {{.SiteName}}</title>
+  <meta name="description" content="{{.CategoryLabel}}商品列表">
+  <link rel="canonical" href="{{.PublicSiteURL}}/categories/{{.Category}}/">
+  <link rel="stylesheet" href="/assets/islands/islands-{{.IslandsCSSHash}}.css">
+</head>
+<body class="min-h-screen bg-background text-foreground antialiased">
+  <div data-vue-island="AnnouncementBar"></div>
+  <div data-vue-island="Header">
+    <a href="{{.PublicSiteURL}}/">質物選物</a>
+  </div>
+
+  <main class="mx-auto max-w-7xl px-4 py-8">
+    <nav class="mb-6 text-sm text-muted-foreground" aria-label="breadcrumb">
+      <a href="{{.PublicSiteURL}}/" class="hover:text-foreground">首頁</a>
+      <span class="mx-1">/</span>
+      <span class="text-foreground">{{.CategoryLabel}}</span>
+    </nav>
+
+    <!-- Static category listing — server-rendered product cards for SEO
+         and no-JS fallback. ProductGrid hides #shop-static only after a
+         successful API load, matching home. data-category is a validated
+         slug token (not JSON) consumed by islands bootstrap. -->
+    <section id="shop-static">
+      <h1 class="mb-6 text-2xl font-semibold lg:text-3xl">{{.CategoryLabel}}</h1>
+
+      {{if .Products}}
+      <ul class="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4" role="list">
+        {{range .Products}}
+        <li class="group">
+          <a href="{{$.PublicSiteURL}}/products/{{.Slug}}" class="block">
+            <div class="aspect-square overflow-hidden rounded-lg bg-muted">
+              {{if .Image}}<img src="{{.Image}}" alt="{{.Name}}" class="h-full w-full object-cover transition group-hover:scale-105" loading="lazy">{{end}}
+            </div>
+            <h2 class="mt-2 text-sm font-medium">{{.Name}}</h2>
+            <p class="text-sm text-muted-foreground">NT$ {{.Price}}</p>
+          </a>
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p class="text-muted-foreground">此分類目前沒有商品。</p>
+      {{end}}
+    </section>
+
+    <div data-vue-island="ProductGrid" data-category="{{.Category}}"></div>
+  </main>
+
+  <div data-vue-island="Footer"></div>
+
+  <div data-vue-island="CartDrawer"></div>
+  <div data-vue-island="AccountDialog"></div>
+  <div data-vue-island="TrackOrderDialog"></div>
+  <div data-vue-island="CheckoutDialog"></div>
+  <div data-vue-island="FooterPageDialog"></div>
+  <div data-vue-island="ProductDetailDialog"></div>
+  <div data-vue-island="WelcomePopup"></div>
+  <div data-vue-island="Toaster"></div>
+
+  <script type="module" src="/assets/islands/islands.js"></script>
+</body>
+</html>

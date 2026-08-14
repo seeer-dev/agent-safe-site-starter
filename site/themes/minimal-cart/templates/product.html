@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{{.Product.Name}} — {{.SiteName}}</title>
+  <meta name="description" content="{{.Product.Description}}">
+  <link rel="canonical" href="{{.PublicSiteURL}}/products/{{.Product.Slug}}">
+  <link rel="stylesheet" href="/assets/islands/islands-{{.IslandsCSSHash}}.css">
+</head>
+<body class="min-h-screen bg-background text-foreground antialiased">
+  <!-- Island: AnnouncementBar -->
+  <div data-vue-island="AnnouncementBar"></div>
+
+  <!-- Island: Header -->
+  <div data-vue-island="Header"></div>
+
+  <!-- Static product content — server-rendered for SEO and no-JS fallback.
+       The ProductDetailPage island enhances this with interactive cart/add-to-cart. -->
+  <main class="mx-auto max-w-7xl px-4 py-8">
+    <nav class="mb-6 text-sm text-muted-foreground" aria-label="breadcrumb">
+      <a href="{{.PublicSiteURL}}/" class="hover:text-foreground">首頁</a>
+      <span class="mx-1">/</span>
+      <a href="{{.PublicSiteURL}}/categories/{{.Product.Category}}/" class="hover:text-foreground">{{.Product.Category}}</a>
+      <span class="mx-1">/</span>
+      <span class="text-foreground">{{.Product.Name}}</span>
+    </nav>
+
+    <div class="grid gap-8 lg:grid-cols-2">
+      <div class="aspect-square overflow-hidden rounded-lg bg-muted">
+        {{if .Product.Image}}<img src="{{.Product.Image}}" alt="{{.Product.Name}}" class="h-full w-full object-cover" loading="eager">{{end}}
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <h1 class="text-2xl font-semibold lg:text-3xl">{{.Product.Name}}</h1>
+
+        <div class="flex items-baseline gap-3">
+          <span class="text-2xl font-semibold text-cta">NT$ {{.Product.Price}}</span>
+          {{if gt .Product.OriginalPrice 0}}
+            {{if gt .Product.OriginalPrice .Product.Price}}
+              <span class="text-sm text-muted-foreground line-through">NT$ {{.Product.OriginalPrice}}</span>
+            {{end}}
+          {{end}}
+        </div>
+
+        <p class="text-muted-foreground">{{.Product.Description}}</p>
+
+        <dl class="grid grid-cols-2 gap-2 text-sm">
+          {{if .Product.Material}}<dt class="text-muted-foreground">材質</dt><dd>{{.Product.Material}}</dd>{{end}}
+          {{if .Product.Origin}}<dt class="text-muted-foreground">產地</dt><dd>{{.Product.Origin}}</dd>{{end}}
+          <dt class="text-muted-foreground">庫存</dt>
+          <dd>{{if gt .Product.Stock 0}}尚有 {{.Product.Stock}} 件{{else}}已售完{{end}}</dd>
+        </dl>
+
+        {{if .Product.LongDescription}}
+        <div class="prose prose-sm max-w-none text-muted-foreground">
+          <p>{{.Product.LongDescription}}</p>
+        </div>
+        {{end}}
+
+        <!-- Island: ProductDetailPage enhances this page with add-to-cart
+             and interactive gallery. JS is progressive enhancement only. -->
+        <div data-vue-island="ProductDetailPage" data-product-slug="{{.Product.Slug}}"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Island: Footer -->
+  <div data-vue-island="Footer"></div>
+
+  <!-- Islands: Dialogs -->
+  <div data-vue-island="CartDrawer"></div>
+  <div data-vue-island="AccountDialog"></div>
+  <div data-vue-island="TrackOrderDialog"></div>
+  <div data-vue-island="CheckoutDialog"></div>
+  <div data-vue-island="FooterPageDialog"></div>
+  <div data-vue-island="ProductDetailDialog"></div>
+  <div data-vue-island="WelcomePopup"></div>
+  <div data-vue-island="Toaster"></div>
+
+  <script type="module" src="/assets/islands/islands.js"></script>
+</body>
+</html>

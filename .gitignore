@@ -4,5 +4,11 @@ dist/
 .ai/scope.json
 *.log
 .DS_Store
+node_modules/
+*.exe
+*.tsbuildinfo
 
 .codegraph/
+
+# Obsolete design mockup — not built or served. Vite uses admin/index.html.
+admin/dashboard.html

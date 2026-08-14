@@ -4,10 +4,11 @@ Before editing across modules or shared infrastructure:
 
 1. Inspect `architecture.yaml`.
 2. Use CodeGraph `explore`/`impact` and `affected` when available.
-3. Create `.ai/scope.json` listing expected paths.
-4. Make the change.
-5. Run `go run ./server/tools/scopecheck` before broadening scope.
-6. If a new path is genuinely required, update the scope with a reason in the task plan rather than silently editing outside it.
-7. Run the full verifier.
+3. Create or select a controlled change under `specs/changes/` before editing protected paths.
+4. Create `.ai/scope.json` listing expected paths.
+5. Run `go run ./server/tools/speccheck`, then make the change.
+6. Run `go run ./server/tools/scopecheck` before broadening scope.
+7. If a new path is genuinely required, update both controlled `applies_to` and task scope with a reason rather than silently editing outside them.
+8. Run the full verifier.
 
-CodeGraph is context discovery, not write authorization. The scope gate and CI/tool checks provide enforcement.
+CodeGraph is context discovery, not write authorization. `speccheck`, the scope gate, and CI provide enforcement.

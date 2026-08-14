@@ -35,7 +35,7 @@ func (s Service) GetBySlug(ctx context.Context, slug string) (Article, error) {
 }
 
 func (s Service) Publish(ctx context.Context, principal auth.Principal, in UpsertInput) (Article, error) {
-	if principal.Role != "admin" {
+	if !auth.Can(principal, "content.publish") {
 		return Article{}, ErrForbidden
 	}
 	in.Slug = strings.TrimSpace(in.Slug)

@@ -44,9 +44,8 @@ func (v SupabaseVerifier) Verify(ctx context.Context, token string) (Principal, 
 	}
 
 	var user struct {
-		ID          string         `json:"id"`
-		Email       string         `json:"email"`
-		AppMetadata map[string]any `json:"app_metadata"`
+		ID    string `json:"id"`
+		Email string `json:"email"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
 		return Principal{}, fmt.Errorf("decode supabase user: %w", err)
@@ -54,9 +53,12 @@ func (v SupabaseVerifier) Verify(ctx context.Context, token string) (Principal, 
 	if user.ID == "" {
 		return Principal{}, ErrUnauthorized
 	}
-	role, _ := user.AppMetadata["role"].(string)
-	if role == "" {
-		role = "user"
-	}
-	return Principal{UserID: user.ID, Email: user.Email, Role: role}, nil
+	// SupabaseVerifier only validates the session. Capabilities are derived
+	// server-side from the canonical staff row by the Resolver. A valid
+	// Supabase user without an active staff row gets no capabilities.
+	return Principal{
+		UserID: user.ID,
+		Email:  user.Email,
+		Role:   "user",
+	}, nil
 }

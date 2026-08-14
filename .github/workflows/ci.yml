@@ -2,7 +2,7 @@ name: ci
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   pull_request:
 
 permissions:
@@ -13,6 +13,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-go@v5
         with:
           go-version: '1.26.5'
@@ -21,5 +23,10 @@ jobs:
       - name: gofmt
         run: test -z "$(gofmt -l server)"
       - run: go run ./server/tools/archcheck
+      - name: controlled spec gate
+        env:
+          SPEC_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          SPEC_REQUIRE_ACCEPTED: '1'
+        run: go run ./server/tools/speccheck
       - run: go test ./...
       - run: go vet ./...
