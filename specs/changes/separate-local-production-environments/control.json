@@ -1,0 +1,121 @@
+{
+  "change_id": "separate-local-production-environments",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner issued a plain apply instruction on 2026-08-14 authorizing implementation of revision 1.",
+  "repository_baseline": "3c3a475c1bdbd27dc13f4c19e91b4b37dc4638f0",
+  "supersedes": [],
+  "applies_to": [
+    ".env.example",
+    ".env.development.example",
+    ".env.production.example",
+    ".gitignore",
+    "README.md",
+    "docs/environment-configuration.md",
+    "server/internal/config/config.go",
+    "server/internal/config/config_test.go",
+    "admin/vite.config.ts",
+    "site/themes/minimal-cart/vite.config.ts",
+    "specs/changes/separate-local-production-environments/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-006": [
+      "security-review"
+    ],
+    "AC-007": [
+      "consumer-reachability"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "config.Load reads APP_ENV from the process environment via isProductionEnv() before opening any dotenv file, then loads .env.development.local and .env only outside production. Verified by go test ./server/internal/config -count=5.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "Both admin/vite.config.ts and site/themes/minimal-cart/vite.config.ts select process.env for production mode and loadEnv for development, and build their define map from a literal BROWSER_SAFE_KEYS allowlist.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Placeholder-only .env.development.example and .env.production.example added; .gitignore covers all six real dotenv profiles with negations for the three examples; docs/environment-configuration.md documents provider ownership and the browser allowlist.",
+      "status": "passed"
+    },
+    "REQ-004": {
+      "observed_revision": 1,
+      "proof": "No API route, authentication semantic, schema, rendering behavior, or deployment contract changed. gofmt, go vet, and go test ./... are clean; admin runs 194 passing tests; theme build:check passes; check:resource-contracts PASSED.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "TestLoadDevelopmentPrecedence shows the process value winning over both files, .env.development.local beating legacy .env, and a name present only in .env still resolving. TestLoadDevelopmentLegacyOnly and TestLoadDevelopmentWithoutDotEnvFiles cover the legacy-only and no-file cases.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "TestLoadProductionIgnoresRepositoryDotEnvFiles, TestLoadProductionFailsClosedWithoutProcessConfig, and TestDotEnvCannotDeclareProduction show production ignoring both dotenv files, failing closed on missing process configuration, and a dotenv APP_ENV=production being unable to move the boundary.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "A development-mode admin build emitted the .env.development.local sentinels, and with ADMIN_API_BASE unset everywhere the bundle carries an empty ADMIN_API_BASE that resolveApiBase maps to the /api default. Detail recorded in receipts/consumer-reachability.md.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "Fresh production builds of both consumers, with conflicting dotenv sentinels present on disk, emitted only the approved process values; all eight sentinels were absent from both outputs. Table recorded in receipts/security-review.md.",
+      "status": "passed"
+    },
+    "AC-005": {
+      "observed_revision": 1,
+      "proof": "git check-ignore confirms all six real dotenv profiles are ignored and all three example files remain trackable; a credential-pattern scan over the examples returned no matches.",
+      "status": "passed"
+    },
+    "AC-006": {
+      "observed_revision": 1,
+      "proof": "Four server-secret sentinels present in the build process environment produced zero occurrences in admin/dist/ and site/themes/minimal-cart/dist/, and only the named allowlist crosses the boundary with ADMIN_API_BASE remaining admin-only; recorded in receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "AC-007": {
+      "observed_revision": 1,
+      "proof": "Five consumers were exercised through real entry points: Go development config, Go production config, admin Vite in both modes, public-theme Vite production, and the Git ignore and template inventory; recorded in receipts/consumer-reachability.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/consumer-reachability.md"
+        }
+      ]
+    },
+    "AC-008": {
+      "observed_revision": 1,
+      "proof": "No migration of the developer .env was performed because the precedence chain keeps it working. Two temporary files were confirmed absent beforehand and deleted afterwards, and the existing .env was never opened, read, printed, or written; recorded in receipts/consumer-reachability.md.",
+      "status": "passed"
+    }
+  }
+}

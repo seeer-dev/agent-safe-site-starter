@@ -33,7 +33,7 @@ The agent then manages the controlled spec, implementation order, targeted tests
 Requires Go 1.24+ (Go 1.26 recommended).
 
 ```bash
-cp .env.example .env
+cp .env.development.example .env.development.local
 go mod download
 go run ./server/tools/dev
 ```
@@ -50,6 +50,8 @@ Local defaults:
 
 The dev command applies migrations, adds one sample article on an empty database, renders the site, starts the Go API on `:8080`, and serves `dist/` on `:4173`.
 
+An existing root `.env` still works and is still read — you do not have to migrate. Local precedence is process environment, then `.env.development.local`, then `.env`.
+
 ## Production shape
 
 - **Site:** Cloudflare Pages
@@ -60,6 +62,8 @@ The dev command applies migrations, adds one sample article on an empty database
 - **Email:** Resend
 
 Set `DB_DRIVER=postgres`, `AUTH_MODE=supabase`, the provider environment variables, and production URLs. Railway uses `Dockerfile` + `railway.toml` and runs migrations as a pre-deploy command.
+
+Production configuration lives in the provider, not in this repository. With `APP_ENV=production` the Go loader and both Vite builds read the process environment only and ignore every repository dotenv file, so there is no `.env.production` to create or deploy. `.env.production.example` is an inventory checklist; `docs/environment-configuration.md` has the full ownership table and the browser-safe allowlist.
 
 For Pages, use either:
 

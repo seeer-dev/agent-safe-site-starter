@@ -1,4 +1,15 @@
+# Real dotenv profiles are never tracked. The tracked *.example files are the
+# only configuration inventory in this repository.
 .env
+.env.local
+.env.development
+.env.development.local
+.env.production
+.env.production.local
+!.env.example
+!.env.development.example
+!.env.production.example
+
 var/
 dist/
 .ai/scope.json

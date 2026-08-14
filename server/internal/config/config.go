@@ -43,8 +43,28 @@ type Config struct {
 	SiteTheme string
 }
 
+// developmentDotEnvFiles lists the local dotenv profiles loaded in
+// non-production runs, in precedence order. The first file that supplies a
+// name wins, and loadDotEnv never overwrites a value already present in the
+// process environment. `.env` is the legacy location and stays supported so
+// an existing local setup keeps working.
+var developmentDotEnvFiles = []string{".env.development.local", ".env"}
+
+// Load reads configuration from the process environment, and — only outside
+// production — from the local dotenv profiles.
+//
+// APP_ENV is read from the process environment BEFORE any dotenv file is
+// opened. This is the deployment boundary: a repository dotenv file must
+// never be able to put a process into production mode, and must never
+// supply a value that a production deployment failed to provide. Railway and
+// Cloudflare Pages set APP_ENV=production in their own process environment,
+// so neither reads a repository dotenv file.
 func Load() Config {
-	_ = loadDotEnv(".env")
+	if !isProductionEnv() {
+		for _, path := range developmentDotEnvFiles {
+			_ = loadDotEnv(path)
+		}
+	}
 	return Config{
 		AppEnv:        env("APP_ENV", "development"),
 		HTTPAddr:      env("HTTP_ADDR", ":8080"),
@@ -106,6 +126,12 @@ func (c Config) Validate() error {
 
 func (c Config) R2Enabled() bool {
 	return c.R2AccountID != "" && c.R2AccessKeyID != "" && c.R2SecretAccessKey != "" && c.R2Bucket != ""
+}
+
+// isProductionEnv reports whether the process environment — not any dotenv
+// file — declares production. Only the process boundary can make this true.
+func isProductionEnv() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production")
 }
 
 func env(name, fallback string) string {

@@ -15,9 +15,36 @@ import { fileURLToPath, URL } from 'node:url'
 //   islands-[hash].css    — Tailwind output (imported by bootstrap)
 //   chunks/[name]-[hash].js — per-island chunks (lazy-loaded)
 
+// Values allowed to cross the browser build boundary. Anything not named
+// here is never injected. SUPABASE_PUBLISHABLE_KEY is a public client
+// identifier, not a server secret. The public theme has no admin API base:
+// server-only values (DATABASE_URL, DEV_AUTH_TOKEN, R2_SECRET_ACCESS_KEY,
+// RESEND_API_KEY, provider service-role keys, OAuth client secrets) must
+// never appear in this list.
+const BROWSER_SAFE_KEYS = [
+  'AUTH_MODE',
+  'SUPABASE_URL',
+  'SUPABASE_PUBLISHABLE_KEY',
+  'AUTH_GOOGLE_ENABLED',
+  'AUTH_LINE_ENABLED',
+] as const
+
 export default defineConfig(({ mode }) => {
   const repoRoot = fileURLToPath(new URL('../../..', import.meta.url))
-  const env = loadEnv(mode, repoRoot, '')
+  const isProduction = mode === 'production'
+
+  // Production builds run in the Cloudflare Pages build environment, which
+  // also holds server-only values for the Go renderer. Repository dotenv
+  // files are deliberately not read here, and only BROWSER_SAFE_KEYS are
+  // injected, so a build-time secret cannot reach the public bundle.
+  const env = isProduction ? process.env : loadEnv(mode, repoRoot, '')
+
+  const define = Object.fromEntries(
+    BROWSER_SAFE_KEYS.map((key) => [
+      `import.meta.env.${key}`,
+      JSON.stringify(env[key] ?? ''),
+    ]),
+  )
 
   return {
     plugins: [vue()],
@@ -26,13 +53,7 @@ export default defineConfig(({ mode }) => {
         '@': fileURLToPath(new URL('.', import.meta.url)),
       },
     },
-    define: {
-      'import.meta.env.AUTH_MODE': JSON.stringify(env.AUTH_MODE ?? ''),
-      'import.meta.env.SUPABASE_URL': JSON.stringify(env.SUPABASE_URL ?? ''),
-      'import.meta.env.SUPABASE_PUBLISHABLE_KEY': JSON.stringify(env.SUPABASE_PUBLISHABLE_KEY ?? ''),
-      'import.meta.env.AUTH_GOOGLE_ENABLED': JSON.stringify(env.AUTH_GOOGLE_ENABLED ?? ''),
-      'import.meta.env.AUTH_LINE_ENABLED': JSON.stringify(env.AUTH_LINE_ENABLED ?? ''),
-    },
+    define,
     build: {
       outDir: 'dist',
       emptyOutDir: true,
