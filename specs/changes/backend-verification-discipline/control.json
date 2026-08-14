@@ -1,0 +1,57 @@
+{
+  "change_id": "backend-verification-discipline",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved implementation on 2026-08-14 after reviewing the proposed global, agent-specific, and server-local rule split.",
+  "repository_baseline": "e30f583c00c9ceecbbdf856016c2a01fab9c3cd2",
+  "supersedes": [],
+  "applies_to": [
+    "server/AGENTS.md",
+    "specs/changes/backend-verification-discipline/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "server/AGENTS.md requires before/after test inventory, prohibits unauthorized removal or weakening, and requires a bounded red-before-green failure trigger for every new regression, security, integration, branch, or governance check.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "server/AGENTS.md distinguishes sequential interleaving from simultaneous execution, requires exact named-test pass events, defines observable PostgreSQL lock semantics, and rejects substring-only wiring proof.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "The Preserve tests and gates section requires inventory comparison and explicit approved justification for every removed, skipped, quarantined, renamed, or weakened check.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "The Require falsifiable evidence section requires the targeted assertion to fail under a bounded temporary trigger, restoration of the trigger, and confirmation that no temporary mutation remains.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "The Prove required test execution section requires exact go test -json pass events for every expected test and treats missing dependencies, missing tests, and skipped tests as failed evidence in required environments.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "The concurrency and wiring sections require deterministic overlap, separate controlled operations or transactions, bounded deadlines, final invariants, observable FOR UPDATE or SKIP LOCKED effects, and exact command or structured-configuration comparison.",
+      "status": "passed"
+    }
+  }
+}
