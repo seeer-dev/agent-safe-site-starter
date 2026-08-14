@@ -610,6 +610,7 @@ func requiresControlledSpec(path string) bool {
 		".github/workflows/",
 		"admin/",
 		"contracts/",
+		"db/",
 		"frontend-sample/",
 		"server/",
 		"site/",

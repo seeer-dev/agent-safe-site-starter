@@ -366,3 +366,50 @@ func assertFileContains(t *testing.T, path, substring string) {
 		t.Fatalf("%s does not contain %q", path, substring)
 	}
 }
+
+func TestRequiresControlledSpec(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		path string
+		want bool
+	}{
+		// Protected db/ paths
+		{"db/migrations/sqlite/001_init.sql", true},
+		{"db/migrations/postgres/001_init.sql", true},
+		{"db/schema.sql", true},
+
+		// Other protected directories
+		{".github/workflows/ci.yml", true},
+		{"admin/src/App.vue", true},
+		{"contracts/api.json", true},
+		{"frontend-sample/index.html", true},
+		{"server/internal/config/config.go", true},
+		{"site/themes/minimal-cart/index.html", true},
+		{"skills/site/SKILL.md", true},
+
+		// Protected individual files
+		{".gitignore", true},
+		{"AGENTS.md", true},
+		{"architecture.yaml", true},
+		{"go.mod", true},
+		{"go.sum", true},
+		{"index.html", true},
+
+		// Exempt paths
+		{"specs/changes/postgres-execution-gate/control.json", false},
+		{".ai/scope.json", false},
+		{"docs/readme.md", false},
+		{"README.md", false},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.path, func(t *testing.T) {
+			t.Parallel()
+			if got := requiresControlledSpec(tc.path); got != tc.want {
+				t.Fatalf("requiresControlledSpec(%q) = %v, want %v", tc.path, got, tc.want)
+			}
+		})
+	}
+}
