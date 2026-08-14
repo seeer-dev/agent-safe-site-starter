@@ -1,6 +1,5 @@
 import { getAccessToken } from '@/lib/auth/token'
-
-const API_BASE = '/api'
+import { getApiBase } from './api-config'
 
 export interface ApiResponse<T> {
   data: T
@@ -27,7 +26,9 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  const res = await fetch(`${API_BASE}${path}`, {
+  const base = getApiBase()
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`
+  const res = await fetch(`${base}${normalizedPath}`, {
     ...options,
     headers,
   })

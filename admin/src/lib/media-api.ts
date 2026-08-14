@@ -9,8 +9,7 @@ import type {
   VerifyResponse,
 } from './media-types'
 import { getAccessToken } from '@/lib/auth/token'
-
-const API_BASE = '/api'
+import { getApiBase } from './api-config'
 
 function getAuthToken(): string {
   return getAccessToken()
@@ -25,7 +24,8 @@ export async function presignUpload(req: PresignRequest, signal?: AbortSignal): 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  const res = await fetch(`${API_BASE}/media/presign`, {
+  const base = getApiBase()
+  const res = await fetch(`${base}/media/presign`, {
     method: 'POST',
     headers,
     body: JSON.stringify(req),
@@ -82,7 +82,8 @@ export async function verifyUpload(
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
-  const res = await fetch(`${API_BASE}/media/verify`, {
+  const base = getApiBase()
+  const res = await fetch(`${base}/media/verify`, {
     method: 'POST',
     headers,
     body: JSON.stringify(req),

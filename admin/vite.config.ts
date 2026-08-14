@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.SUPABASE_PUBLISHABLE_KEY': JSON.stringify(env.SUPABASE_PUBLISHABLE_KEY ?? ''),
       'import.meta.env.AUTH_GOOGLE_ENABLED': JSON.stringify(env.AUTH_GOOGLE_ENABLED ?? ''),
       'import.meta.env.AUTH_LINE_ENABLED': JSON.stringify(env.AUTH_LINE_ENABLED ?? ''),
+      'import.meta.env.ADMIN_API_BASE': JSON.stringify(env.ADMIN_API_BASE ?? ''),
     },
     server: {
       port: 5174,
