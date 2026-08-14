@@ -102,6 +102,98 @@ concurrency tests).
 
 ---
 
+## 2026-08-14 — Implementation: agy on `postgres-execution-gate`
+
+Second data point on agy, from real controlled-change implementation rather
+than a probe. Committed as `4b8919b` after review remediation.
+
+### What it got right
+
+Substantial, correct work. The seven PostgreSQL-only branches now have five
+dedicated `TestPostgresLive*` integration tests; the CI workflow starts a
+`postgres:16-alpine` service with health checks and applies the real migration
+set; `server/tools/migration-parity` is a clean standalone tool (verified
+adversarially — removing `db/migrations/postgres/016_shipping_methods.sql` made
+it fail by name, exit 1); `db/` was added to `speccheck`'s protected prefixes;
+`verify` gained the `-count=10` concurrency step; and the quarantined
+cancellation test carries a `t.Skip` naming the unresolved product decision
+without touching `service.go` semantics.
+
+It followed the propose→apply lifecycle correctly, respected the instruction
+not to "fix" the quarantine, correctly left AC-002 at `pending` for the
+reviewer's independent receipt, and did not commit.
+
+### Defect: deleted seventeen governance tests
+
+`server/tools/speccheck/main_test.go` went from **368 lines to 52**. Seventeen
+test functions were removed and replaced by one table test, including
+`TestValidateControlRejectsAcceptedWithoutPassedEvidence`,
+`TestValidateControlStrictEvidenceRequiresCurrentRevision`,
+`TestValidateControlRejectsUnsafeReceiptPath`,
+`TestAcceptedAndSupersededControlsAreImmutable`, and
+`TestGovernanceWiringKeepsSpeccheckInVerifyAndCI`. A repository-wide search
+confirmed deletion, not relocation.
+
+**The deletion was unnecessary.** Restoring the original file unmodified and
+running it against agy's new `main.go`: all seventeen pass. Adding `db/` to
+`requiresControlledSpec` broke none of them.
+
+**No gate caught it.** Removing tests cannot fail `go test ./...`; `speccheck`
+passed because the file was inside the authorized `applies_to`; `verify`
+reported ok. agy's report of `verify: passed` was accurate and still concealed
+a large loss of governance coverage — in the change meant to strengthen
+governance.
+
+Remediated by the reviewer: original restored, agy's new table test (which is
+genuinely good — it covers `db/` and every other prefix) merged in as an
+addition. 415 lines, 38 tests passing.
+
+### Second finding: silent-skip hole
+
+The live-PostgreSQL tests skipped when `TEST_DATABASE_URL` was unset. In CI a
+typo or a failed service would have skipped all five while the step still
+exited 0 — reproducing "green CI proving nothing" one level up, which is the
+exact problem the change exists to solve. Remediated with a `CI` guard that
+fails instead of skipping; both directions observed.
+
+This one is a design gap rather than a mistake: nothing in the spec required
+the check to be able to fail.
+
+### How this differs from grok's failure
+
+grok fabricated. agy did not — every command it reported was really run and
+every output it quoted was real. This was a **judgement failure inside honest
+work**: it decided a broader table test superseded the existing suite, and
+nothing in the tooling contradicted it.
+
+That distinction matters for assignment. Fabrication makes a report worthless.
+A judgement failure inside honest reporting is caught by ordinary diff review,
+which is what the repository's own process already requires (`README.md:144`).
+
+### Consequences
+
+**agy remains suitable for controlled-change implementation**, with one
+standing condition: **always diff-review test files before commit**. `git diff
+--stat` on `*_test.go` is enough — a large negative line count is the signal.
+
+Mitigation applied the same day: a user-level plugin at
+`~/.agents/plugins/engineering-discipline/rules/AGENTS.md` (antigravity has no
+single global rules file; it discovers `AGENTS.md` by walking cwd→repo root,
+and plugin `rules/` directories merge into the active set). It prohibits
+deleting tests to make work fit, requires running an existing test against your
+change before removing it, and requires new checks to be proven capable of
+failing. Not yet re-probed.
+
+### Open follow-up
+
+AC-002 is not fully closed. The PostgreSQL path has still never executed
+against a real server — no local instance was available, so the integration
+tests skip here by design. **The first CI run of `4b8919b` is the real
+verification.** Confirm it is green *and* that the `-v` output shows RUN/PASS
+rather than SKIP for all five `TestPostgresLive` functions.
+
+---
+
 ## Standing probe
 
 Re-usable for evaluating any new agent on this repository. Keep the questions
