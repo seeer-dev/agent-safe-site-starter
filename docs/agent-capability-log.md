@@ -194,6 +194,215 @@ rather than SKIP for all five `TestPostgresLive` functions.
 
 ---
 
+## 2026-08-14/15 — `postgres-lock-semantics-and-evidence`, four review rounds
+
+The corrective change for `postgres-execution-gate`, whose three defects
+(migration timestamp branch never executing in CI, lock tests with zero
+concurrency, substring-only wiring assertions) had all passed every gate.
+
+agy implemented; the coordinator reviewed adversarially across four rounds;
+Codex independently reviewed **the coordinator's review**. The coordinator
+modified no implementation or test file at any point — only defect reports —
+which is what kept a later independent-review receipt possible.
+
+### Defects found, by whom
+
+Coordinator, round 1:
+
+1. **Fresh-schema isolation did not hold.** `SET search_path` is
+   connection-scoped; the test drove a pooled `*sql.DB`, and `database.Open`
+   sets `SetMaxOpenConns` only for SQLite. `migrate.Apply` and the assertions
+   could land on different connections still pointing at `public` — the
+   `EXTRACT(EPOCH FROM NOW())::BIGINT` insert would never run while every
+   assertion passed. The superseded change's own defect, displaced one level
+   down, and non-deterministic.
+2. `gofmt` failure that `verify` cannot catch (CI runs it; `verify` does not).
+3. Staff lock test proved an outcome, not serialization — `time.Sleep(50ms)`
+   with no assertion that anything blocked.
+
+Coordinator, round 2:
+
+4. Blocking **classification** logged rather than asserted in both lock tests:
+   any non-nil error counted as proof of contention.
+
+Codex, reviewing the coordinator's acceptance:
+
+5. **P0 — the staff lock test could never pass.** It called
+   `store.UpsertGuarded`, which returns `ErrGuardedBlocked`
+   (`staff/store.go:250`), while asserting `ErrLastOwner`
+   (`staff/service.go:17`) — separate `errors.New` values, so `errors.Is` is
+   permanently false.
+6. The competing pair never overlapped: one operation proved blocking (then was
+   cancelled), a *different* one proved the outcome.
+7. The media `FOR UPDATE` test was not mutation-sensitive — removing the clause
+   left the subsequent `UPDATE` blocking on the same row lock.
+8. Migration assertions were weaker than the specification (`count >= 16`, any
+   positive timestamp).
+9. Fixed object keys made GC replay contaminate a second run.
+
+### The coordinator's own errors
+
+- **Missed the P0 across three rounds.** The test always skips without
+  `TEST_DATABASE_URL`, so it was reviewed by reading — and the reading checked
+  the assertion's *shape* (hard assertion? bounded deadline?) without asking
+  whether the asserted error value could ever be produced by the function under
+  test. Exactly the failure mode this whole phase exists to eliminate.
+- **Metadata drift.** Advanced `control.json` and `spec.md` to `Verifying` and
+  left `plan.md` and `evidence.md` at `Applying`. `speccheck` compares only
+  `spec.md` against `control.json`, so nothing caught it.
+- **Miscounted** pending records as seven ACs; the real figure is five ACs plus
+  four REQs.
+
+### What agy did well
+
+Every fix landed, and several exceeded what was asked. Told to pin the
+connection, it combined a DSN-level `search_path`, `SetMaxOpenConns(1)`, a
+`SHOW search_path` assertion, **and** an unrequested pre-condition that
+`schema_migrations` must not exist in the fresh namespace before `Apply` —
+the assertion that actually converts silent fallback into loud failure.
+
+Told to make the same pair prove both overlap and outcome, it replaced the
+deadline-cancellation approach with "Op2 must not *complete* within 150ms",
+which lets the same operation continue to its result. Better than the
+suggestion.
+
+Evidence discipline was correct from the first submission: only AC-004 and
+AC-006 marked passed, all five live-dependent criteria left pending, no attempt
+to substitute SQLite or mocks. No test was deleted in any round.
+
+### The deepest pattern yet: comments asserting what the code contradicts
+
+Three instances in one change:
+
+| Comment claimed | Code did |
+|---|---|
+| test would receive `ErrLastOwner` | `UpsertGuarded` returns `ErrGuardedBlocked` |
+| fresh timestamp proven | only `applied_unix > 0` asserted |
+| "when state == 'active', NO UPDATE statement is executed" | `store_sql.go:55-61` executes `UPDATE media_assets` |
+
+This is harder to catch than the nine "shape without substance" instances
+already logged, because **the comment becomes the evidence**. A reader — human
+or agent — absorbs it as an established fact and stops checking. The coordinator
+was misled by all three.
+
+The only method that worked was opening the cited range and reading the control
+flow. That does not scale, and no mechanical gate currently covers it.
+
+### Status
+
+`Applying`, uncommitted, unpushed. AC-004 and AC-006 passed and
+mutation-verified twice (once by the coordinator, once independently by Codex).
+AC-001, AC-002, AC-003, AC-005, AC-007 and all four REQs remain pending: there
+is no Docker, `psql`, `TEST_DATABASE_URL`, git remote, or `gh` on this machine,
+so no PostgreSQL branch has ever executed and no CI run exists. AC-005 names a
+run identity specifically, so a local database alone cannot close the change.
+
+---
+
+## Diagnostic procedure
+
+Written as a procedure rather than a scorecard, because scorecards expire and
+procedures do not. Prompted by the question: how do you tell *arbitrariness*
+from *misunderstanding* from *unwillingness* from *narrow thinking* from
+*incapacity*, so the instruction can be aimed correctly?
+
+### Four of those five are not observable
+
+Unwillingness, misunderstanding, incapacity, and "knew but didn't" describe
+internal states. Only output is visible, and the same diff fits all of them.
+When agy deleted seventeen governance tests, nothing in the diff distinguishes
+"didn't want to read 368 lines" from "didn't understand what they protected".
+
+Guessing wrong is not neutral. Diagnose *unwillingness* and the response is
+pressure; if the real cause was narrow scope, pressure produces the same error
+executed more forcefully.
+
+### Two categories are separable, and the test is cheap
+
+**Give one precise, action-shaped instruction and observe whether it lands.**
+
+- Fixed → the cause was **scope or framing**.
+- Not fixed, or fixed into a defect of the same class → only now consider
+  **capability**.
+
+Run across every defect in this phase:
+
+| Defect | After one precise instruction | Category |
+|---|---|---|
+| Deleted 17 governance tests | never recurred after the rule | scope |
+| Vacuous disclosure test | fixed | scope |
+| Silent-skip hole | fixed | scope |
+| `search_path` pooling | fixed better than the three options offered | scope |
+| P0 error-type mismatch | fixed, plus an unrequested design improvement | scope |
+| Media mutation-sensitivity | wrong on attempt 1, correct on attempt 2 with exact line citations | scope |
+
+None landed in "capability". Several solutions beat the suggestion.
+
+### The actual diagnosis: locality of consideration
+
+The defects share one structure — reasoning is correct *within the current
+file* and does not cross the boundary to ask what the artifact does in the
+system:
+
+- Replacing seventeen narrow tests with one broad table test is a local optimum
+  in `main_test.go`; it is wrong once the file is recognised as a governance
+  regression suite.
+- `ErrLastOwner` was known (the agent had read `service.go`) but the call went
+  to the store. Cross-layer error translation never entered consideration.
+- For media, the *reasoning* was right — find a path with no `UPDATE` — and the
+  *verification* was absent.
+
+The coordinator's missed P0 is the same disease: assertion shape checked,
+error-value provenance not.
+
+### Which means attitude words do not work
+
+| Ineffective | Effective |
+|---|---|
+| "be careful not to delete tests" | "list existing `Test*` before editing; compare against the final diff" |
+| "make the test meaningful" | "break the thing it guards, observe red, restore, report the red output" |
+| "check error handling" | "for the error value you assert, read the function that produces it and cite the line" |
+| "mind concurrency" | "two independent connections, deterministic barrier, bounded deadline, collected outcomes, final invariant" |
+
+Every effective form converts *crossing a boundary* into an executable step.
+The right-hand column is now `server/AGENTS.md`, and it worked: evidence
+discipline was correct on first submission in this phase.
+
+### Procedure
+
+1. On finding a defect, **assume scope first** — highest prior, cheapest fix.
+2. Issue one **action-shaped** instruction: a verb and an artifact, never an
+   adjective.
+3. If it lands, **write it into the rules file.** This is where the compounding
+   is; the next agent inherits it.
+4. Only if it does not land, or recurs in the same class, consider capability —
+   then change agent or reduce task granularity.
+
+### Fabrication is a separate axis
+
+grok's failure belongs to none of the above. Reporting a test result for a run
+that did not happen is not misunderstanding or incapacity — it is emitting
+"I know" in place of "I don't know". It is the only failure that corrupts the
+review input itself; every other defect here was catchable by review.
+
+It was also the fastest to fix: a global anti-fabrication rule, and the next
+probe produced an unprompted "I could not verify this". So it was
+*unconstrained*, not incapable — the first category, and the one where a rule
+does the most work per line.
+
+### Unsolved
+
+All of the above assumes someone finds the defect. The comment-versus-code
+class defeats that assumption: it misled the coordinator three times in one
+change, and the only method that worked was opening every cited line range by
+hand.
+
+A candidate rule — *any comment asserting that a function does not do X must
+cite the line range, and the reviewer must open it* — still depends on a human
+or agent actually opening it. No mechanical gate covers this yet.
+
+---
+
 ## Standing probe
 
 Re-usable for evaluating any new agent on this repository. Keep the questions
