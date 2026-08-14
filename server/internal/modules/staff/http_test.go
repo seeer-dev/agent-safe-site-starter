@@ -65,3 +65,29 @@ func TestListStaffHTTPAllowsReadCap(t *testing.T) {
 		t.Fatalf("body = %s, want members array", rec.Body.String())
 	}
 }
+
+type unavailableVerifier struct{}
+
+func (v unavailableVerifier) Verify(_ context.Context, _ string) (auth.Principal, error) {
+	return auth.Principal{}, auth.ErrUnavailable
+}
+
+func TestListStaffHTTPReturns503OnDependencyUnavailable(t *testing.T) {
+	t.Parallel()
+	store := newStaffTestStore(t)
+	h := NewHandler(NewService(store), auth.NewAuthenticator(unavailableVerifier{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/staff", nil)
+	req.Header.Set("Authorization", "Bearer some-token")
+	rec := httptest.NewRecorder()
+	h.List(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", rec.Code, rec.Body.String())
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body["error"] != "service unavailable" {
+		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	}
+}

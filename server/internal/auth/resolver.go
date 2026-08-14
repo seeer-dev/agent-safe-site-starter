@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"errors"
+	"fmt"
 )
 
 // StaffLookup is the minimal store interface the resolver needs to map a
@@ -47,10 +49,13 @@ func (r StaffCapabilityResolver) Resolve(ctx context.Context, p Principal) (Prin
 	// rows must be explicitly linked via supabase_user_id by an owner.
 	row, err := r.lookup.GetBySupabaseUserID(ctx, p.UserID)
 	if err != nil {
-		// No linked staff row: valid Supabase user, no admin capabilities.
-		p.Role = "user"
-		p.Capabilities = nil
-		return p, nil
+		if errors.Is(err, ErrStaffNotFound) {
+			// No linked staff row: valid Supabase user, no admin capabilities.
+			p.Role = "user"
+			p.Capabilities = nil
+			return p, nil
+		}
+		return Principal{}, fmt.Errorf("%w: staff lookup: %w", ErrUnavailable, err)
 	}
 
 	if row.Status != "active" {

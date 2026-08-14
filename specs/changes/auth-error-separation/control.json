@@ -1,0 +1,134 @@
+{
+  "change_id": "auth-error-separation",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner issued plain apply instruction on 2026-08-14 to implement revision 1.",
+  "repository_baseline": "374ffc755f0098ac22059e9987f4bf5ff7c9cd8e",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/auth/**",
+    "server/internal/bootstrap/app.go",
+    "server/internal/bootstrap/staff_lookup.go",
+    "server/internal/bootstrap/staff_lookup_test.go",
+    "server/internal/modules/commerce/http.go",
+    "server/internal/modules/commerce/http_test.go",
+    "server/internal/modules/content/http.go",
+    "server/internal/modules/media/http.go",
+    "server/internal/modules/media/media.go",
+    "server/internal/modules/media/verify_http_test.go",
+    "server/internal/modules/sitecontent/http.go",
+    "server/internal/modules/sitecontent/http_test.go",
+    "server/internal/modules/staff/http.go",
+    "server/internal/modules/staff/http_test.go",
+    "admin/src/stores/auth.test.ts",
+    "specs/changes/auth-error-separation/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-004": [
+      "consumer-reachability",
+      "security-review"
+    ],
+    "AC-006": [
+      "consumer-reachability"
+    ],
+    "AC-007": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "Staff lookup error separation implemented in auth.StaffCapabilityResolver and bootstrap.staffLookupAdapter. Valid unlinked user receives role=user and empty capabilities (TestStaffCapabilityResolverUnlinkedUser, TestStaffCapabilityResolverNoStaffRow). Staff lookup infrastructure errors return ErrUnavailable (TestStaffCapabilityResolverLookupInfrastructureFailure, TestStaffLookupAdapterPreservesInfrastructureError).",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "SupabaseVerifier classifies credential rejection (400/401/403) as ErrUnauthorized and provider failures (429/500/503/network/decode) as ErrUnavailable (TestSupabaseVerifierClassifications). Protected HTTP handlers use shared auth.WriteError mapping (TestCommerceHTTPAuthErrorSeparation, TestSiteContentHTTPUnavailableOnAuthFailure, TestListStaffHTTPReturns503OnDependencyUnavailable, TestVerifyHTTPAuthErrorSeparation).",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Unlinked and disabled permission semantics preserved (TestStaffCapabilityResolverDisabledStaff, TestStaffCapabilityResolverUnlinkedUser). Admin auth store preserves session token and provider session on HTTP 503 while clearing server capabilities and entering retryable failed state (admin/src/stores/auth.test.ts).",
+      "status": "passed"
+    },
+    "REQ-004": {
+      "observed_revision": 1,
+      "proof": "All 41 protected handler entry points calling auth.Principal across 7 production files migrated to auth.WriteError. Non-disclosure verified in public response bodies and server diagnostic logs (TestWriteErrorNoSensitiveDataLeakage, receipts/security-review-rev1.md, receipts/consumer-reachability-rev1.md).",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "Verified Supabase user without staff row receives UserID, role=user, empty StaffID, and 0 capabilities without email fallback. Proved by TestStaffCapabilityResolverUnlinkedUser, TestStaffCapabilityResolverEmailImpersonation, and TestStaffLookupAdapterTranslatesNotFound.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Staff lookup failure for reasons other than ErrNotFound returns no principal and wraps ErrUnavailable while preserving the underlying cause. Proved by TestStaffCapabilityResolverLookupInfrastructureFailure and TestStaffLookupAdapterPreservesInfrastructureError.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "Missing/malformed bearer token or Supabase 400/401/403 returns HTTP 401 with generic error body. Proved by TestWriteErrorUnauthorized, TestSupabaseVerifierClassifications, and handler tests in commerce, content, media, sitecontent, staff.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "Supabase transport/5xx failures and staff lookup infrastructure errors return HTTP 503 via auth.WriteError, emit a redacted rune-bounded diagnostic, and return no protected data. Proved by TestWriteErrorUnavailable, TestWriteErrorNoSensitiveDataLeakage (rewritten to be non-vacuous), TestCommerceHTTPAuthErrorSeparation, TestSiteContentHTTPUnavailableOnAuthFailure, TestListStaffHTTPReturns503OnDependencyUnavailable, and TestVerifyHTTPAuthErrorSeparation. Recorded in receipts/consumer-reachability-rev1.md and receipts/security-review-rev1.md.",
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/consumer-reachability-rev1.md"
+        },
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review-rev1.md"
+        }
+      ],
+      "status": "passed"
+    },
+    "AC-005": {
+      "observed_revision": 1,
+      "proof": "Unlinked user retains role=user with 0 capabilities; disabled staff retains role=disabled with 0 capabilities. Proved by TestStaffCapabilityResolverUnlinkedUser, TestStaffCapabilityResolverDisabledStaff, and TestListStaffHTTPForbiddenWithoutReadCap.",
+      "status": "passed"
+    },
+    "AC-006": {
+      "observed_revision": 1,
+      "proof": "Admin store on /api/admin/me 503 enters failed status, clears server capabilities, retains token and provider session, and does not invoke signOut; 401 invalidates and signs out. Proved by admin/src/stores/auth.test.ts and receipts/consumer-reachability-rev1.md.",
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/consumer-reachability-rev1.md"
+        }
+      ],
+      "status": "passed"
+    },
+    "AC-007": {
+      "observed_revision": 1,
+      "proof": "All protected entry points in bootstrap, commerce, content, media, sitecontent, and staff use the shared auth.WriteError mapping; no Principal error path returns 401 any longer. Reviewer found the original non-disclosure test vacuous (it passed a bare sentinel) and the sanitizeDiagnostic helper performing no redaction, demonstrated the leak, and remediated both: the test now places secrets inside the error chain and asserts both redaction and retained context, and sanitizeDiagnostic redacts URL, JWT, and email shapes with rune-bounded truncation. Recorded in receipts/security-review-rev1.md including the reviewer addendum.",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review-rev1.md"
+        }
+      ],
+      "status": "passed"
+    }
+  }
+}

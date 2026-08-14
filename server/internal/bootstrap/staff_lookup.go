@@ -2,6 +2,8 @@ package bootstrap
 
 import (
 	"context"
+	"errors"
+	"fmt"
 
 	"github.com/example/ai-site-starter/server/internal/auth"
 	"github.com/example/ai-site-starter/server/internal/modules/staff"
@@ -20,7 +22,10 @@ func newStaffLookupAdapter(store staff.Store) staffLookupAdapter {
 func (a staffLookupAdapter) GetBySupabaseUserID(ctx context.Context, supabaseUserID string) (auth.StaffRow, error) {
 	sm, err := a.store.GetBySupabaseUserID(ctx, supabaseUserID)
 	if err != nil {
-		return auth.StaffRow{}, err
+		if errors.Is(err, staff.ErrNotFound) {
+			return auth.StaffRow{}, auth.ErrStaffNotFound
+		}
+		return auth.StaffRow{}, fmt.Errorf("staff lookup: %w", err)
 	}
 	return staffToRow(sm), nil
 }

@@ -29,18 +29,22 @@ func NewSupabaseVerifier(baseURL, publishableKey string) SupabaseVerifier {
 func (v SupabaseVerifier) Verify(ctx context.Context, token string) (Principal, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, v.baseURL+"/auth/v1/user", nil)
 	if err != nil {
-		return Principal{}, err
+		return Principal{}, fmt.Errorf("%w: create request", ErrUnavailable)
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("apikey", v.publishableKey)
 
 	resp, err := v.client.Do(req)
 	if err != nil {
-		return Principal{}, fmt.Errorf("supabase auth: %w", err)
+		return Principal{}, fmt.Errorf("%w: supabase network failure: %v", ErrUnavailable, err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
+
+	if resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusBadRequest || resp.StatusCode == http.StatusForbidden {
 		return Principal{}, ErrUnauthorized
+	}
+	if resp.StatusCode != http.StatusOK {
+		return Principal{}, fmt.Errorf("%w: supabase status %d", ErrUnavailable, resp.StatusCode)
 	}
 
 	var user struct {
@@ -48,10 +52,10 @@ func (v SupabaseVerifier) Verify(ctx context.Context, token string) (Principal, 
 		Email string `json:"email"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return Principal{}, fmt.Errorf("decode supabase user: %w", err)
+		return Principal{}, fmt.Errorf("%w: decode supabase user", ErrUnavailable)
 	}
 	if user.ID == "" {
-		return Principal{}, ErrUnauthorized
+		return Principal{}, fmt.Errorf("%w: empty supabase user id", ErrUnavailable)
 	}
 	// SupabaseVerifier only validates the session. Capabilities are derived
 	// server-side from the canonical staff row by the Resolver. A valid

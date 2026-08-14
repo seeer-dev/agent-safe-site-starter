@@ -502,3 +502,30 @@ func jsonInt(n int64) string {
 func errorsIs(err error, target error) bool {
 	return errors.Is(err, target)
 }
+
+type unavailVerifier struct{}
+
+func (v unavailVerifier) Verify(_ context.Context, _ string) (auth.Principal, error) {
+	return auth.Principal{}, auth.ErrUnavailable
+}
+
+func TestSiteContentHTTPUnavailableOnAuthFailure(t *testing.T) {
+	t.Parallel()
+	svc := NewService(newScTestStore(t))
+	h := NewHandler(svc, auth.NewAuthenticator(unavailVerifier{}))
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/site-content", nil)
+	req.Header.Set("Authorization", "Bearer test-token")
+	rec := httptest.NewRecorder()
+	h.ListAll(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", rec.Code, rec.Body.String())
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body["error"] != "service unavailable" {
+		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	}
+}

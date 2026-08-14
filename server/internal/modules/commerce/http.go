@@ -207,7 +207,7 @@ func (h Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 func (h Handler) CreateOrderForMember(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if principal.UserID == "" {
@@ -284,7 +284,7 @@ func (h Handler) GetOrderForGuest(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListMyOrders(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if principal.UserID == "" {
@@ -306,7 +306,7 @@ func (h Handler) ListMyOrders(w http.ResponseWriter, r *http.Request) {
 func (h Handler) GetMyOrder(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if principal.UserID == "" {
@@ -366,7 +366,7 @@ func (h Handler) Quote(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -388,7 +388,7 @@ func (h Handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 func (h Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -410,7 +410,7 @@ func (h Handler) GetProduct(w http.ResponseWriter, r *http.Request) {
 func (h Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in ProductInput
@@ -429,7 +429,7 @@ func (h Handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in ProductInput
@@ -448,7 +448,7 @@ func (h Handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 func (h Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if err := h.service.DeleteProduct(r.Context(), principal, r.PathValue("id")); err != nil {
@@ -461,7 +461,7 @@ func (h Handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateProductStatus(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var body struct {
@@ -482,7 +482,7 @@ func (h Handler) UpdateProductStatus(w http.ResponseWriter, r *http.Request) {
 func (h Handler) BulkUpdateProducts(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var body struct {
@@ -505,7 +505,7 @@ func (h Handler) BulkUpdateProducts(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListOrders(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -527,7 +527,7 @@ func (h Handler) ListOrders(w http.ResponseWriter, r *http.Request) {
 func (h Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -549,7 +549,7 @@ func (h Handler) GetOrder(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var body struct {
@@ -572,7 +572,7 @@ func (h Handler) UpdateOrderStatus(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateOrderReturnStatus(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var body struct {
@@ -595,7 +595,7 @@ func (h Handler) UpdateOrderReturnStatus(w http.ResponseWriter, r *http.Request)
 func (h Handler) RestockOrderItems(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var body RestockInput
@@ -616,7 +616,7 @@ func (h Handler) RestockOrderItems(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -638,7 +638,7 @@ func (h Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateMember(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in MemberInput
@@ -657,7 +657,7 @@ func (h Handler) UpdateMember(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateMemberStatus(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var body struct {
@@ -680,7 +680,7 @@ func (h Handler) UpdateMemberStatus(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListPromos(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -698,7 +698,7 @@ func (h Handler) ListPromos(w http.ResponseWriter, r *http.Request) {
 func (h Handler) CreatePromo(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in PromoInput
@@ -717,7 +717,7 @@ func (h Handler) CreatePromo(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdatePromo(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in PromoInput
@@ -736,7 +736,7 @@ func (h Handler) UpdatePromo(w http.ResponseWriter, r *http.Request) {
 func (h Handler) DeletePromo(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if err := h.service.DeletePromo(r.Context(), principal, r.PathValue("id")); err != nil {
@@ -751,7 +751,7 @@ func (h Handler) DeletePromo(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListPaymentMethods(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
@@ -769,7 +769,7 @@ func (h Handler) ListPaymentMethods(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdatePaymentMethod(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in PaymentMethodInput
@@ -790,7 +790,7 @@ func (h Handler) UpdatePaymentMethod(w http.ResponseWriter, r *http.Request) {
 func (h Handler) ListShippingMethods(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	methods, err := h.service.ListShippingMethods(r.Context(), principal)
@@ -804,7 +804,7 @@ func (h Handler) ListShippingMethods(w http.ResponseWriter, r *http.Request) {
 func (h Handler) CreateShippingMethod(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in ShippingMethodInput
@@ -823,7 +823,7 @@ func (h Handler) CreateShippingMethod(w http.ResponseWriter, r *http.Request) {
 func (h Handler) UpdateShippingMethod(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var in ShippingMethodUpdateInput

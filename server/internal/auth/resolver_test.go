@@ -109,7 +109,7 @@ func TestStaffCapabilityResolverDisabledStaff(t *testing.T) {
 func TestStaffCapabilityResolverNoStaffRow(t *testing.T) {
 	t.Parallel()
 	lookup := &stubLookup{
-		bySupabaseErr: errors.New("not found"),
+		bySupabaseErr: ErrStaffNotFound,
 	}
 	r := NewStaffCapabilityResolver(lookup)
 	p := Principal{UserID: "sup-3", Email: "nobody@example.com"}
@@ -174,11 +174,11 @@ func TestStaffCapabilityResolverPreservesExistingCapabilities(t *testing.T) {
 // gets no capabilities. Email matching is not a valid linking mechanism.
 func TestStaffCapabilityResolverEmailImpersonation(t *testing.T) {
 	t.Parallel()
-	// The lookup returns "not found" for the supabase_user_id, even though
+	// The lookup returns ErrStaffNotFound for the supabase_user_id, even though
 	// the staff row exists with the same email. The resolver must NOT
 	// fall back to email lookup.
 	lookup := &stubLookup{
-		bySupabaseErr: errors.New("not found"),
+		bySupabaseErr: ErrStaffNotFound,
 	}
 	r := NewStaffCapabilityResolver(lookup)
 	p := Principal{
@@ -203,7 +203,7 @@ func TestStaffCapabilityResolverEmailImpersonation(t *testing.T) {
 func TestStaffCapabilityResolverUnlinkedUser(t *testing.T) {
 	t.Parallel()
 	lookup := &stubLookup{
-		bySupabaseErr: errors.New("not found"),
+		bySupabaseErr: ErrStaffNotFound,
 	}
 	r := NewStaffCapabilityResolver(lookup)
 	p := Principal{UserID: "sup-new-user", Email: "new@example.com"}
@@ -216,5 +216,25 @@ func TestStaffCapabilityResolverUnlinkedUser(t *testing.T) {
 	}
 	if resolved.StaffID != "" {
 		t.Errorf("unlinked user should have empty StaffID, got %q", resolved.StaffID)
+	}
+}
+
+func TestStaffCapabilityResolverLookupInfrastructureFailure(t *testing.T) {
+	t.Parallel()
+	dbErr := errors.New("connection reset by peer")
+	lookup := &stubLookup{
+		bySupabaseErr: dbErr,
+	}
+	r := NewStaffCapabilityResolver(lookup)
+	p := Principal{UserID: "sup-error", Email: "err@example.com"}
+	_, err := r.Resolve(context.Background(), p)
+	if err == nil {
+		t.Fatal("expected error on db lookup failure, got nil")
+	}
+	if !errors.Is(err, ErrUnavailable) {
+		t.Fatalf("expected ErrUnavailable, got %v", err)
+	}
+	if !errors.Is(err, dbErr) {
+		t.Fatalf("expected wrapped db error, got %v", err)
 	}
 }

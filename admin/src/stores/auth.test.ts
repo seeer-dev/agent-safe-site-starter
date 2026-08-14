@@ -371,4 +371,25 @@ describe('admin auth store', () => {
     expect(adminTokenWrites).toHaveLength(0)
     expect(localStorage.getItem('admin_token')).toBeNull()
   })
+
+  it('enters failed state and preserves session when /admin/me returns 503', async () => {
+    adapter = createFakeAdapter({
+      accessToken: 'existing-token',
+      user: { id: 'user-1', email: 'staff@example.com' },
+    })
+    setSessionAdapterForTests(adapter)
+    fetchMock.mockResolvedValue(jsonResponse({ error: 'service unavailable' }, 503))
+
+    const store = await loadStore()
+    await store.initialize()
+
+    expect(store.isAuthenticated).toBe(false)
+    expect(store.status).toBe('failed')
+    expect(store.caps).toEqual([])
+    expect(store.token).toBe('existing-token')
+    expect(getAccessToken()).toBe('existing-token')
+    expect(adapter.signOut).not.toHaveBeenCalled()
+    expect(store.verifyError).toBe('目前無法驗證身分，請稍後再試。')
+    expect(store.verifyError).not.toContain('service unavailable')
+  })
 })

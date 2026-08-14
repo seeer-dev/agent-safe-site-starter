@@ -119,7 +119,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("GET /api/admin/me", func(w http.ResponseWriter, r *http.Request) {
 		principal, err := authenticator.Principal(r)
 		if err != nil {
-			httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+			auth.WriteError(w, err)
 			return
 		}
 		httpx.JSON(w, http.StatusOK, map[string]any{

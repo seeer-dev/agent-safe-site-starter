@@ -1,6 +1,7 @@
 package media
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -165,5 +166,43 @@ func TestVerifyDecodeFailedSentinelIsRecognized(t *testing.T) {
 	// validationMessage must return the fixed sentinel, not the full chain.
 	if validationMessage(wrapped) != ErrValidationDecodeFailed.Error() {
 		t.Fatalf("validationMessage = %q, want %q", validationMessage(wrapped), ErrValidationDecodeFailed.Error())
+	}
+}
+
+type unavailVerifier struct{}
+
+func (v unavailVerifier) Verify(_ context.Context, _ string) (auth.Principal, error) {
+	return auth.Principal{}, auth.ErrUnavailable
+}
+
+func TestVerifyHTTPAuthErrorSeparation(t *testing.T) {
+	t.Parallel()
+	store := newVerifyFakeStore()
+	svc := NewVerifyService(store, newFakeRegistryStore())
+
+	// 401 when unauthenticated
+	h401 := NewVerifyHandler(svc, auth.Authenticator{})
+	req := httptest.NewRequest(http.MethodPost, "/api/media/verify", strings.NewReader(`{"key":"some-key"}`))
+	rec := httptest.NewRecorder()
+	h401.Verify(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String())
+	}
+
+	// 503 when auth dependency fails
+	h503 := NewVerifyHandler(svc, auth.NewAuthenticator(unavailVerifier{}))
+	req2 := httptest.NewRequest(http.MethodPost, "/api/media/verify", strings.NewReader(`{"key":"some-key"}`))
+	req2.Header.Set("Authorization", "Bearer token")
+	rec2 := httptest.NewRecorder()
+	h503.Verify(rec2, req2)
+	if rec2.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", rec2.Code, rec2.Body.String())
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec2.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body["error"] != "service unavailable" {
+		t.Errorf("error = %q, want 'service unavailable'", body["error"])
 	}
 }

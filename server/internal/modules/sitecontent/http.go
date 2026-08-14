@@ -20,7 +20,7 @@ func NewHandler(service Service, authenticator auth.Authenticator) Handler {
 func (h Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	if !auth.Can(principal, "content.read") {
@@ -38,7 +38,7 @@ func (h Handler) ListAll(w http.ResponseWriter, r *http.Request) {
 func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var input SiteContentInput
@@ -61,7 +61,7 @@ func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
 func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	id := r.PathValue("id")
@@ -93,7 +93,7 @@ func (h Handler) Update(w http.ResponseWriter, r *http.Request) {
 func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	id := r.PathValue("id")
@@ -121,7 +121,7 @@ func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
 func (h Handler) Publish(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	id := r.PathValue("id")
@@ -161,7 +161,7 @@ func (h Handler) Publish(w http.ResponseWriter, r *http.Request) {
 func (h Handler) Approve(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	id := r.PathValue("id")

@@ -571,3 +571,41 @@ func TestQuoteAndCreateOrderHTTPShippingStoreFailureReturns503(t *testing.T) {
 		t.Fatalf("member body leaked or missing sentinel: %s", rec.Body.String())
 	}
 }
+
+type unavailVerifier struct{}
+
+func (v unavailVerifier) Verify(_ context.Context, _ string) (auth.Principal, error) {
+	return auth.Principal{}, auth.ErrUnavailable
+}
+
+func TestCommerceHTTPAuthErrorSeparation(t *testing.T) {
+	t.Parallel()
+	store := newTestStore(t)
+	svc := func() Service { seedDefaultShippingMethods(t, store); return NewService(store) }()
+
+	// Case 1: Missing auth header -> 401
+	h := NewHandler(svc, auth.Authenticator{})
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/products", nil)
+	rec := httptest.NewRecorder()
+	h.ListProducts(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401; body=%s", rec.Code, rec.Body.String())
+	}
+
+	// Case 2: Unavailable auth dependency -> 503
+	hUnavailable := NewHandler(svc, auth.NewAuthenticator(unavailVerifier{}))
+	req2 := httptest.NewRequest(http.MethodGet, "/api/admin/products", nil)
+	req2.Header.Set("Authorization", "Bearer test-token")
+	rec2 := httptest.NewRecorder()
+	hUnavailable.ListProducts(rec2, req2)
+	if rec2.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503; body=%s", rec2.Code, rec2.Body.String())
+	}
+	var body map[string]string
+	if err := json.Unmarshal(rec2.Body.Bytes(), &body); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if body["error"] != "service unavailable" {
+		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	}
+}

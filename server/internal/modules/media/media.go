@@ -121,7 +121,7 @@ func NewHandler(service Service, authenticator auth.Authenticator) Handler {
 func (h Handler) Presign(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var input PresignInput

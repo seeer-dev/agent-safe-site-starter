@@ -29,7 +29,7 @@ func (h Handler) ListPublished(w http.ResponseWriter, r *http.Request) {
 func (h Handler) Publish(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {
-		httpx.Error(w, http.StatusUnauthorized, "unauthorized")
+		auth.WriteError(w, err)
 		return
 	}
 	var input UpsertInput
