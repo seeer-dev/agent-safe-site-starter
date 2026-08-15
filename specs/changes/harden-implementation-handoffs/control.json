@@ -1,0 +1,77 @@
+{
+  "change_id": "harden-implementation-handoffs",
+  "revision": 1,
+  "status": "Verifying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "User authorized plain apply implementation of harden-implementation-handoffs revision 1 on 2026-08-15.",
+  "repository_baseline": "7e5aa90b92d23c8c316d44ca935be7af8d150a1c",
+  "supersedes": [],
+  "applies_to": [
+    "skills/expand-implementation/**",
+    "specs/changes/harden-implementation-handoffs/**"
+  ],
+  "requirements": ["REQ-001", "REQ-002", "REQ-003"],
+  "acceptance": ["AC-001", "AC-002", "AC-003", "AC-004"],
+  "strict_evidence": true,
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "Defined neutral handoff envelope in skills/expand-implementation/references/handoff-protocol.md with stable packet identity, change ID/revision, named reviewer, explicit modify set, forbidden paths, and expected response schema.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "Defined PowerShell/Herdr shell-safe transport in skills/expand-implementation/references/handoff-protocol.md using OS-temp non-secret transport and herdr agent prompt submission.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Enforced planner write-authority boundaries prohibiting unauthorized controlled plan edits, compact packet sizing, and postflight scope-residue incident accounting in skills/expand-implementation/SKILL.md and handoff-protocol.md.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "Observed recipient acknowledgement containing Slice 1, change/revision, allowed/forbidden paths, and Codex w5:p2 destination during forward replay. Recorded in receipts/forward-replay-acceptance-rev1.md.",
+      "receipts": [
+        {
+          "kind": "independent-review",
+          "path": "receipts/forward-replay-acceptance-rev1.md"
+        }
+      ],
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Observed PowerShell OS-temp non-secret packet creation, herdr agent prompt delivery, and zero in-repo residue during forward replay. Recorded in receipts/forward-replay-acceptance-rev1.md.",
+      "receipts": [
+        {
+          "kind": "independent-review",
+          "path": "receipts/forward-replay-acceptance-rev1.md"
+        }
+      ],
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "Observed planner write boundary during forward replay with plan.md SHA-256 remaining 5B52A991718310EFA8E9E51960AA221C02A9DC3530A55186D93A59D1436DD624. Recorded in receipts/forward-replay-acceptance-rev1.md.",
+      "receipts": [
+        {
+          "kind": "independent-review",
+          "path": "receipts/forward-replay-acceptance-rev1.md"
+        }
+      ],
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "Observed postflight scope inspection and deletion accounting with temp packet deleted and zero repo residue during forward replay. Recorded in receipts/forward-replay-acceptance-rev1.md.",
+      "receipts": [
+        {
+          "kind": "independent-review",
+          "path": "receipts/forward-replay-acceptance-rev1.md"
+        }
+      ],
+      "status": "passed"
+    }
+  }
+}

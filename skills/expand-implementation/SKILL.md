@@ -17,6 +17,7 @@ Read before expanding:
 2. The proposal's `control.json`, `spec.md`, `plan.md`, and `evidence.md`.
 3. Every source, contract, migration, consumer, test, fixture, verifier, and CI path needed to verify the proposal's claims.
 4. [`references/blueprint-format.md`](references/blueprint-format.md) in full.
+5. [`references/handoff-protocol.md`](references/handoff-protocol.md) when delegating implementation across agents or shells.
 
 If a required artifact is absent, contradictory, or not review-ready, record the gap. Do not compensate with an invented implementation.
 
@@ -63,7 +64,9 @@ During apply, do not improvise around a marker. Re-run expansion for the affecte
 
 ## Output rules
 
-- Modify planning/control artifacts only during proposal expansion.
+- Modify planning/control artifacts only during proposal expansion with explicit write authority; planners relaying active implementations must not silently amend controlled artifacts and must use the OS-temp transport in `references/handoff-protocol.md`.
+- When delegating packets, use attributable envelopes with stable IDs, explicit modify/forbidden sets, named reviewer, and shell-safe non-secret OS-temp transport.
+- Require postflight scope audits; record any temporary out-of-scope files created during implementation as incidents even after cleanup.
 - Do not edit an Accepted or Superseded proposal already present in the comparison base; retrospective replay is read-only and non-authoritative.
 - Preserve the repository's existing `propose` followed by plain `apply` interface.
 - Keep the user-facing proposal summary concise even when `plan.md` is detailed.
