@@ -251,3 +251,186 @@ Slice 1 is the only delegated scope until independent review passes. Slice 2 sta
 - Secure token recovery mechanism (account takeover risk assessment).
 - Live Supabase customer/staff success-path walkthrough with configured `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Revision 9 local wiring, fail-closed provider-unavailable state, invalid-session cleanup, and browser-to-Go member create/list/detail reachability are implemented and covered by `receipts/walkthrough-auth-rev9.md`.
 - Independent acceptance walkthrough by a non-implementer reviewer.
+
+## Implementation expansion context (Batch 1: B5 approval gate)
+
+Proposal revision: 12
+Proposal status: Verifying
+Repository baseline: `7c45b616fbe3a632ffe2a39d872c98485466c991`
+Observed HEAD: `7e5aa90b92d23c8c316d44ca935be7af8d150a1c`
+Pre-existing dirty paths:
+- `.github/workflows/ci.yml` - preserve; postgres-lock CI wiring
+- `server/internal/migrate/postgres_integration_test.go` - preserve; postgres-lock
+- `server/internal/modules/media/postgres_integration_test.go` - preserve; postgres-lock
+- `server/internal/modules/staff/postgres_integration_test.go` - preserve; postgres-lock
+- `server/internal/modules/staff/store.go` - preserve; postgres-lock
+- `server/tools/verify/main_test.go` - preserve; postgres-lock
+- `server/tools/postgres-live-gate/**` - preserve; postgres-lock S01G
+- `specs/changes/postgres-lock-semantics-and-evidence/**` - preserve; postgres-lock
+- `specs/changes/enforce-spec-governance/**` - preserve; enforce receipt
+Packet ID mapping:
+- Batch 1 -> Packet B01E (evidence + walkthrough)
+
+### Packet B01E: B5 approval gate evidence sync and independent walkthrough
+
+Status: executable
+Covers: REQ-006, AC-011, AC-012
+Hard dependencies: none
+Outcome: AC-011 and AC-012 evidence is updated from revision 7 "IN PROGRESS" to revision 12 observed state, and an independent local walkthrough receipt records the approve→publish→render flow with the real Go API and admin UI.
+Safe failure / rollback: All edits are to `specs/changes/minimal-cart-integration/control.json`, `evidence.md`, and a new receipt file. No product code changes. If the walkthrough finds a gap, the receipt records it as a blocker and the AC remains pending.
+
+#### Repository anchors
+
+| Purpose | Path | Symbol or structural anchor | Current evidence |
+|---|---|---|---|
+| Behavior owner | `server/internal/modules/sitecontent/service.go` | `Service.Approve` | Requires `content.approve` cap, rejects empty UserID, rejects past/zero expiry, atomic conditional UPDATE on draft_version match |
+| Behavior owner | `server/internal/modules/sitecontent/service.go` | `Service.Publish` | Requires `content.publish` cap, pre-validates key, atomic conditional UPDATE checking draft_version + approved_version = draft_version + approved_expiry_unix > now |
+| Behavior owner | `server/internal/modules/sitecontent/service.go` | `Service.Update` | Requires `content.update` cap, increments draft_version (invalidating approval), never touches published_* fields |
+| Behavior owner | `server/internal/modules/sitecontent/store.go` | `SQLStore.Publish` | Conditional UPDATE: copies draft→published_*, freezes approval metadata into published_version/published_approver_user_id/published_approved_unix/published_approval_expiry_unix, checks approved_expiry_unix > now |
+| Behavior owner | `server/internal/modules/sitecontent/store.go` | `SQLStore.ListPublished` | Filters `published_approval_expiry_unix > now` — expired snapshots absent from public render |
+| Contract | `server/internal/modules/sitecontent/http.go` | `Handler.Approve` | POST /admin/site-content/{id}/approve, 403/404/409/400 error mapping |
+| Contract | `server/internal/modules/sitecontent/http.go` | `Handler.Publish` | POST /admin/site-content/{id}/publish, 403/404/409(stale)/409(approval)/400 error mapping |
+| Consumer | `admin/src/config/resources/content.ts` | `rowActions[approve]` | cap: content.approve, expect: draft_version, expiryInput: true, showWhen: approve_always |
+| Consumer | `admin/src/config/resources/content.ts` | `rowActions[publish]` | cap: content.publish, expect: draft_version, showWhen: publish_ready |
+| Consumer | `admin/src/config/resources/content.ts` | `rowMap` | formatUnix for approved_at, approved_expiry_at, published_approved_at, published_approval_expiry_at |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestApproveRecordsApproverIdentityAndVersion` | Asserts approver_user_id, approved_version, approved_unix, approved_expiry_unix persisted |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestEditInvalidatesApproval` | Edit increments draft_version → Publish returns ErrStaleVersion (old version) or ErrApprovalConflict (new version, stale approval) |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestExpiredApprovalRejectsPublish` | Expired approval → ErrApprovalConflict |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestPublishedSnapshotExpiryFilter` | ListPublished filters published_approval_expiry_unix > now |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestPublishedSnapshotExpiryEditDoesNotChangeFrozenMetadata` | Editing draft after publish does not change frozen published approval metadata |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestUnapprovedPublishedRowFailClosed` | Published row with default 0 approval metadata → absent from ListPublished |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestMigration012SQLiteFullApply` | Migration 012 applies cleanly, all 9 governance columns present |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestMigration012PostgresParity` | PostgreSQL 012 migration matches SQLite schema intent |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestUpdatePublishedContentKeepsPublishedCopyLive` | AC-011 core: editing draft does not take published copy offline |
+| Existing proof | `server/internal/modules/sitecontent/service_test.go` | `TestPublishSwitchesToNewVersion` | Re-approve + publish switches public copy to new version |
+| Existing proof | `server/internal/modules/sitecontent/http_test.go` | `TestApproveHTTPSuccess`, `TestPublishHTTPSuccess`, `TestApproveHTTPStaleVersion409`, `TestPublishHTTPStaleVersion409`, `TestPublishHTTPWithoutApproval409` | HTTP layer wiring verified |
+| Migration | `db/migrations/sqlite/012_site_content_approval.sql` | 9 governance columns | draft_version, approved_version, approver_user_id, approved_unix, approved_expiry_unix, published_version, published_approver_user_id, published_approved_unix, published_approval_expiry_unix |
+| Migration | `db/migrations/postgres/012_site_content_approval.sql` | matching schema | PostgreSQL parity |
+
+Read set:
+- `server/internal/modules/sitecontent/service.go` - understand Approve/Publish/Update gate logic
+- `server/internal/modules/sitecontent/store.go` - understand conditional UPDATE and ListPublished expiry filter
+- `server/internal/modules/sitecontent/http.go` - understand HTTP error mapping
+- `server/internal/modules/sitecontent/service_test.go` - inventory all 60 top-level tests
+- `admin/src/config/resources/content.ts` - understand admin UI approve/publish wiring
+- `specs/changes/minimal-cart-integration/control.json` - current AC-011/012 evidence (stuck at revision 7)
+- `specs/changes/minimal-cart-integration/spec.md` - AC-011/012 normative text
+
+Modify set:
+- `specs/changes/minimal-cart-integration/control.json` - update AC-011 and AC-012 observed_revision to 12, update proof to reflect completed B5 implementation, update status from pending to passed (if walkthrough confirms)
+- `specs/changes/minimal-cart-integration/evidence.md` - update AC-011 and AC-012 proof text
+- `specs/changes/minimal-cart-integration/receipts/b5-approval-walkthrough-rev12.md` - new independent walkthrough receipt
+
+Must not modify:
+- Any Go source file - B5 implementation is already complete
+- Any admin source file - admin UI is already complete
+- Any migration file - migrations 009/012 are already applied
+- Any file outside `specs/changes/minimal-cart-integration/**` - scope boundary
+
+#### Behavior contract
+
+Before:
+- AC-011 `observed_revision` = 7, proof says "B5 IN PROGRESS (revision 7): formal approval/version/expiry gate is partially implemented"
+- AC-012 `observed_revision` = 7, proof says "B5 IN PROGRESS (revision 7): formal current-approval metadata is partially implemented"
+- Both ACs are `pending`
+- No independent walkthrough receipt for the B5 approve→publish→render flow at revision 12
+
+After:
+- AC-011 `observed_revision` = 12, proof reflects the fully implemented Approve/Publish gate with all 60 top-level tests, HTTP wiring, admin UI wiring, and migration 012
+- AC-012 `observed_revision` = 12, proof reflects the snapshot-scoped governance (published_approval_expiry_unix filter), unapproved-row fail-closed behavior, and all regression tests
+- Both ACs are `passed` (if walkthrough confirms no gaps) or remain `pending` with a named blocker (if walkthrough finds a gap)
+- New receipt `receipts/b5-approval-walkthrough-rev12.md` records the independent local walkthrough: create draft → approve with expiry → publish → verify ListPublished shows approved content → edit draft → verify published copy unchanged → re-approve → re-publish → verify new version live → verify expired approval blocks publish
+
+Preserved invariants:
+- No product code changes
+- No migration changes
+- No admin UI changes
+- Existing 60 top-level tests remain unchanged and passing
+- control.json revision remains 12
+- control.json status remains Verifying (only AC-level status changes)
+
+#### Ordered edits
+
+1. `specs/changes/minimal-cart-integration/receipts/b5-approval-walkthrough-rev12.md` - new receipt
+   - Change: Create a new walkthrough receipt recording the independent local walkthrough of the B5 approve→publish→render flow. The walkthrough must:
+     - Start the Go dev server (`go run ./server/tools/dev`)
+     - Create a draft site content block via the admin UI or API
+     - Approve it with a future expiry via the admin UI or API
+     - Publish it via the admin UI or API
+     - Verify `ListPublished` returns the published content
+     - Verify `go run ./server/tools/render` produces dist/ with the published content
+     - Edit the draft and verify the published copy remains unchanged (AC-011 core)
+     - Verify the draft edit invalidated the approval (publish fails with 409)
+     - Re-approve and re-publish, verify the new version is live
+     - Test expired approval (use a past expiry or manipulate the row) and verify publish fails
+     - Record source revision, exact commands, observed HTTP responses, and dist/ inspection results
+   - Constraint: No credentials, tokens, or raw PII in the receipt. Record exact commands and observed outputs.
+   - Result: A complete independent walkthrough receipt proving the B5 gate works end-to-end at revision 12.
+
+2. `specs/changes/minimal-cart-integration/control.json` - AC-011 and AC-012 evidence update
+   - Change: Update AC-011 `observed_revision` from 7 to 12. Update AC-011 `proof` to reflect the completed B5 implementation: Approve/Publish gate with capability separation, optimistic concurrency, approval expiry validation, snapshot-scoped governance, and 60 passing tests. Update AC-011 `status` from `pending` to `passed` (if walkthrough confirms). Add `receipts` entry pointing to `receipts/b5-approval-walkthrough-rev12.md` with kind `walkthrough`. Same for AC-012.
+   - Constraint: `revision` remains 12, `status` remains `Verifying`. No other AC is touched.
+   - Result: AC-011 and AC-012 reflect revision 12 observed state instead of revision 7 stale "IN PROGRESS" text.
+
+3. `specs/changes/minimal-cart-integration/evidence.md` - AC-011 and AC-012 proof text update
+   - Change: Update the AC-011 and AC-012 rows in the evidence table to match the updated control.json proof text.
+   - Constraint: No other evidence row is touched.
+   - Result: evidence.md and control.json are consistent.
+
+#### Integration trace
+
+```text
+B5 approval gate walkthrough
+  -> go run ./server/tools/dev (starts Go API + dev site)
+  -> POST /admin/site-content (create draft, content.create cap)
+  -> POST /admin/site-content/{id}/approve (content.approve cap, expiry_unix, expected_draft_version)
+  -> Service.Approve -> Store.Approve (conditional UPDATE, draft_version match)
+  -> POST /admin/site-content/{id}/publish (content.publish cap, expected_draft_version)
+  -> Service.Publish -> Store.Publish (conditional UPDATE, draft_version + approved_version + expiry)
+  -> GET /api/site-content (ListPublished, published_approval_expiry_unix > now filter)
+  -> go run ./server/tools/render (dist/ inspection)
+  -> PUT /admin/site-content/{id} (edit draft, draft_version increments, approval invalidated)
+  -> verify ListPublished still shows old published copy (AC-011 core invariant)
+  -> POST /admin/site-content/{id}/publish (fails with 409, approval stale)
+  -> re-approve + re-publish (new version live)
+  -> expired approval test (publish fails with 409)
+```
+
+#### Verification matrix
+
+| Claim | Working directory | Exact argv or walkthrough | Selected assertion/artifact | Expected result | Negative case | Failure trigger | Restoration/residue check |
+|---|---|---|---|---|---|---|---|
+| 60 sitecontent tests pass | `D:\Projects\AI-go-starter` | `go test ./server/internal/modules/sitecontent/ -v -count=1` | All 60 Test* functions | All PASS | N/A (existing tests) | N/A | N/A |
+| Admin typecheck + build | `D:\Projects\AI-go-starter\admin` | `npm run typecheck && npm run build` | exit 0 | Both PASS | N/A | N/A | N/A |
+| OpenAPI contracts | `D:\Projects\AI-go-starter\site\themes\minimal-cart` | `npm run check:openapi-contracts` | "PASSED" | PASS | N/A | N/A | N/A |
+| Approve→Publish→Render walkthrough | `D:\Projects\AI-go-starter` | `go run ./server/tools/dev` then manual API/UI walkthrough | `receipts/b5-approval-walkthrough-rev12.md` | All steps observed, no gaps | If publish without approval returns 409 | N/A (walkthrough is observation, not mutation) | N/A |
+| Draft edit keeps published copy live | `D:\Projects\AI-go-starter` | walkthrough step: edit draft after publish, verify ListPublished | `TestUpdatePublishedContentKeepsPublishedCopyLive` + walkthrough observation | Published copy unchanged | If published copy changed after draft edit | N/A | N/A |
+| Expired approval blocks publish | `D:\Projects\AI-go-starter` | walkthrough step: attempt publish with expired approval | `TestExpiredApprovalRejectsPublish` + walkthrough observation | 409 Conflict | If publish succeeded with expired approval | N/A | N/A |
+| Evidence updated to revision 12 | `D:\Projects\AI-go-starter` | `git diff specs/changes/minimal-cart-integration/control.json` | AC-011/012 observed_revision = 12 | Updated | N/A | N/A | N/A |
+| Receipt exists and is non-empty | `D:\Projects\AI-go-starter` | `Test-Path receipts/b5-approval-walkthrough-rev12.md` | file exists, non-empty | True | N/A | N/A | N/A |
+| speccheck passes | `D:\Projects\AI-go-starter` | `go run ./server/tools/speccheck` | "ok" | PASS (if no other dirty spec dirs conflict) | N/A | N/A | N/A |
+
+#### Completion gate
+
+- [ ] Every ordered edit is inside the modify set and controlled scope.
+- [ ] Before/after behavior and preserved invariants match the approved spec.
+- [ ] Every mapped AC has a selected assertion or observable artifact.
+- [ ] The bounded failure trigger fails for the claimed reason and is restored.
+- [ ] Existing relevant tests remain present and unweakened.
+- [ ] No temporary mutation, fixture, credential, or generated residue remains.
+- [ ] Expected evidence has been replaced with attributable observed evidence after apply.
+
+#### Blueprint-wide gates
+
+| Check | Result |
+|---|---|
+| Every REQ maps to at least one packet | pass (REQ-006 -> B01E) |
+| Every AC maps to proof in at least one packet | pass (AC-011 -> B01E, AC-012 -> B01E) |
+| Every packet maps back to REQ/AC | pass (B01E -> REQ-006, AC-011, AC-012) |
+| Baseline, observed HEAD, dirty paths, and packet ID mapping are explicit | pass |
+| All paths and symbols were inspected | pass (service.go, store.go, http.go, service_test.go, content.ts, control.json, spec.md all read) |
+| Hard dependency graph has no unexplained edge or cycle | pass (no hard dependencies) |
+| Scope covers every modify path and no unrelated path | pass (only specs/changes/minimal-cart-integration/**) |
+| Product/authority decisions are approved or blocked | pass (no new decisions; evidence sync only) |
+| No agent/provider/model identity changes packet semantics | pass |
+| No expected result is presented as observed evidence | pass |
