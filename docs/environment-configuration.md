@@ -49,6 +49,39 @@ All real profiles (`.env`, `.env.local`, `.env.development`,
 `.env.development.local`, `.env.production`, `.env.production.local`) are
 git-ignored. The tracked `*.example` files hold placeholders only.
 
+### Ephemeral local PostgreSQL gate
+
+To run the full PostgreSQL 16 live integration test suite locally without
+setting up an external PostgreSQL service or modifying local `.env` files:
+
+```bash
+go run ./server/tools/local-postgres-gate
+```
+
+Key characteristics and operational boundaries:
+
+- **Single command & parity**: Starts an isolated PostgreSQL 16 instance on
+  loopback (`127.0.0.1`) matching CI, injects a child-scoped `TEST_DATABASE_URL`
+  into `postgres-live-gate`, and runs every required `TestPostgresLive*` test.
+- **Process isolation**: `TEST_DATABASE_URL` exists only inside the child test
+  process. No credentials or endpoints are written to `.env` files, repository
+  files, or logs.
+- **Automatic cleanup**: When tests complete (or on failure / interrupt), the
+  child PostgreSQL process is stopped and all temporary runtime/data directories
+  are removed automatically.
+- **Binary caching & offline behavior**: On the first run, PostgreSQL 16
+  binaries are downloaded to the user cache directory
+  (`%LocalAppData%/embedded-postgres-binaries` on Windows,
+  `~/.cache/embedded-postgres-binaries` on Linux). Subsequent runs execute
+  offline using the cached binaries. First-run execution requires network
+  connectivity to download the binary archive.
+- **Port collisions**: Defaults to loopback port `5433` to avoid collisions
+  with any default PostgreSQL service on port `5432`. If port `5433` is
+  occupied, use the `-port` flag (e.g. `go run ./server/tools/local-postgres-gate -port 5434`).
+- **Validation boundary**: Local test success verifies code against a real
+  PostgreSQL 16 engine, but does not substitute for CI run receipts or production
+  deployment validation.
+
 ## Deployment ownership
 
 | Variable | Railway (Go API) | Pages (build) | Browser bundle | Secret |

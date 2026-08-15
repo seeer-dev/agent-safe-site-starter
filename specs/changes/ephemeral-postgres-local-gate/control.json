@@ -1,0 +1,34 @@
+{
+  "change_id": "ephemeral-postgres-local-gate",
+  "revision": 1,
+  "status": "Verifying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "User authorized Agy to implement and Codex to independently validate the local PostgreSQL environment on 2026-08-15.",
+  "repository_baseline": "7e5aa90b92d23c8c316d44ca935be7af8d150a1c",
+  "supersedes": [],
+  "applies_to": [
+    "go.mod",
+    "go.sum",
+    "server/tools/local-postgres-gate/**",
+    "docs/environment-configuration.md",
+    "specs/changes/ephemeral-postgres-local-gate/**"
+  ],
+  "requirements": ["REQ-001", "REQ-002", "REQ-003"],
+  "acceptance": ["AC-001", "AC-002", "AC-003", "AC-004"],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": ["consumer-reachability"],
+    "AC-002": ["consumer-reachability", "independent-review"],
+    "AC-003": ["security-review"],
+    "AC-004": ["walkthrough"]
+  },
+  "evidence": {
+    "REQ-001": {"status": "passed", "observed_revision": 1, "proof": "Codex independently ran go run ./server/tools/local-postgres-gate on 2026-08-15. It started loopback PostgreSQL 16 and invoked the existing live gate; see receipts/local-live-run-rev1.md."},
+    "REQ-002": {"status": "passed", "observed_revision": 1, "proof": "Successful live run left port 5433 and postgres processes clear. Unit failure-path coverage proves gate failure stops the child and cleans its runtime path; see receipts/lifecycle-walkthrough-rev1.md."},
+    "REQ-003": {"status": "passed", "observed_revision": 1, "proof": "go.mod pins github.com/fergusstrange/embedded-postgres v1.34.0 directly; code pins V16 and documentation records the cache and local-only boundaries; see receipts/independent-review-rev1.md."},
+    "AC-001": {"status": "passed", "observed_revision": 1, "proof": "The independent live run reached postgres-live-gate through the one-command launcher. Child environment isolation is asserted by TestBuildChildEnv and TestBuildGateCommandProperties; see receipts/local-live-run-rev1.md.", "receipts": [{"kind": "consumer-reachability", "path": "receipts/local-live-run-rev1.md"}]},
+    "AC-002": {"status": "passed", "observed_revision": 1, "proof": "postgres-live-gate reported all required live PostgreSQL tests passed, including migration, media locks, database constraints, and staff locks; see receipts/local-live-run-rev1.md and receipts/independent-review-rev1.md.", "receipts": [{"kind": "consumer-reachability", "path": "receipts/local-live-run-rev1.md"}, {"kind": "independent-review", "path": "receipts/independent-review-rev1.md"}]},
+    "AC-003": {"status": "passed", "observed_revision": 1, "proof": "Independent review confirmed pinned V16, fixed exec arguments, loopback binding, case-insensitive child-only DSN replacement, no DSN output, and a user-cache-only binary boundary; see receipts/independent-review-rev1.md.", "receipts": [{"kind": "security-review", "path": "receipts/independent-review-rev1.md"}]},
+    "AC-004": {"status": "passed", "observed_revision": 1, "proof": "Successful run cleanup was observed directly; deterministic startup/gate-failure unit tests assert cleanup and child stop behavior without an external database; see receipts/lifecycle-walkthrough-rev1.md.", "receipts": [{"kind": "walkthrough", "path": "receipts/lifecycle-walkthrough-rev1.md"}]}
+  }
+}
