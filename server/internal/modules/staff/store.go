@@ -42,8 +42,10 @@ type Store interface {
 }
 
 type SQLStore struct {
-	db      *sql.DB
-	dialect database.Dialect
+	db                  *sql.DB
+	dialect             database.Dialect
+	testAfterLockHook   func(ctx context.Context, tx *sql.Tx)
+	testLockAttemptHook func(ctx context.Context, tx *sql.Tx)
 }
 
 func NewSQLStore(db *sql.DB, dialect database.Dialect) SQLStore {
@@ -176,6 +178,9 @@ func (s SQLStore) UpdateStatus(ctx context.Context, id, status string, updatedUn
 // On SQLite, FOR UPDATE is not supported but SetMaxOpenConns(1)
 // serializes all access, so the lock is a no-op.
 func (s SQLStore) lockActiveOwners(ctx context.Context, tx *sql.Tx) error {
+	if s.testLockAttemptHook != nil {
+		s.testLockAttemptHook(ctx, tx)
+	}
 	if s.dialect == database.Postgres {
 		_, err := tx.ExecContext(ctx, `SELECT id FROM staff_members WHERE status = 'active' AND role_label = 'owner' FOR UPDATE`)
 		return err
@@ -229,6 +234,9 @@ func (s SQLStore) UpsertGuarded(ctx context.Context, sm StaffMember) error {
 
 	if err := s.lockActiveOwners(ctx, tx); err != nil {
 		return fmt.Errorf("lock active owners: %w", err)
+	}
+	if s.testAfterLockHook != nil {
+		s.testAfterLockHook(ctx, tx)
 	}
 
 	existing, err := s.getByIDInTx(ctx, tx, sm.ID)

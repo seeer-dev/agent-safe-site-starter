@@ -36,3 +36,36 @@ func TestVerifyStepsIncludeEssentialGates(t *testing.T) {
 		}
 	}
 }
+
+func TestVerifyConcurrencyStepExactArgv(t *testing.T) {
+	t.Parallel()
+
+	expectedConcurrencyStep := []string{
+		"go", "test",
+		"./server/internal/modules/commerce",
+		"./server/internal/modules/staff",
+		"./server/internal/modules/media",
+		"-count=10",
+	}
+
+	found := false
+	for _, step := range defaultSteps {
+		if len(step) == len(expectedConcurrencyStep) {
+			match := true
+			for i := range step {
+				if step[i] != expectedConcurrencyStep[i] {
+					match = false
+					break
+				}
+			}
+			if match {
+				found = true
+				break
+			}
+		}
+	}
+
+	if !found {
+		t.Fatalf("verify defaultSteps missing exact concurrency step %v; current steps: %v", expectedConcurrencyStep, defaultSteps)
+	}
+}

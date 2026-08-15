@@ -55,7 +55,7 @@ jobs:
       - name: live postgres integration tests
         env:
           TEST_DATABASE_URL: 'postgres://test_user:test_password@localhost:5432/test_db?sslmode=disable'
-        run: go test -v -run '^TestPostgresLive' ./server/...
+        run: go run ./server/tools/postgres-live-gate
       - name: concurrency stress tests
         run: go test ./server/internal/modules/commerce ./server/internal/modules/staff ./server/internal/modules/media -count=10
       - name: go vet

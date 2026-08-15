@@ -1,7 +1,7 @@
 {
   "change_id": "postgres-lock-semantics-and-evidence",
   "revision": 1,
-  "status": "Ready",
+  "status": "Applying",
   "decision_authority": "Repository owner/user",
   "approval_basis": "Repository owner approved opening and delegating this next phase on 2026-08-14 after reviewing the exact fresh-migration, lock-semantics, and named-test evidence outcomes.",
   "repository_baseline": "f8053f8ea3ac640586384e24667933e5f556b689",
@@ -57,16 +57,60 @@
     ]
   },
   "evidence": {
-    "REQ-001": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
-    "REQ-002": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
-    "REQ-003": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
-    "REQ-004": { "proof": "Pending implementation and verification for revision 1.", "status": "pending" },
-    "AC-001": { "proof": "Pending fresh-schema consumer reachability evidence for revision 1.", "status": "pending" },
-    "AC-002": { "proof": "Pending live PostgreSQL staff-lock reachability and independent review for revision 1.", "status": "pending" },
-    "AC-003": { "proof": "Pending live PostgreSQL media-lock reachability and independent review for revision 1.", "status": "pending" },
-    "AC-004": { "proof": "Pending exact named-test gate implementation and negative-path verification for revision 1.", "status": "pending" },
-    "AC-005": { "proof": "Pending observed live CI run, consumer reachability, and independent review for revision 1.", "status": "pending" },
-    "AC-006": { "proof": "Pending verifier wiring regression implementation for revision 1.", "status": "pending" },
-    "AC-007": { "proof": "Pending mutation-sensitive independent review for revision 1.", "status": "pending" }
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "Pending live PostgreSQL fresh-schema migration execution.",
+      "status": "pending"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "Pending live PostgreSQL lock semantic execution across staff and media.",
+      "status": "pending"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Pending live PostgreSQL exact test inventory execution in CI.",
+      "status": "pending"
+    },
+    "REQ-004": {
+      "observed_revision": 1,
+      "proof": "Pending mutation-sensitive live verification and exact verifier assertion.",
+      "status": "pending"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "Pending fresh-schema consumer reachability evidence for revision 1 on live PostgreSQL.",
+      "status": "pending"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Pending live PostgreSQL staff-lock reachability and independent review for revision 1.",
+      "status": "pending"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "Pending live PostgreSQL media-lock reachability and independent review for revision 1.",
+      "status": "pending"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "Exact named-test gate implemented in server/tools/postgres-live-gate. Reviewer verified both rejection branches by mutation rather than by report: with no TEST_DATABASE_URL the gate exits 1 naming all three required tests as skipped, and renaming TestPostgresLiveStaffLockActiveOwners produced a distinct missing-from-execution-stream diagnostic; the rename was restored with zero residue. Unit coverage: TestGateRejectsMissingTest, TestGateRejectsSkippedTest, TestGateRejectsFailedTest, TestGatePassesExactInventory. Recorded in receipts/reviewer-acceptance-rev1.md.",
+      "status": "passed"
+    },
+    "AC-005": {
+      "observed_revision": 1,
+      "proof": "Pending observed live CI run, consumer reachability, and independent review for revision 1.",
+      "status": "pending"
+    },
+    "AC-006": {
+      "observed_revision": 1,
+      "proof": "Verifier concurrency step wiring assertion in server/tools/verify/main_test.go compares the complete argument vector including packages and repeat count. Reviewer mutation-verified it: changing -count=10 to -count=5 in verify/main.go turned TestVerifyConcurrencyStepExactArgv red, and restoration returned it to green with zero residue. Recorded in receipts/reviewer-acceptance-rev1.md.",
+      "status": "passed"
+    },
+    "AC-007": {
+      "observed_revision": 1,
+      "proof": "Pending mutation-sensitive independent review for revision 1.",
+      "status": "pending"
+    }
   }
 }
