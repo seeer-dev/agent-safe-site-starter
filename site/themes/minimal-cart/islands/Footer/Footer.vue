@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onMounted, ref } from 'vue'
 import { Mail, ArrowRight } from 'lucide-vue-next'
 import { useToast } from '@/shared/composables/use-toast'
 import type { FooterPageKey } from '@/shared/lib/types'
@@ -8,6 +8,13 @@ import { useUiStore } from '@/shared/stores/ui'
 const ui = useUiStore()
 const { toast } = useToast()
 const email = ref('')
+
+// The Go renderer emits #footer-static as the no-JavaScript fallback. Hide it
+// only after this interactive Footer island has mounted, so a failed island
+// load leaves the static policy links available.
+onMounted(() => {
+  document.getElementById('footer-static')?.setAttribute('hidden', '')
+})
 
 function subscribe() {
   if (!email.value.trim()) return

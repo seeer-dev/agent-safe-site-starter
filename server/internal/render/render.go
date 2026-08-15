@@ -192,6 +192,7 @@ type homeData struct {
 	Products       []ProductData
 	Categories     []string
 	CategoryLabels map[string]string
+	FooterContent  []SiteContentData
 	DarkMode       bool
 	IslandsCSSHash string
 }
@@ -202,6 +203,7 @@ type articleData struct {
 	APIBase        string
 	Article        content.Article
 	Body           template.HTML
+	FooterContent  []SiteContentData
 	DarkMode       bool
 	IslandsCSSHash string
 }
@@ -211,6 +213,7 @@ type productPageData struct {
 	PublicSiteURL  string
 	APIBase        string
 	Product        ProductData
+	FooterContent  []SiteContentData
 	DarkMode       bool
 	IslandsCSSHash string
 }
@@ -222,6 +225,7 @@ type categoryPageData struct {
 	Category       string
 	CategoryLabel  string
 	Products       []ProductData
+	FooterContent  []SiteContentData
 	DarkMode       bool
 	IslandsCSSHash string
 }
@@ -233,6 +237,7 @@ type contentPageData struct {
 	Key            string
 	Title          string
 	Body           string // plain text, escaped by html/template
+	FooterContent  []SiteContentData
 	DarkMode       bool
 	IslandsCSSHash string
 }
@@ -285,7 +290,7 @@ func (r Renderer) RenderAll(articles []content.Article) error {
 		return err
 	}
 	return r.renderToStaging(func(stagingDir string) error {
-		return r.renderHomeAndArticles(stagingDir, articles, nil, nil, nil)
+		return r.renderHomeAndArticles(stagingDir, articles, nil, nil, nil, nil)
 	})
 }
 
@@ -298,16 +303,16 @@ func (r Renderer) RenderAllFull(articles []content.Article, products []ProductDa
 		return err
 	}
 	return r.renderToStaging(func(stagingDir string) error {
-		if err := r.renderHomeAndArticles(stagingDir, articles, products, categories, categoryLabels); err != nil {
+		if err := r.renderHomeAndArticles(stagingDir, articles, products, categories, categoryLabels, contentBlocks); err != nil {
 			return err
 		}
-		if err := r.renderProductsTo(stagingDir, products); err != nil {
+		if err := r.renderProductsTo(stagingDir, products, contentBlocks); err != nil {
 			return fmt.Errorf("render products: %w", err)
 		}
-		if err := r.renderCategoriesTo(stagingDir, categories, categoryLabels, productsByCategory); err != nil {
+		if err := r.renderCategoriesTo(stagingDir, categories, categoryLabels, productsByCategory, contentBlocks); err != nil {
 			return fmt.Errorf("render categories: %w", err)
 		}
-		if err := r.renderSiteContentTo(stagingDir, contentBlocks); err != nil {
+		if err := r.renderSiteContentTo(stagingDir, contentBlocks, contentBlocks); err != nil {
 			return fmt.Errorf("render site content: %w", err)
 		}
 		return nil
@@ -384,7 +389,7 @@ func (r Renderer) renderToStaging(fn func(stagingDir string) error) error {
 	return nil
 }
 
-func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Article, products []ProductData, categories []string, categoryLabels map[string]string) error {
+func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Article, products []ProductData, categories []string, categoryLabels map[string]string, footerContent []SiteContentData) error {
 	islandsCSSHash := r.islandsCSSHash()
 
 	home, err := template.ParseFiles(filepath.Join(r.templateDir(), "home.html"))
@@ -399,6 +404,7 @@ func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Art
 		Products:       products,
 		Categories:     categories,
 		CategoryLabels: categoryLabels,
+		FooterContent:  footerContent,
 		DarkMode:       r.cfg.DarkMode,
 		IslandsCSSHash: islandsCSSHash,
 	}); err != nil {
@@ -423,6 +429,7 @@ func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Art
 			APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
 			Article:        article,
 			Body:           template.HTML(article.BodyHTML), // #nosec G203 -- trusted CMS contract
+			FooterContent:  footerContent,
 			DarkMode:       r.cfg.DarkMode,
 			IslandsCSSHash: islandsCSSHash,
 		}); err != nil {
@@ -452,10 +459,10 @@ func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Art
 // the ProductDetailPage island providing interactive add-to-cart as
 // progressive enhancement.
 func (r Renderer) RenderProducts(products []ProductData) error {
-	return r.renderProductsTo(r.cfg.OutputDir, products)
+	return r.renderProductsTo(r.cfg.OutputDir, products, nil)
 }
 
-func (r Renderer) renderProductsTo(outputDir string, products []ProductData) error {
+func (r Renderer) renderProductsTo(outputDir string, products []ProductData, footerContent []SiteContentData) error {
 	if len(products) == 0 {
 		return nil
 	}
@@ -478,6 +485,7 @@ func (r Renderer) renderProductsTo(outputDir string, products []ProductData) err
 			PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
 			APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
 			Product:        p,
+			FooterContent:  footerContent,
 			DarkMode:       r.cfg.DarkMode,
 			IslandsCSSHash: islandsCSSHash,
 		}); err != nil {
@@ -492,10 +500,10 @@ func (r Renderer) renderProductsTo(outputDir string, products []ProductData) err
 // ProductGrid island providing interactive filtering/sorting as progressive
 // enhancement.
 func (r Renderer) RenderCategories(categories []string, labels map[string]string, productsByCategory map[string][]ProductData) error {
-	return r.renderCategoriesTo(r.cfg.OutputDir, categories, labels, productsByCategory)
+	return r.renderCategoriesTo(r.cfg.OutputDir, categories, labels, productsByCategory, nil)
 }
 
-func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labels map[string]string, productsByCategory map[string][]ProductData) error {
+func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labels map[string]string, productsByCategory map[string][]ProductData, footerContent []SiteContentData) error {
 	if len(categories) == 0 {
 		return nil
 	}
@@ -524,6 +532,7 @@ func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labe
 			Category:       cat,
 			CategoryLabel:  label,
 			Products:       productsByCategory[cat],
+			FooterContent:  footerContent,
 			DarkMode:       r.cfg.DarkMode,
 			IslandsCSSHash: islandsCSSHash,
 		}); err != nil {
@@ -538,10 +547,10 @@ func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labe
 // policy pages). Content in hero/announcement/popup placements are
 // rendered inline by the home page islands, not as separate routes.
 func (r Renderer) RenderSiteContent(blocks []SiteContentData) error {
-	return r.renderSiteContentTo(r.cfg.OutputDir, blocks)
+	return r.renderSiteContentTo(r.cfg.OutputDir, blocks, blocks)
 }
 
-func (r Renderer) renderSiteContentTo(outputDir string, blocks []SiteContentData) error {
+func (r Renderer) renderSiteContentTo(outputDir string, blocks []SiteContentData, footerContent []SiteContentData) error {
 	if len(blocks) == 0 {
 		return nil
 	}
@@ -566,6 +575,7 @@ func (r Renderer) renderSiteContentTo(outputDir string, blocks []SiteContentData
 			Key:            b.Key,
 			Title:          b.Title,
 			Body:           b.Body, // plain text -- html/template escapes this (INTEGRATION_PLAN.md:388)
+			FooterContent:  footerContent,
 			DarkMode:       r.cfg.DarkMode,
 			IslandsCSSHash: islandsCSSHash,
 		}); err != nil {

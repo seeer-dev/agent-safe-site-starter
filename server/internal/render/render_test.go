@@ -1207,3 +1207,108 @@ func TestRenderHomeEmptyProductsShowsEmptyMessage(t *testing.T) {
 		t.Errorf("dist/index.html does not show empty products message")
 	}
 }
+
+func TestRenderStaticFooterContentLinks(t *testing.T) {
+	// Do NOT call t.Parallel() — this test changes CWD to the repo root.
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origWd) })
+
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir repo root: %v", err)
+	}
+
+	outputDir := filepath.Join(t.TempDir(), "dist")
+	r := New(Config{
+		SiteName:      "Test",
+		PublicSiteURL: "http://localhost:4173",
+		OutputDir:     outputDir,
+		TemplateDir:   "site/templates",
+		AssetDir:      "site/assets",
+		SiteTheme:     "minimal-cart",
+	})
+
+	articles := []content.Article{{Slug: "test-article", Title: "Test article", BodyHTML: "<p>Body</p>"}}
+	products := []ProductData{{Slug: "test-product", Name: "Test product", Category: "apparel", Price: 100, Stock: 1}}
+	footerContent := []SiteContentData{{Key: "footer.about", Title: "About", Body: "About this store"}}
+
+	if err := r.RenderAllFull(articles, products, []string{"apparel"}, map[string]string{"apparel": "Apparel"}, map[string][]ProductData{"apparel": products}, footerContent); err != nil {
+		t.Fatalf("RenderAllFull: %v", err)
+	}
+
+	for name, path := range map[string]string{
+		"home":     filepath.Join(outputDir, "index.html"),
+		"product":  filepath.Join(outputDir, "products", "test-product", "index.html"),
+		"category": filepath.Join(outputDir, "categories", "apparel", "index.html"),
+		"content":  filepath.Join(outputDir, "content", "footer.about", "index.html"),
+		"article":  filepath.Join(outputDir, "articles", "test-article", "index.html"),
+	} {
+		html, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s page: %v", name, err)
+		}
+		if !strings.Contains(string(html), `id="footer-static"`) {
+			t.Errorf("%s page is missing #footer-static", name)
+		}
+		if !strings.Contains(string(html), `href="http://localhost:4173/content/footer.about/"`) {
+			t.Errorf("%s page is missing the static footer.about link", name)
+		}
+	}
+}
+
+func TestRenderStaticFooterEmptyContent(t *testing.T) {
+	// Do NOT call t.Parallel() — this test changes CWD to the repo root.
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origWd) })
+
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir repo root: %v", err)
+	}
+
+	outputDir := filepath.Join(t.TempDir(), "dist")
+	r := New(Config{
+		SiteName:      "Test",
+		PublicSiteURL: "http://localhost:4173",
+		OutputDir:     outputDir,
+		TemplateDir:   "site/templates",
+		AssetDir:      "site/assets",
+		SiteTheme:     "minimal-cart",
+	})
+
+	articles := []content.Article{{Slug: "test-article", Title: "Test article", BodyHTML: "<p>Body</p>"}}
+	products := []ProductData{{Slug: "test-product", Name: "Test product", Category: "apparel", Price: 100, Stock: 1}}
+	if err := r.RenderAllFull(articles, products, []string{"apparel"}, map[string]string{"apparel": "Apparel"}, map[string][]ProductData{"apparel": products}, nil); err != nil {
+		t.Fatalf("RenderAllFull: %v", err)
+	}
+
+	for name, path := range map[string]string{
+		"home":     filepath.Join(outputDir, "index.html"),
+		"product":  filepath.Join(outputDir, "products", "test-product", "index.html"),
+		"category": filepath.Join(outputDir, "categories", "apparel", "index.html"),
+		"article":  filepath.Join(outputDir, "articles", "test-article", "index.html"),
+	} {
+		html, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("read %s page: %v", name, err)
+		}
+		if !strings.Contains(string(html), "Information will be published before launch.") {
+			t.Errorf("%s page is missing the static footer empty state", name)
+		}
+		if strings.Contains(string(html), `href="http://localhost:4173/content//"`) {
+			t.Errorf("%s page contains a broken empty footer link", name)
+		}
+	}
+}

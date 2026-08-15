@@ -291,6 +291,12 @@ func TestComposeAndRenderProducesMinimalCartOutput(t *testing.T) {
 	if !strings.Contains(homeStr, `id="shop-static"`) {
 		t.Errorf("dist/index.html does not contain #shop-static section (no-JS baseline)")
 	}
+	if !strings.Contains(homeStr, `id="footer-static"`) {
+		t.Errorf("dist/index.html does not contain #footer-static section (no-JS navigation baseline)")
+	}
+	if !strings.Contains(homeStr, `href="http://localhost:4173/content/footer.about/"`) {
+		t.Errorf("dist/index.html does not contain the static footer.about link")
+	}
 	// 1d. Home page must contain category navigation links.
 	if !strings.Contains(homeStr, "/categories/apparel/") {
 		t.Errorf("dist/index.html does not contain category navigation link /categories/apparel/")

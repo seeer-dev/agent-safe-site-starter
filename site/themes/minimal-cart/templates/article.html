@@ -24,6 +24,21 @@
     <div class="prose mt-8 max-w-none text-foreground/90">{{.Body}}</div>
   </main>
 
+  <nav id="footer-static" class="border-t border-border/60 bg-muted/20 px-4 py-8 sm:px-6 lg:px-8" aria-label="Information and policies">
+    <div class="mx-auto max-w-7xl">
+      <h2 class="text-xs font-medium uppercase tracking-wider text-muted-foreground">Information and policies</h2>
+      {{if gt (len .FooterContent) 0}}
+      <ul class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+        {{range .FooterContent}}
+        <li><a href="{{if $.PublicSiteURL}}{{$.PublicSiteURL}}{{end}}/content/{{.Key}}/" class="text-sm text-foreground/80 transition-colors hover:text-foreground">{{.Title}}</a></li>
+        {{end}}
+      </ul>
+      {{else}}
+      <p class="mt-4 text-xs text-muted-foreground">Information will be published before launch.</p>
+      {{end}}
+    </div>
+  </nav>
+
   <!-- Island: Footer -->
   <div data-vue-island="Footer"></div>
 

@@ -2,7 +2,7 @@
 
 Change ID: minimal-cart-integration  
 Revision: 12  
-Status: Verifying -- admin visibility remediation
+Status: Verifying -- B01F implementation complete; browser acceptance pending
 
 Normative specification: [`spec.md`](spec.md)  
 Detailed implementation strategy: [`../../../INTEGRATION_PLAN.md`](../../../INTEGRATION_PLAN.md)
@@ -252,24 +252,24 @@ Slice 1 is the only delegated scope until independent review passes. Slice 2 sta
 - Live Supabase customer/staff success-path walkthrough with configured `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY`. Revision 9 local wiring, fail-closed provider-unavailable state, invalid-session cleanup, and browser-to-Go member create/list/detail reachability are implemented and covered by `receipts/walkthrough-auth-rev9.md`.
 - Independent acceptance walkthrough by a non-implementer reviewer.
 
-## Implementation expansion context (Batch 1: B5 approval gate)
+## Implementation expansion context
 
 Proposal revision: 12
 Proposal status: Verifying
 Repository baseline: `7c45b616fbe3a632ffe2a39d872c98485466c991`
-Observed HEAD: `7e5aa90b92d23c8c316d44ca935be7af8d150a1c`
+Observed HEAD: `52e1f3fc1bb3e103c4a3988f0a479d70bd7cecab`
 Pre-existing dirty paths:
-- `.github/workflows/ci.yml` - preserve; postgres-lock CI wiring
-- `server/internal/migrate/postgres_integration_test.go` - preserve; postgres-lock
-- `server/internal/modules/media/postgres_integration_test.go` - preserve; postgres-lock
-- `server/internal/modules/staff/postgres_integration_test.go` - preserve; postgres-lock
-- `server/internal/modules/staff/store.go` - preserve; postgres-lock
-- `server/tools/verify/main_test.go` - preserve; postgres-lock
-- `server/tools/postgres-live-gate/**` - preserve; postgres-lock S01G
-- `specs/changes/postgres-lock-semantics-and-evidence/**` - preserve; postgres-lock
-- `specs/changes/enforce-spec-governance/**` - preserve; enforce receipt
+- `Makefile` - preserve; pre-existing working tree modification, not attributable to B01F planning
+- `specs/changes/minimal-cart-integration/control.json` - preserve; pre-existing revision 12 evidence update, not attributable to B01F planning
+- `specs/changes/minimal-cart-integration/evidence.md` - preserve; pre-existing revision 12 evidence update, not attributable to B01F planning
+- `specs/changes/minimal-cart-integration/receipts/b5-approval-walkthrough-rev12.md` - preserve; pre-existing revision 12 receipt, not attributable to B01F planning
+- `specs/changes/commerce-module-file-split/` - preserve; pre-existing untracked proposal directory, not attributable to B01F planning
+- `specs/changes/public-endpoint-rate-limit/` - preserve; pre-existing untracked proposal directory, not attributable to B01F planning
+- `specs/changes/supabase-jwks-verifier/` - preserve; pre-existing untracked proposal directory, not attributable to B01F planning
+- `specs/changes/verify-contract-checks/` - preserve; pre-existing untracked proposal directory, not attributable to B01F planning
 Packet ID mapping:
 - Batch 1 -> Packet B01E (evidence + walkthrough)
+- Batch 2 -> Packet B01F (static footer policy navigation)
 
 ### Packet B01E: B5 approval gate evidence sync and independent walkthrough
 
@@ -420,17 +420,187 @@ B5 approval gate walkthrough
 - [ ] No temporary mutation, fixture, credential, or generated residue remains.
 - [ ] Expected evidence has been replaced with attributable observed evidence after apply.
 
+### Packet B01F: Discoverable static footer policy navigation without JavaScript
+
+Status: implemented; browser walkthrough evidence pending
+Covers: REQ-006, AC-012
+Hard dependencies: none
+Outcome: Public static HTML templates server-render semantic `<nav id="footer-static">` with `<a href="/content/<key>/">` links for all currently published and unexpired footer and policy content, providing accessible and discoverable policy navigation when JavaScript is disabled, while hiding the fallback on successful Footer island mount to prevent duplicate footers.
+Safe failure / rollback: If sitecontent lookup fails, `rendercompose.Compose` returns an error and `renderToStaging` halts promotion, preserving the last-known-good `dist/`; if no footer/policy blocks exist, the templates render an honest empty state without broken links.
+
+#### Repository anchors
+
+| Purpose | Path | Symbol or structural anchor | Current evidence |
+|---|---|---|---|
+| Authoritative data source | `server/internal/modules/sitecontent/store.go` | `SQLStore.ListPublished` | Queries `status = 'published'`, `published_updated_unix > 0`, and `published_approval_expiry_unix > now` sorted by `published_sort_order ASC, published_updated_unix DESC` |
+| Composition owner | `server/tools/internal/rendercompose/compose.go` | `Compose` | Calls `scStore.ListPublished(ctx)` and extracts all published `footer` and `policy` blocks into `Input.ContentBlocks` |
+| Render engine & data contracts | `server/internal/render/render.go` | `RenderAllFull`, `homeData`, `articleData`, `productPageData`, `categoryPageData`, `contentPageData` | Passes page data to html/template; currently omits `FooterContent` from template data structs |
+| Public template (home) | `site/themes/minimal-cart/templates/home.html` | `<div data-vue-island="Footer"></div>` | Lacks static server-rendered `#footer-static` nav baseline |
+| Public template (product) | `site/themes/minimal-cart/templates/product.html` | `<div data-vue-island="Footer"></div>` | Lacks static server-rendered `#footer-static` nav baseline |
+| Public template (category) | `site/themes/minimal-cart/templates/category.html` | `<div data-vue-island="Footer"></div>` | Lacks static server-rendered `#footer-static` nav baseline |
+| Public template (content) | `site/themes/minimal-cart/templates/content.html` | `<div data-vue-island="Footer"></div>` | Lacks static server-rendered `#footer-static` nav baseline |
+| Public template (article) | `site/themes/minimal-cart/templates/article.html` | `<div data-vue-island="Footer"></div>` | Lacks static server-rendered `#footer-static` nav baseline |
+| Progressive enhancement owner | `site/themes/minimal-cart/islands/Footer/Footer.vue` | `<script setup>`, `onMounted` | Needs `onMounted` hook to hide `#footer-static` on successful mount (matching `ProductGrid.vue` pattern) |
+| Existing render test | `server/internal/render/render_test.go` | `TestRenderStagingSuccessPromotesToDist` | Proves atomic staging and template execution |
+| Existing compose e2e test | `server/tools/internal/rendercompose/compose_test.go` | `TestComposeAndRenderProducesMinimalCartOutput` | Asserts `#shop-static`, product routes, category routes, and content routes in `dist/` |
+
+Read set:
+- `server/internal/modules/sitecontent/store.go` - understand published snapshot filtering (`published_approval_expiry_unix > now`)
+- `server/tools/internal/rendercompose/compose.go` - observe that `Compose` already queries published content and populates `Input.ContentBlocks` with `footer` and `policy` blocks
+- `server/internal/render/render.go` - understand template data shapes and staging render flow
+- `site/themes/minimal-cart/templates/*.html` - understand existing static HTML template structures and island mount points
+- `site/themes/minimal-cart/islands/Footer/Footer.vue` - understand Footer island lifecycle and mount behavior
+- `site/themes/minimal-cart/islands/ProductGrid/ProductGrid.vue` - reference existing `hideStaticSection` / `onMounted` progressive-enhancement pattern
+- `specs/changes/minimal-cart-integration/spec.md` - AC-012 normative requirements
+
+Modify set:
+- `server/internal/render/render.go` - add `FooterContent []SiteContentData` to `homeData`, `articleData`, `productPageData`, `categoryPageData`, `contentPageData`; pass `contentBlocks` from `RenderAllFull` to all sub-renderers (`renderHomeAndArticles`, `renderProductsTo`, `renderCategoriesTo`, `renderSiteContentTo`)
+- `site/themes/minimal-cart/templates/home.html` - add server-rendered `<nav id="footer-static">` with `{{range .FooterContent}}` above `<div data-vue-island="Footer"></div>`
+- `site/themes/minimal-cart/templates/product.html` - add server-rendered `<nav id="footer-static">` with `{{range .FooterContent}}` above `<div data-vue-island="Footer"></div>`
+- `site/themes/minimal-cart/templates/category.html` - add server-rendered `<nav id="footer-static">` with `{{range .FooterContent}}` above `<div data-vue-island="Footer"></div>`
+- `site/themes/minimal-cart/templates/content.html` - add server-rendered `<nav id="footer-static">` with `{{range .FooterContent}}` above `<div data-vue-island="Footer"></div>`
+- `site/themes/minimal-cart/templates/article.html` - add server-rendered `<nav id="footer-static">` with `{{range .FooterContent}}` above `<div data-vue-island="Footer"></div>`
+- `site/themes/minimal-cart/islands/Footer/Footer.vue` - add `onMounted(() => { document.getElementById('footer-static')?.setAttribute('hidden', '') })` to hide static fallback once Vue island mounts
+- `server/internal/render/render_test.go` - add `TestRenderStaticFooterContentLinks` and `TestRenderStaticFooterEmptyContent`
+- `server/tools/internal/rendercompose/compose_test.go` - update `TestComposeAndRenderProducesMinimalCartOutput` to assert static footer anchor tags in `dist/index.html`
+
+Must not modify:
+- `server/tools/internal/rendercompose/compose.go` - `Compose` already extracts published `footer` and `policy` blocks into `Input.ContentBlocks`
+- `site/themes/minimal-cart/islands/Footer/Footer.vue` `NAV_LINKS` / dialog keys - preserve existing dialog behavior intact without speculative key mapping
+- `server/internal/modules/sitecontent/**` - storage and approval gating are already complete and tested
+- `admin/**` - admin content management is already complete
+- `db/migrations/**` - no schema changes needed
+- `contracts/**` - OpenAPI contracts already reflect site content endpoints
+- Any file outside `specs/changes/minimal-cart-integration/**` during planning phase
+
+#### Behavior contract
+
+Before:
+- Public static HTML pages contain `<div data-vue-island="Footer"></div>` without server-rendered footer markup or policy links.
+- When JavaScript is disabled, the footer area is completely empty; no policy navigation is discoverable or clickable.
+- `Footer.vue` mounts when JS runs, but does not coordinate with any static baseline.
+
+After:
+- Public static HTML templates (`home.html`, `product.html`, `category.html`, `content.html`, `article.html`) emit a focused semantic navigation fallback `<nav id="footer-static" class="border-t border-border/60 bg-muted/20 px-4 py-8 sm:px-6 lg:px-8" aria-label="網站資訊與政策">` with a list of `<a href="{{if $.PublicSiteURL}}{{$.PublicSiteURL}}{{end}}/content/{{.Key}}/">{{.Title}}</a>` for all currently published, unexpired `footer` and `policy` content blocks.
+- If no footer/policy content blocks are published, the template gracefully renders an honest placeholder (`<p class="text-xs text-muted-foreground">政策與網站資訊將於正式上線前公告。</p>`) without broken links.
+- When JavaScript is disabled or fails to execute, `#footer-static` remains visible, accessible, and navigable; visitors can click any link to open the static policy page (`/content/<key>/index.html`), which renders completely without client JS.
+- When JavaScript executes successfully, `Footer.vue` mounts and its `onMounted` hook adds the `hidden` attribute to `#footer-static`, preventing dual/duplicate footers while providing interactive dialogs and newsletter features.
+
+Preserved invariants:
+- Only published, unexpired content rows (`status = 'published'` AND `published_approval_expiry_unix > now`) are included in `FooterContent`; draft or expired content is never rendered.
+- Content route containment is enforced by `safeJoin` and `validateRouteSegment`.
+- Template strings (`Title`, `Body`) are safely escaped by `html/template`.
+- `Footer.vue` interactive dialog behavior and modal triggers remain unchanged.
+- Atomic staging promotion via `renderToStaging` remains intact (render failure preserves last-known-good `dist/`).
+
+Inputs and authority:
+- Data source: `scStore.ListPublished(ctx)` via `rendercompose.Compose(ctx, db, dialect, r2PublicBaseURL)`.
+- Server authority: Go renderer evaluates published status and expiry timestamps at render time.
+
+Errors and edge states:
+- Empty footer/policy blocks: honest empty placeholder rendered, no template error or broken `<a>` tags.
+- JS disabled: semantic `<a href="/content/<key>/">` navigates directly to static policy routes.
+- JS enabled: `#footer-static` is hidden by `onMounted` in `Footer.vue`, showing only the interactive island without visual duplication.
+- Island mount failure: `#footer-static` stays visible as a safe degradation fallback.
+
+#### Ordered edits
+
+1. `server/internal/render/render.go` - `homeData`, `articleData`, `productPageData`, `categoryPageData`, `contentPageData`, `RenderAllFull`, `renderHomeAndArticles`, `renderProductsTo`, `renderCategoriesTo`, `renderSiteContentTo`
+   - Change: Add `FooterContent []SiteContentData` field to all five page data structs (`homeData`, `articleData`, `productPageData`, `categoryPageData`, `contentPageData`). In `RenderAllFull`, pass `contentBlocks` directly to `renderHomeAndArticles`, `renderProductsTo`, `renderCategoriesTo`, and `renderSiteContentTo` as `FooterContent`.
+   - Constraint: Do not alter `RenderAllFull` or `RenderAll` public function signatures.
+   - Result: All rendered page templates receive the authoritative list of published footer/policy content blocks.
+
+2. `site/themes/minimal-cart/templates/home.html`, `product.html`, `category.html`, `content.html`, `article.html` - static footer navigation markup
+   - Change: Immediately above `<div data-vue-island="Footer"></div>`, add:
+     ```html
+     <nav id="footer-static" class="border-t border-border/60 bg-muted/20 px-4 py-8 sm:px-6 lg:px-8" aria-label="網站資訊與政策">
+       <div class="mx-auto max-w-7xl">
+         <h2 class="text-xs font-medium uppercase tracking-wider text-muted-foreground">網站資訊與政策</h2>
+         {{if gt (len .FooterContent) 0}}
+         <ul class="mt-4 flex flex-wrap gap-x-6 gap-y-2">
+           {{range .FooterContent}}
+           <li>
+             <a href="{{if $.PublicSiteURL}}{{$.PublicSiteURL}}{{end}}/content/{{.Key}}/" class="text-sm text-foreground/80 transition-colors hover:text-foreground">{{.Title}}</a>
+           </li>
+           {{end}}
+         </ul>
+         {{else}}
+         <p class="mt-4 text-xs text-muted-foreground">政策與網站資訊將於正式上線前公告。</p>
+         {{end}}
+       </div>
+     </nav>
+     ```
+   - Constraint: Keep static fallback focused on accessible navigation only; do not duplicate newsletter forms, brand logo, or contact claims.
+   - Result: All static HTML pages contain semantic footer navigation readable without JavaScript.
+
+3. `site/themes/minimal-cart/islands/Footer/Footer.vue` - hide static fallback on island mount
+   - Change: Import `onMounted` from `vue` (if not already imported) and add:
+     ```typescript
+     onMounted(() => {
+       document.getElementById('footer-static')?.setAttribute('hidden', '')
+     })
+     ```
+   - Constraint: Preserve existing `NAV_LINKS` array and `ui.openFooterPage(link.key)` dialog behavior unchanged.
+   - Result: Island mount hides `#footer-static` to prevent dual visible footers when JavaScript is active.
+
+4. `server/internal/render/render_test.go` - `TestRenderStaticFooterContentLinks`, `TestRenderStaticFooterEmptyContent`
+   - Change: Add `TestRenderStaticFooterContentLinks` to assert that `RenderAllFull` outputs HTML containing `<nav id="footer-static"` and `<a href=".../content/footer.about/">About</a>` across home, product, category, content, and article pages. Add `TestRenderStaticFooterEmptyContent` to assert that when `contentBlocks` is empty, all pages render the honest empty notice `<p class="mt-4 text-xs text-muted-foreground">政策與網站資訊將於正式上線前公告。</p>` without broken `<a>` tags.
+   - Constraint: Must not weaken existing render tests.
+   - Result: Automated regression proof covering static footer link rendering and empty states across all 5 template families.
+
+5. `server/tools/internal/rendercompose/compose_test.go` - `TestComposeAndRenderProducesMinimalCartOutput`
+   - Change: Add assertions verifying that `dist/index.html` contains `<nav id="footer-static"` and `<a href="http://localhost:4173/content/footer.about/">About</a>`.
+   - Constraint: Must not break existing e2e render composition assertions.
+   - Result: End-to-end regression proof from SQLite DB seed through `Compose` to rendered `dist/index.html`.
+
+#### Integration trace
+
+```text
+db published site_content rows (status='published', published_approval_expiry_unix > now, placement IN ('footer', 'policy'))
+  -> scStore.ListPublished(ctx) (store.go)
+  -> rendercompose.Compose (compose.go: filters placement == "footer" || "policy" into Input.ContentBlocks)
+  -> Renderer.RenderAllFull (render.go: passes ContentBlocks as FooterContent to homeData/productPageData/categoryPageData/contentPageData/articleData)
+  -> template execution (home.html, product.html, category.html, content.html, article.html)
+  -> dist/*.html generated containing <nav id="footer-static"> with <a href="/content/<key>/">
+  -> JS-disabled visitor loads dist/index.html -> views #footer-static -> clicks /content/footer.about/
+  -> browser loads dist/content/footer.about/index.html -> renders policy title and body without client JS
+  -> (progressive enhancement) JS-enabled visitor loads page -> islands.js mounts Footer.vue -> Footer.vue onMounted adds hidden to #footer-static -> only interactive Footer island is visible
+```
+
+#### Verification matrix
+
+| Claim | Working directory | Exact argv or walkthrough | Selected assertion/artifact | Expected result | Negative case | Failure trigger | Restoration/residue check |
+|---|---|---|---|---|---|---|---|
+| Static footer links rendered in home HTML | `D:\Projects\AI-go-starter` | `go test ./server/internal/render/ -run TestRenderStaticFooterContentLinks -v -count=1` | `TestRenderStaticFooterContentLinks` | PASS: `dist/index.html` contains `<nav id="footer-static"` and `<a href=".../content/footer.about/">` | If policy link href missing or malformed | Temporarily remove `FooterContent` from `homeData` in `render.go` -> assert test fails | Restore `render.go` + `git diff --check` |
+| Static footer links across all 5 template families | `D:\Projects\AI-go-starter` | `go test ./server/internal/render/ -run TestRenderStaticFooterContentLinks -v -count=1` | `TestRenderStaticFooterContentLinks` | PASS: home, product, category, content, and article pages all contain `#footer-static` and link | If any template omits `#footer-static` | Temporarily remove `#footer-static` from `product.html` -> assert test fails | Restore `product.html` + `git diff --check` |
+| Graceful empty state when no footer/policy content exists | `D:\Projects\AI-go-starter` | `go test ./server/internal/render/ -run TestRenderStaticFooterEmptyContent -v -count=1` | `TestRenderStaticFooterEmptyContent` | PASS: all 5 templates render honest empty notice, no broken `<a>` tags | If empty slice causes panic or empty broken hrefs | Temporarily remove empty check in `home.html` -> assert test fails | Restore `home.html` + `git diff --check` |
+| End-to-end compose and render produces footer links in dist/ | `D:\Projects\AI-go-starter` | `go test ./server/tools/internal/rendercompose/ -run TestComposeAndRenderProducesMinimalCartOutput -v -count=1` | `TestComposeAndRenderProducesMinimalCartOutput` | PASS: seeded `footer.about` appears as `<a href="http://localhost:4173/content/footer.about/">` in `dist/index.html` | If `ContentBlocks` omitted from template data | Temporarily omit `FooterContent` in `RenderAllFull` -> assert test fails | Restore `render.go` + `git diff --check` |
+| Theme build and islands typecheck | `D:\Projects\AI-go-starter\site\themes\minimal-cart` | `npm run build:check` | `dist/islands.js` and `dist/islands-*.css` | exit 0, build succeeds | If Footer.vue syntax or type error | N/A | N/A |
+| Fresh render inspection | `D:\Projects\AI-go-starter` | `go run ./server/tools/render` then inspect `dist/index.html` | `dist/index.html`, `dist/content/footer.about/index.html` | `dist/index.html` contains `<nav id="footer-static"` with `<a href=".../content/footer.about/">` | If static nav missing in render output | N/A | N/A |
+| JS-disabled browser navigation walkthrough | `D:\Projects\AI-go-starter` | `go run ./server/tools/dev` then navigate with JS disabled | Browser inspection of `http://localhost:4173/` -> click footer link -> `http://localhost:4173/content/footer.about/` loads and displays title/body | 200 OK, full policy text readable without JavaScript | If footer link missing or navigation broken | N/A | N/A |
+| JS-enabled progressive enhancement no-duplicate walkthrough | `D:\Projects\AI-go-starter` | `go run ./server/tools/dev` then inspect DOM with JS enabled | Browser inspection of `http://localhost:4173/` -> `#footer-static` has `hidden` attribute; only interactive Footer island is visible | `#footer-static[hidden]` present; no visual duplication | If onMounted fails to hide `#footer-static` | N/A | N/A |
+
+#### Completion gate
+
+- [ ] Every ordered edit is inside the modify set and controlled scope.
+- [ ] Before/after behavior and preserved invariants match the approved spec.
+- [ ] Every mapped AC has a selected assertion or observable artifact.
+- [ ] The bounded failure trigger fails for the claimed reason and is restored.
+- [ ] Existing relevant tests remain present and unweakened.
+- [ ] No temporary mutation, fixture, credential, or generated residue remains.
+- [ ] Expected evidence has been replaced with attributable observed evidence after apply.
+
 #### Blueprint-wide gates
 
 | Check | Result |
 |---|---|
-| Every REQ maps to at least one packet | pass (REQ-006 -> B01E) |
-| Every AC maps to proof in at least one packet | pass (AC-011 -> B01E, AC-012 -> B01E) |
-| Every packet maps back to REQ/AC | pass (B01E -> REQ-006, AC-011, AC-012) |
+| Every REQ maps to at least one packet | pass (REQ-006 -> B01E, B01F) |
+| Every AC maps to proof in at least one packet | pass (AC-011 -> B01E, AC-012 -> B01E, B01F) |
+| Every packet maps back to REQ/AC | pass (B01E -> REQ-006, AC-011, AC-012; B01F -> REQ-006, AC-012) |
 | Baseline, observed HEAD, dirty paths, and packet ID mapping are explicit | pass |
-| All paths and symbols were inspected | pass (service.go, store.go, http.go, service_test.go, content.ts, control.json, spec.md all read) |
+| All paths and symbols were inspected | pass (render.go, compose.go, store.go, templates/*.html, Footer.vue, ProductGrid.vue, render_test.go, compose_test.go all read) |
 | Hard dependency graph has no unexplained edge or cycle | pass (no hard dependencies) |
-| Scope covers every modify path and no unrelated path | pass (only specs/changes/minimal-cart-integration/**) |
-| Product/authority decisions are approved or blocked | pass (no new decisions; evidence sync only) |
+| Scope covers every modify path and no unrelated path | pass (only specs/changes/minimal-cart-integration/** during planning; named modify set for apply) |
+| Product/authority decisions are approved or blocked | pass (progressive enhancement + static nav aligns with spec AC-012) |
 | No agent/provider/model identity changes packet semantics | pass |
 | No expected result is presented as observed evidence | pass |
