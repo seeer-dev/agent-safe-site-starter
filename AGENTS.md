@@ -13,6 +13,7 @@ Read `architecture.yaml` and `skills/site/SKILL.md` before broad changes.
 - Database changes require a SQLite migration and a PostgreSQL migration unless the feature explicitly drops one driver.
 - Prefer portable SQL. Do not add PostgreSQL-only features silently.
 - Public content defaults to static publish: CMS/data -> Go renderer -> `dist/` -> Cloudflare Pages.
+- Core site assets default to plain static JavaScript/CSS. Vue islands are permitted only inside the selected interactive theme (`site/themes/<theme>/`) where component interaction requires them. The admin interface (`admin/`) is a separate Vue SPA.
 - Add client JavaScript only for interaction that actually needs it.
 - Protected implementation and governance changes require one valid controlled change under `specs/changes/<change-id>/`; a Draft or Superseded spec never authorizes product edits.
 - Treat `server/tools/speccheck`, `server/tools/verify`, CI workflows, `AGENTS.md`, `architecture.yaml`, and `skills/` as protected governance surfaces. Changes to the gate must pass the gate.

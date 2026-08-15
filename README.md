@@ -14,7 +14,7 @@ Browser interactions -> Railway Go API ----+
                          Supabase Auth
 ```
 
-No Nuxt, Next.js, frontend SSR runtime, DI container, plugin registry, or database access from the browser.
+No Nuxt, Next.js, frontend SSR runtime, DI container, plugin registry, or database access from the browser. Core site assets are plain static JavaScript/CSS; interactive Vue islands are confined to the selected commerce theme (`site/themes/minimal-cart/`), and the admin panel (`admin/`) is a separate Vue SPA.
 
 ## What a non-technical user does
 
@@ -75,6 +75,7 @@ Cloudflare Pages' build image supports Go and custom build commands, so the rend
 ## Repository map
 
 ```text
+admin/                   separate Vue SPA for store management
 server/
   cmd/api/               Go API entrypoint
   internal/
@@ -86,7 +87,8 @@ server/
   tools/                 deterministic commands for AI/CI
 site/
   templates/             human-readable HTML templates
-  assets/                plain CSS/JS
+  assets/                plain CSS/JS for core static pages
+  themes/                interactive themes with scoped Vue islands
 db/migrations/
   sqlite/
   postgres/
