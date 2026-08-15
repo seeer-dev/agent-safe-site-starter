@@ -5,6 +5,7 @@
 - `server/tools/verify` currently runs archcheck, scopecheck, Go tests, and vet.
 - CI runs archcheck, tests, and vet directly and does not run scopecheck or a spec gate.
 - `.ai/scope.json` is an ignored local allowlist and cannot provide durable spec traceability by itself.
+- A fresh Windows checkout can materialize controlled Markdown as CRLF; header parsing must treat CRLF and LF artifact headings equivalently.
 - The target repo has no existing `specs/` or external spec CLI dependency.
 - The first workflow draft exposed revision names, slice selection, and a separate walkthrough step as normal user operations even though these are agent-owned control mechanics.
 

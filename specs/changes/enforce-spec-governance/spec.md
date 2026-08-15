@@ -2,7 +2,7 @@
 
 Change ID: enforce-spec-governance
 Revision: 3
-Status: Verifying
+Status: Accepted
 Decision authority: Repository owner/user
 Approval basis: User approved the summarized skill and evidence-governance hardening on 2026-08-12 by replying '好，調整'.
 Repository baseline: 7c45b616fbe3a632ffe2a39d872c98485466c991

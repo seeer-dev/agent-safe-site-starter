@@ -3,7 +3,7 @@
 | REQ/AC | Status | Proof |
 |---|---|---|
 | REQ-001 | passed | protected-path coverage tests passed; missing-control CLI test rejected uncovered paths |
-| REQ-002 | passed | go test ./server/tools/speccheck -count=1: passed |
+| REQ-002 | passed | go test ./server/tools/speccheck -count=1: passed, including CRLF spec-heading regression |
 | REQ-003 | passed | go test ./... -count=1 and go vet ./... passed; verifier wiring inspection passed |
 | REQ-004 | passed | governance protected-path and wiring tests: passed |
 | REQ-005 | passed | README and workflows/safe-change.md two-step workflow contract inspection passed; manual skill frontmatter/reference validation passed |
@@ -13,7 +13,7 @@
 | REQ-009 | passed | repository documentation and routed references consistently require production-claim audits, structured walkthroughs, and independent replay; receipt receipts/revision-3-validation.md |
 | AC-001 | passed | missing-control CLI test: rejected with uncovered protected paths |
 | AC-002 | passed | TestCoveringChangesRequiresOneAuthorizingSpec: passed |
-| AC-003 | passed | TestValidateControlRejectsArtifactDrift: passed |
+| AC-003 | passed | TestValidateControlRejectsArtifactDrift and TestValidateControlAcceptsCRLFSpecHeadings: passed |
 | AC-004 | passed | TestValidateControlRejectsAcceptedWithoutPassedEvidence: passed |
 | AC-005 | passed | verifier wiring inspection passed; go test ./... -count=1 and go vet ./... passed |
 | AC-006 | passed | TestGovernanceWiringKeepsSpeccheckInVerifyAndCI: passed; CI base wiring inspected |
@@ -28,4 +28,4 @@
 | AC-015 | passed | recovery possession-proof, lifetime, abuse-control, rotation, audit, and failure matrix inspected; receipt receipts/revision-3-validation.md |
 | AC-016 | passed | approved-source plus source/fresh-build/fresh-render audit contract inspected; receipt receipts/revision-3-validation.md |
 | AC-017 | passed | walkthrough receipt path, revision, completeness, and proof-link validation tests passed; receipt receipts/revision-3-validation.md |
-| AC-018 | passed | actual diff inspection and independent command replay, including repository-facing documentation assertions, recorded in receipt receipts/revision-3-validation.md |
+| AC-018 | passed | independent CRLF parser diff inspection and command replay recorded in receipt receipts/crlf-parser-review.md |

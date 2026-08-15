@@ -1,7 +1,7 @@
 {
   "change_id": "enforce-spec-governance",
   "revision": 3,
-  "status": "Verifying",
+  "status": "Accepted",
   "decision_authority": "Repository owner/user",
   "approval_basis": "User approved the summarized skill and evidence-governance hardening on 2026-08-12 by replying '好，調整'.",
   "repository_baseline": "7c45b616fbe3a632ffe2a39d872c98485466c991",
@@ -59,7 +59,7 @@
   },
   "evidence": {
     "REQ-001": {"status": "passed", "proof": "protected-path coverage tests passed; missing-control CLI test rejected uncovered paths", "observed_revision": 3},
-    "REQ-002": {"status": "passed", "proof": "go test ./server/tools/speccheck -count=1: passed", "observed_revision": 3},
+    "REQ-002": {"status": "passed", "proof": "go test ./server/tools/speccheck -count=1: passed, including CRLF spec-heading regression", "observed_revision": 3},
     "REQ-003": {"status": "passed", "proof": "go test ./... -count=1 and go vet ./... passed; verifier wiring inspection passed", "observed_revision": 3},
     "REQ-004": {"status": "passed", "proof": "governance protected-path and wiring tests: passed", "observed_revision": 3},
     "REQ-005": {"status": "passed", "proof": "README and workflows/safe-change.md two-step workflow contract inspection passed; manual skill frontmatter/reference validation passed", "observed_revision": 3},
@@ -69,7 +69,7 @@
     "REQ-009": {"status": "passed", "proof": "repository documentation and routed references consistently require production-claim audits, structured walkthroughs, and independent replay; receipt receipts/revision-3-validation.md", "observed_revision": 3},
     "AC-001": {"status": "passed", "proof": "missing-control CLI test: rejected with uncovered protected paths", "observed_revision": 3},
     "AC-002": {"status": "passed", "proof": "TestCoveringChangesRequiresOneAuthorizingSpec: passed", "observed_revision": 3},
-    "AC-003": {"status": "passed", "proof": "TestValidateControlRejectsArtifactDrift: passed", "observed_revision": 3},
+    "AC-003": {"status": "passed", "proof": "TestValidateControlRejectsArtifactDrift and TestValidateControlAcceptsCRLFSpecHeadings: passed", "observed_revision": 3},
     "AC-004": {"status": "passed", "proof": "TestValidateControlRejectsAcceptedWithoutPassedEvidence: passed", "observed_revision": 3},
     "AC-005": {"status": "passed", "proof": "verifier wiring inspection passed; go test ./... -count=1 and go vet ./... passed", "observed_revision": 3},
     "AC-006": {"status": "passed", "proof": "TestGovernanceWiringKeepsSpeccheckInVerifyAndCI: passed; CI base wiring inspected", "observed_revision": 3},
@@ -84,6 +84,6 @@
     "AC-015": {"status": "passed", "proof": "recovery possession-proof, lifetime, abuse-control, rotation, audit, and failure matrix inspected; receipt receipts/revision-3-validation.md", "observed_revision": 3, "receipts": [{"kind": "security-review", "path": "receipts/revision-3-validation.md"}]},
     "AC-016": {"status": "passed", "proof": "approved-source plus source/fresh-build/fresh-render audit contract inspected; receipt receipts/revision-3-validation.md", "observed_revision": 3, "receipts": [{"kind": "production-content-audit", "path": "receipts/revision-3-validation.md"}]},
     "AC-017": {"status": "passed", "proof": "walkthrough receipt path, revision, completeness, and proof-link validation tests passed; receipt receipts/revision-3-validation.md", "observed_revision": 3, "receipts": [{"kind": "walkthrough", "path": "receipts/revision-3-validation.md"}]},
-    "AC-018": {"status": "passed", "proof": "actual diff inspection and independent command replay, including repository-facing documentation assertions, recorded in receipt receipts/revision-3-validation.md", "observed_revision": 3, "receipts": [{"kind": "independent-review", "path": "receipts/revision-3-validation.md"}]}
+    "AC-018": {"status": "passed", "proof": "independent CRLF parser diff inspection and command replay recorded in receipt receipts/crlf-parser-review.md", "observed_revision": 3, "receipts": [{"kind": "independent-review", "path": "receipts/crlf-parser-review.md"}]}
   }
 }

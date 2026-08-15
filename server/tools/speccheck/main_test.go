@@ -24,6 +24,23 @@ func TestValidateControlAcceptsAcceptedWithPassedEvidence(t *testing.T) {
 	}
 }
 
+func TestValidateControlAcceptsCRLFSpecHeadings(t *testing.T) {
+	path := writeChange(t, "Applying", "pending", "")
+	specPath := filepath.Join(filepath.Dir(path), "spec.md")
+	body, err := os.ReadFile(specPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(specPath, []byte(strings.ReplaceAll(string(body), "\n", "\r\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	_, problems := validateControl(path)
+	if len(problems) > 0 {
+		t.Fatalf("validateControl() rejected CRLF spec headings:\n%s", strings.Join(problems, "\n"))
+	}
+}
+
 func TestValidateControlRejectsAcceptedWithoutPassedEvidence(t *testing.T) {
 	path := writeChange(t, "Accepted", "pending", "")
 	_, problems := validateControl(path)
