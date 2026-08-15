@@ -1,0 +1,7 @@
+interface:
+  display_name: "Expand Implementation"
+  short_description: "Turn proposals into executable blueprints"
+  default_prompt: "Use $expand-implementation to expand this proposal into a repository-grounded implementation blueprint."
+
+policy:
+  allow_implicit_invocation: true

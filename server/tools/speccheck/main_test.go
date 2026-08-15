@@ -238,6 +238,25 @@ func TestSiteSkillRequiresReachabilityRecoveryReceiptsAndIndependentReplay(t *te
 	assertFileContains(t, filepath.Join(root, "skills", "site", "references", "delivery-lifecycle.md"), "implementation report from another agent is a handoff")
 }
 
+func TestSiteSkillRoutesAgentNeutralImplementationExpansion(t *testing.T) {
+	root := repositoryRoot(t)
+	assertFileContains(t, filepath.Join(root, "skills", "site", "SKILL.md"), "../expand-implementation/SKILL.md")
+	assertFileContains(t, filepath.Join(root, "skills", "site", "references", "integration-planning.md"), "../../expand-implementation/SKILL.md")
+	assertFileContains(t, filepath.Join(root, "skills", "site", "references", "workflow-usage.md"), "expands implementation instructions into the existing `plan.md`")
+	assertFileContains(t, filepath.Join(root, "skills", "site", "references", "workflow-usage.md"), "not a third lifecycle action")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "SKILL.md"), "This skill does not select, assign, schedule, or evaluate implementers")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "SKILL.md"), "`SPEC_DRIFT`")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "references", "blueprint-format.md"), "#### Verification matrix")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "references", "blueprint-format.md"), "Failure trigger")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "references", "blueprint-format.md"), "Pre-existing dirty paths")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "references", "blueprint-format.md"), "Working directory")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "references", "blueprint-format.md"), "#### Observed implementation")
+	assertFileContains(t, filepath.Join(root, "skills", "expand-implementation", "references", "blueprint-format.md"), "#### Retrospective evidence gate")
+	if !requiresControlledSpec("skills/expand-implementation/SKILL.md") {
+		t.Fatal("expand-implementation skill must remain a protected governance path")
+	}
+}
+
 func writeChange(t *testing.T, status, evidenceStatus, proof string) string {
 	t.Helper()
 	dir := filepath.Join(t.TempDir(), "example-change")

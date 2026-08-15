@@ -6,7 +6,8 @@ Use this reference when the user says `propose`, `apply`, or `walkthrough`, or a
 
 ```text
 user: propose <outcome>
-  agent: inspect -> draft controlled artifacts -> describe the proposal
+  agent: inspect -> expand implementation packets in plan.md
+         -> draft controlled artifacts -> describe the proposal
 
 user: apply
   agent: approve the sole current proposal -> implement all slices
@@ -22,7 +23,7 @@ The user does not need to provide a change ID, revision, status, REQ/AC ID, slic
 
 ## What propose returns
 
-The agent creates or updates `specs/changes/<change-id>/control.json`, `spec.md`, `plan.md`, and `evidence.md` internally, then describes:
+The agent creates or updates `specs/changes/<change-id>/control.json`, `spec.md`, `plan.md`, and `evidence.md` internally. For a non-trivial proposal, it reads `skills/expand-implementation/SKILL.md` and expands implementation instructions into the existing `plan.md` before describing:
 
 - the intended user-visible outcome;
 - important boundaries and non-goals;
@@ -32,6 +33,8 @@ The agent creates or updates `specs/changes/<change-id>/control.json`, `spec.md`
 - how completion and UX will be proved.
 
 Keep the response readable. Do not dump internal IDs, state transitions, path allowlists, or commands unless the user asks. A propose-only request ends with a review-ready `Draft` and does not modify product code.
+
+Implementation expansion is internal planning work, not a third lifecycle action. It does not select an implementer or vary instructions by agent, provider, model, or team role.
 
 Example:
 

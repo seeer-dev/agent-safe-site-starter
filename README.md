@@ -91,7 +91,9 @@ db/migrations/
   sqlite/
   postgres/
 contracts/openapi.yaml   HTTP contract
-skills/site/             one user-intent router skill
+skills/
+  site/                  user-intent router skill
+  expand-implementation/ proposal-to-blueprint expansion skill
 specs/changes/           controlled specs, plans, and evidence
 workflows/               concise operator workflows
 architecture.yaml        machine/human architecture map
@@ -131,6 +133,8 @@ evidence.md   observed proof for every REQ/AC
 ```
 
 These are agent- and reviewer-facing controls, not extra user commands. The normal user workflow remains `propose <outcome>`, review the summary, then plain `apply`. A separate `walkthrough` request is available for a read-only UX audit, but apply already runs any walkthrough needed for acceptance.
+
+For non-trivial work, the site router uses `skills/expand-implementation/` internally to turn the proposal into repository-grounded implementation packets in the existing `plan.md`. The expansion records exact paths and symbols, ordered edits, boundaries, verification, falsification, and drift stops. It does not choose an implementation agent and does not add a user command.
 
 `Draft` records a proposal but cannot authorize protected edits. `Ready`, `Applying`, `Verifying`, or `Accepted` may cover implementation when approval and artifacts are valid. Maintainers and agents can run the deterministic gate directly or through the full verifier:
 

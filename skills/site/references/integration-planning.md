@@ -123,6 +123,8 @@ For production claims, use an approval inventory rather than only a blacklist. P
 
 Reject plans organized only as all schemas -> all backend modules -> all APIs -> all admin -> all site work -> final integration. Create the smallest slice that ends in an observable user outcome and crosses only the regions needed to prove it.
 
+For a non-trivial controlled proposal, read `../../expand-implementation/SKILL.md` and its required blueprint reference in full. Expand each vertical slice into the existing `plan.md`; do not create a parallel plan artifact or leave path, symbol, dependency, failure, or proof discovery to the implementer.
+
 For each slice, state:
 
 ```text
@@ -133,6 +135,8 @@ Allowed paths:
 Acceptance evidence:
 Rollback or safe failure:
 ```
+
+An implementation-ready packet additionally records inspected repository anchors, read/modify/must-not-modify sets, before/after behavior, ordered symbol-level edits, forbidden work, exact verification, a bounded failure trigger, restoration, and an explicit drift stop. Keep the packet blocked rather than guessing when repository evidence does not support the proposal.
 
 Use a foundation phase only for a decision, invariant, or contract that blocks multiple slices. Do not turn it into a warehouse of unrelated migrations or abstractions.
 
