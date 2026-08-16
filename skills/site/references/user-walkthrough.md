@@ -5,10 +5,11 @@ Use this reference after an applied slice to discover runtime, contract, permiss
 ## Preconditions
 
 1. Read the controlled spec revision/status, plan, affected surface contracts, acceptance evidence, and repository status.
-2. Run the narrowest mechanical gates first: targeted tests, type/lint/build checks when applicable, `scopecheck`, and the repository verifier.
-3. Record failures that predate the slice and stop when the app cannot be exercised safely.
-4. Freeze the source revision and runtime configuration for the walkthrough. Do not edit code until the report is complete.
-5. Use test accounts and reversible test data appropriate to each persona; never expose secrets in evidence.
+2. Under selected linked-worktree mode, confirm the isolated linked worktree is established and validated with `$env:SCOPE_CHANGE_ID='<change-id>'` running `scopecheck` and the mechanical gates before runtime UX acceptance. Selected mode is local-only and forbidden in CI.
+3. Run the narrowest mechanical gates first: targeted tests, type/lint/build checks when applicable, `scopecheck`, and the repository verifier.
+4. Record failures that predate the slice and stop when the app cannot be exercised safely.
+5. Freeze the source revision and runtime configuration for the walkthrough. Do not edit code until the report is complete.
+6. Use test accounts and reversible test data appropriate to each persona; never expose secrets in evidence or reports, and forbid in-repository scratch files. In `finally`, clean up temporary linked worktrees and prune Git metadata.
 
 ## Choose the inspection path
 

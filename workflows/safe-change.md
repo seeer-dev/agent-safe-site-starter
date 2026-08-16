@@ -20,12 +20,15 @@ Product code stays read-only during proposal. Interrupt only when multiple curre
 ```text
 plain apply
   -> record approval and authorize the sole review-ready proposal
-  -> create a narrow .ai/scope.json
-  -> implement all slices in dependency order
+  -> establish scope:
+       - clean/single-task: narrow .ai/scope.json (legacy mode)
+       - parallel/dirty worktrees: preflight ownership (stop on overlap) -> OS-temp linked worktree -> $env:SCOPE_CHANGE_ID='<id>'
+  -> implement all slices in dependency order (zero repo scratch / secrets)
   -> run targeted tests and required walkthroughs
   -> collect current, receipt-backed evidence
   -> independently replay the diff, commands, and generated output
-  -> run scopecheck, speccheck, and the full verifier
+  -> run scopecheck, speccheck, and the full verifier (selected mode is local-only; forbidden in CI)
+  -> in finally: remove linked worktree and prune Git metadata
   -> report changed behavior, validation, and remaining risk
 ```
 

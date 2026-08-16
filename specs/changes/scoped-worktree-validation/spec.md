@@ -2,7 +2,7 @@
 
 Change ID: scoped-worktree-validation
 Revision: 2
-Status: Applying
+Status: Verifying
 Decision authority: Repository owner/user
 Approval basis: The repository owner authorized implementation on 2026-08-15 after the isolated linked-worktree model and review/implementation split were summarized. Revision 2 adds complete Git-worktree overlap preflight and the missing walkthrough guidance path before implementation.
 Repository baseline: bc1d17f10d258c337efab975466949c92a5ec956

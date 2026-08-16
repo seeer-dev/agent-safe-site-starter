@@ -168,7 +168,8 @@ When review changes intended behavior, record a spec amendment and its impact in
 
 ## Lock scope and preserve the baseline
 
-- Create or update `.ai/scope.json` with only the plan/review files or the current slice's expected paths.
+- For clean/single-task working trees, create or update `.ai/scope.json` with only the plan/review files or the current slice's expected paths (legacy mode, which does not provide cross-task attribution).
+- For parallel delegated packets or dirty-primary working trees, plan for isolated OS-temporary linked worktrees: preflight active/dirty ownership across all worktrees and stop immediately on `applies_to` overlap; set `$env:SCOPE_CHANGE_ID='<change-id>'` and run `scopecheck` and `verify` inside the linked root; forbid in-repository scratch files and secrets in reports; capture the complete selected diff; and in `finally`, remove the linked worktree and prune Git metadata. Selected mode is local-only and forbidden in CI.
 - Expand scope only after repository evidence proves a new path is required; record the reason in the plan.
 - Keep discovered implementation fixes out of a plan-only task.
 - Record pre-existing dirty files and failing checks. Do not overwrite them, include them in the slice, or report them as regressions.

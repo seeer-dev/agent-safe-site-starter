@@ -37,14 +37,18 @@ Before each slice:
 1. Re-read the controlled spec, its status/revision, the plan, current slice, affected surface contracts, allowed paths, and acceptance evidence. Do not edit product code unless the spec is `Ready` or `Applying`; plain `apply` may approve the sole latest summarized proposal under the gate in `spec-driven-delivery.md`.
 2. Confirm the repository baseline and preserve unrelated worktree changes.
 3. Reject or repair an unclear contract before coding; do not guess through a path-only or contradictory task.
-4. Create a narrow `.ai/scope.json` for only this slice.
+4. Establish the slice scope gate:
+   - In a clean/single-task worktree, create a narrow `.ai/scope.json` for this slice (legacy mode, which does not provide cross-task attribution).
+   - In parallel delegated or dirty-primary worktrees, preflight active/dirty ownership across all worktrees and stop immediately on `applies_to` overlap; create an OS-temporary linked worktree per packet using the controlled change/baseline as authority; set `$env:SCOPE_CHANGE_ID='<change-id>'` and run `scopecheck` and `verify` in the linked root. Selected mode is local-only and forbidden in CI.
 
 During the slice:
 
 - Implement one complete producer-to-consumer path in dependency order.
+- Forbid in-repository scratch files and secrets in reports; capture the full selected diff.
 - Run targeted checks as behavior becomes testable; do not defer integration proof to the final slice.
 - Replace expected evidence with observed commands, assertions, or inspected output.
 - Mark completion only after the user-visible outcome and required failure/permission cases pass.
+- In `finally`, remove temporary linked worktrees, prune Git metadata, and log any temporary scope incidents.
 - Re-read the implementation contract before starting the next slice.
 - Keep implementer self-reports provisional. Before restoring passed evidence, independently inspect the diff and replay the mapped commands, real consumer path, failure behavior, fresh generated output, and required receipts.
 

@@ -167,6 +167,9 @@ Use these acceptance boundaries:
 - The sample is content/API infrastructure, not a finished admin UI.
 - Supabase token verification uses the Auth server `/auth/v1/user` endpoint for clarity. A cached JWKS verifier can replace the adapter later without changing modules.
 - `body_html` is treated as trusted CMS-authored HTML. Sanitize it before persistence if untrusted users can author content.
-- `scopecheck` remains a local narrow-diff gate because `.ai/scope.json` is task-local; `speccheck` is the durable PR/CI-controlled-spec gate.
+- `scopecheck` operates as a local narrow-diff gate with two supported modes:
+  - **Legacy mode** reads `.ai/scope.json` for single-task/clean working trees, but is not durable cross-task attribution proof.
+  - **Selected linked-worktree mode** (`SCOPE_CHANGE_ID=<change-id>`) runs in an isolated linked worktree to validate the full diff against the controlled `applies_to` and `repository_baseline`, stopping on ownership overlaps across worktrees. Selected mode is local-only and forbidden in CI (CI requires full-diff verification against the PR base commit). In-repository scratch files and secrets in reports are forbidden; in `finally`, remove the temporary worktree and prune Git metadata.
+- `speccheck` is the durable PR/CI-controlled-spec gate.
 
 Read `architecture.yaml`, `AGENTS.md`, `skills/site/SKILL.md`, and `workflows/safe-change.md` before expanding the starter.

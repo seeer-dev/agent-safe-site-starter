@@ -2,7 +2,7 @@
 
 Change ID: scoped-worktree-validation
 Revision: 2
-Status: Applying
+Status: Verifying
 
 Normative specification: [`spec.md`](spec.md)
 
@@ -116,7 +116,7 @@ Errors and edge states:
 
 ### Packet S01: Selected scope fails closed in an isolated linked worktree
 
-Status: executable
+Status: verifying — implementation complete; independent evidence pending
 Covers: REQ-001, REQ-002, AC-001, AC-002, AC-003, AC-004, AC-005
 Hard dependencies: S00 because changing scope authority is a governance trust decision.
 Outcome: `SCOPE_CHANGE_ID=<id> go run ./server/tools/scopecheck` validates the complete selected linked-worktree diff and rejects unsafe execution contexts.
@@ -217,7 +217,7 @@ agent-created linked worktree
 
 ### Packet S02: Regression suite proves selected and legacy behavior
 
-Status: executable
+Status: verifying — implementation complete; independent evidence pending
 Covers: REQ-001, REQ-002, REQ-003, AC-001, AC-002, AC-003, AC-004, AC-005, AC-006
 Hard dependencies: S01 defines the selected-mode seams and diagnostics under test.
 Outcome: Named integration tests prove isolation, complete outside-path rejection, fail-closed guards, and byte-compatible legacy decisions.
