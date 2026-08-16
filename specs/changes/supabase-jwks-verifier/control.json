@@ -1,0 +1,48 @@
+{
+  "change_id": "supabase-jwks-verifier",
+  "revision": 3,
+  "status": "Applying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner authorized implementation by Agy on 2026-08-16. Revision 3 rebases the controlled baseline onto the committed scoped-worktree proposal, preserves fail-closed verifier, claim, cache, and rollback defaults, and leaves live Supabase compatibility evidence environment-blocked.",
+  "repository_baseline": "8e8849fb4ebffb6617635dcc96b77eb2cceb853d",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/auth/jwks.go",
+    "server/internal/auth/jwks_test.go",
+    "server/internal/bootstrap/app.go",
+    "server/internal/bootstrap/app_test.go",
+    "server/internal/config/config.go",
+    "server/internal/config/config_test.go",
+    "go.mod",
+    "go.sum",
+    ".env.development.example",
+    ".env.production.example",
+    "README.md",
+    "docs/environment-configuration.md",
+    "docs/supabase-oauth.md",
+    "specs/changes/supabase-jwks-verifier/**"
+  ],
+  "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004"],
+  "acceptance": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": ["consumer-reachability"],
+    "AC-002": ["security-review"],
+    "AC-003": ["consumer-reachability", "security-review"],
+    "AC-004": ["security-review"],
+    "AC-005": ["security-review"],
+    "AC-006": ["walkthrough", "security-review"]
+  },
+  "evidence": {
+    "REQ-001": {"status": "pending", "proof": ""},
+    "REQ-002": {"status": "pending", "proof": ""},
+    "REQ-003": {"status": "pending", "proof": ""},
+    "REQ-004": {"status": "pending", "proof": ""},
+    "AC-001": {"status": "pending", "proof": ""},
+    "AC-002": {"status": "pending", "proof": ""},
+    "AC-003": {"status": "pending", "proof": ""},
+    "AC-004": {"status": "pending", "proof": ""},
+    "AC-005": {"status": "pending", "proof": ""},
+    "AC-006": {"status": "blocked", "proof": "Requires non-secret signing, issuer, audience, access-token-lifetime, protected-endpoint, outage, and explicit rollback observations from the actual Supabase deployment environment."}
+  }
+}
