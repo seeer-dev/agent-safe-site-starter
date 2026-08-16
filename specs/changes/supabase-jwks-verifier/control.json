@@ -1,10 +1,10 @@
 {
   "change_id": "supabase-jwks-verifier",
-  "revision": 3,
+  "revision": 4,
   "status": "Applying",
   "decision_authority": "Repository owner/user",
-  "approval_basis": "Repository owner authorized implementation by Agy on 2026-08-16. Revision 3 rebases the controlled baseline onto the committed scoped-worktree proposal, preserves fail-closed verifier, claim, cache, and rollback defaults, and leaves live Supabase compatibility evidence environment-blocked.",
-  "repository_baseline": "8e8849fb4ebffb6617635dcc96b77eb2cceb853d",
+  "approval_basis": "Repository owner authorized implementation by Agy on 2026-08-16. Revision 4 rebases the controlled baseline after the scoped-worktree implementation commit, preserves fail-closed verifier, claim, cache, and rollback defaults, and leaves live Supabase compatibility evidence environment-blocked.",
+  "repository_baseline": "e09f8079b126c6a8cf39ef43910064959a2b57ce",
   "supersedes": [],
   "applies_to": [
     "server/internal/auth/jwks.go",

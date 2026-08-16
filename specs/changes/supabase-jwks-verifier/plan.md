@@ -1,7 +1,7 @@
 # Supabase Local JWT Verification Implementation Blueprint
 
 Change ID: supabase-jwks-verifier
-Revision: 3
+Revision: 4
 Status: Applying
 
 Normative specification: [`spec.md`](spec.md)
@@ -10,8 +10,8 @@ Normative specification: [`spec.md`](spec.md)
 
 Proposal revision: 2
 Proposal status: Applying
-Repository baseline: `8e8849fb4ebffb6617635dcc96b77eb2cceb853d`
-Observed HEAD: `8e8849fb4ebffb6617635dcc96b77eb2cceb853d`
+Repository baseline: `e09f8079b126c6a8cf39ef43910064959a2b57ce`
+Observed HEAD: `e09f8079b126c6a8cf39ef43910064959a2b57ce`
 Pre-existing dirty paths:
 - `Makefile` - preserve; unrelated tracked modification.
 - `specs/changes/commerce-module-file-split/` - preserve; unrelated untracked proposal.
