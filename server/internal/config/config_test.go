@@ -215,3 +215,226 @@ func TestDotEnvCannotDeclareProduction(t *testing.T) {
 		t.Errorf("dotenv must still load when only the file claims production: got %q", cfg.DevAuthToken)
 	}
 }
+
+func TestLoadSupabaseVerifierMode(t *testing.T) {
+	tests := []struct {
+		name     string
+		envVal   string
+		setEnv   bool
+		wantMode string
+	}{
+		{
+			name:     "unset defaults to remote",
+			setEnv:   false,
+			wantMode: "remote",
+		},
+		{
+			name:     "empty string defaults to remote",
+			envVal:   "",
+			setEnv:   true,
+			wantMode: "remote",
+		},
+		{
+			name:     "whitespace string defaults to remote",
+			envVal:   "   ",
+			setEnv:   true,
+			wantMode: "remote",
+		},
+		{
+			name:     "explicit remote",
+			envVal:   "remote",
+			setEnv:   true,
+			wantMode: "remote",
+		},
+		{
+			name:     "explicit jwks",
+			envVal:   "jwks",
+			setEnv:   true,
+			wantMode: "jwks",
+		},
+		{
+			name:     "case insensitivity and trim",
+			envVal:   "  JWKS  ",
+			setEnv:   true,
+			wantMode: "jwks",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			isolatedRepo(t, "SUPABASE_VERIFIER_MODE")
+			if tc.setEnv {
+				t.Setenv("SUPABASE_VERIFIER_MODE", tc.envVal)
+			} else {
+				os.Unsetenv("SUPABASE_VERIFIER_MODE")
+			}
+			cfg := Load()
+			if cfg.SupabaseVerifierMode != tc.wantMode {
+				t.Errorf("SupabaseVerifierMode = %q, want %q", cfg.SupabaseVerifierMode, tc.wantMode)
+			}
+		})
+	}
+}
+
+func TestValidateSupabaseJWKSConfiguration(t *testing.T) {
+	t.Parallel()
+
+	validBase := Config{
+		AppEnv:                 "development",
+		DBDriver:               "sqlite",
+		DatabaseURL:            "file:var/site.db",
+		AuthMode:               "supabase",
+		SupabasePublishableKey: "test-pub-key",
+		SupabaseVerifierMode:   "jwks",
+	}
+
+	tests := []struct {
+		name      string
+		mutate    func(c *Config)
+		wantError bool
+	}{
+		{
+			name: "valid managed https in development",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co"
+			},
+			wantError: false,
+		},
+		{
+			name: "valid managed https in production",
+			mutate: func(c *Config) {
+				c.AppEnv = "production"
+				c.DBDriver = "postgres"
+				c.DatabaseURL = "postgres://example"
+				c.SupabaseURL = "https://project.supabase.co"
+			},
+			wantError: false,
+		},
+		{
+			name: "valid loopback localhost in development",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "http://localhost:54321"
+			},
+			wantError: false,
+		},
+		{
+			name: "valid loopback 127.0.0.1 in development",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "http://127.0.0.1:54321"
+			},
+			wantError: false,
+		},
+		{
+			name: "valid loopback [::1] in development",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "http://[::1]:54321"
+			},
+			wantError: false,
+		},
+		{
+			name: "rejects http loopback in production",
+			mutate: func(c *Config) {
+				c.AppEnv = "production"
+				c.DBDriver = "postgres"
+				c.DatabaseURL = "postgres://example"
+				c.SupabaseURL = "http://localhost:54321"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects http loopback in mixed-case Production",
+			mutate: func(c *Config) {
+				c.AppEnv = "Production"
+				c.DBDriver = "postgres"
+				c.DatabaseURL = "postgres://example"
+				c.SupabaseURL = "http://localhost:54321"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects dev auth mode in mixed-case PRODUCTION",
+			mutate: func(c *Config) {
+				c.AppEnv = "PRODUCTION"
+				c.AuthMode = "dev"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects non-loopback http in development",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "http://example.com"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects userinfo in URL",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://user:pass@project.supabase.co"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects query in URL",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co?key=val"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects fragment in URL",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co#fragment"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects extra path in URL",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co/extra/path"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects relative URL",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "project.supabase.co"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects unsupported verifier mode",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co"
+				c.SupabaseVerifierMode = "auto"
+			},
+			wantError: true,
+		},
+		{
+			name: "rejects fallback verifier mode",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co"
+				c.SupabaseVerifierMode = "fallback"
+			},
+			wantError: true,
+		},
+		{
+			name: "remote mode allows any valid Supabase URL",
+			mutate: func(c *Config) {
+				c.SupabaseURL = "https://project.supabase.co"
+				c.SupabaseVerifierMode = "remote"
+			},
+			wantError: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := validBase
+			tc.mutate(&cfg)
+			err := cfg.Validate()
+			if (err != nil) != tc.wantError {
+				t.Errorf("Validate() error = %v, wantError = %v", err, tc.wantError)
+			}
+		})
+	}
+}

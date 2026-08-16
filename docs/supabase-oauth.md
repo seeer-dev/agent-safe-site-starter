@@ -73,6 +73,18 @@ sends the Supabase access token to Go as `Authorization: Bearer`.
   An OAuth identity with no staff row stays forbidden.
 - Cancel or provider error returns the user to the signed-out form.
 
+## Token verification and session revocation
+
+Go verifies Supabase access tokens according to `SUPABASE_VERIFIER_MODE`:
+
+- `remote` (default / rollback): Go calls `/auth/v1/user` on every protected request.
+  Server-side sign-out, session deletion, and user bans take effect immediately.
+- `jwks`: Go verifies asymmetric `ES256` / `RS256` tokens locally using a cached key
+  set from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json`. This eliminates the per-request
+  network round-trip. However, because verification occurs locally, server-side
+  sign-out or session termination is not observed until the access token expires.
+  To restore immediate revocation checks, set `SUPABASE_VERIFIER_MODE=remote` and redeploy.
+
 ## Secret-negative check
 
 The Vite define surface may include only:

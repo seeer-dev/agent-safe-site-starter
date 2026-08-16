@@ -2,14 +2,14 @@
 
 Change ID: supabase-jwks-verifier
 Revision: 4
-Status: Applying
+Status: Verifying
 
 Normative specification: [`spec.md`](spec.md)
 
 ## Implementation expansion context
 
-Proposal revision: 2
-Proposal status: Applying
+Proposal revision: 4
+Proposal status: Verifying
 Repository baseline: `e09f8079b126c6a8cf39ef43910064959a2b57ce`
 Observed HEAD: `e09f8079b126c6a8cf39ef43910064959a2b57ce`
 Pre-existing dirty paths:
@@ -547,4 +547,4 @@ implemented config/verifier/bootstrap diff
 | No agent/provider/model identity changes packet semantics | pass |
 | No expected result is presented as observed evidence | pass |
 
-The proposal remains Draft because product edits are not yet authorized and S01 requires a real deployment environment. Plain apply may execute S02-S05 only after review/approval; it must not improvise S01 evidence or activate JWKS in production without the stated inputs.
+Repository implementation S02-S05 is now under independent verification. S01 remains environment-blocked; no repository evidence may improvise live compatibility or activate JWKS in production without the stated inputs.

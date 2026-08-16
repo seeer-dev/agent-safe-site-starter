@@ -97,6 +97,7 @@ Key characteristics and operational boundaries:
 | `AUTH_MODE` | ● | ● | ● | |
 | `SUPABASE_URL` | ● | ● | ● | |
 | `SUPABASE_PUBLISHABLE_KEY` | ● | ● | ● | |
+| `SUPABASE_VERIFIER_MODE` | ● | | | |
 | `AUTH_GOOGLE_ENABLED` | | ● | ● | |
 | `AUTH_LINE_ENABLED` | | ● | ● | |
 | `DEV_AUTH_TOKEN` | | | | ● (never in production) |
@@ -128,6 +129,13 @@ expose it — a name has to be added to the allowlist deliberately.
 
 `SUPABASE_PUBLISHABLE_KEY` is a public client identifier, not a server secret.
 Row-level security, not key secrecy, is what protects Supabase data.
+
+`SUPABASE_VERIFIER_MODE` is a server-only setting (`remote` | `jwks`). It defaults
+to `remote` (verifying tokens via `/auth/v1/user`). When set to `jwks`, the Go API
+caches public keys from `<SUPABASE_URL>/auth/v1/.well-known/jwks.json` and verifies
+asymmetric JWTs locally. In `jwks` mode, server-side sign-out or session revocation
+is not observed until the access token expires. Setting `SUPABASE_VERIFIER_MODE=remote`
+and redeploying immediately restores per-request `/auth/v1/user` checks.
 
 OAuth client secrets belong in the Supabase dashboard. They are never
 environment variables here and never enter a bundle.

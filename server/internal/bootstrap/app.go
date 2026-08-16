@@ -44,12 +44,9 @@ func New(ctx context.Context, cfg config.Config) (*App, error) {
 }
 
 func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect database.Dialect) (*App, error) {
-	var verifier auth.Verifier
-	switch cfg.AuthMode {
-	case "supabase":
-		verifier = auth.NewSupabaseVerifier(cfg.SupabaseURL, cfg.SupabasePublishableKey)
-	default:
-		verifier = auth.NewDevVerifier(cfg.DevAuthToken)
+	verifier, err := newAuthVerifier(cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	// Staff store is needed for capability resolution in supabase mode.
@@ -264,4 +261,20 @@ func (a mediaVerifierAdapter) VerifyKey(ctx context.Context, userID, objectKey s
 		return commerce.ErrUnverifiedMedia
 	}
 	return nil
+}
+
+func newAuthVerifier(cfg config.Config) (auth.Verifier, error) {
+	switch cfg.AuthMode {
+	case "supabase":
+		switch cfg.SupabaseVerifierMode {
+		case "jwks":
+			return auth.NewSupabaseJWKSVerifier(cfg.SupabaseURL)
+		case "", "remote":
+			return auth.NewSupabaseVerifier(cfg.SupabaseURL, cfg.SupabasePublishableKey), nil
+		default:
+			return nil, fmt.Errorf("unsupported verifier mode %q", cfg.SupabaseVerifierMode)
+		}
+	default:
+		return auth.NewDevVerifier(cfg.DevAuthToken), nil
+	}
 }

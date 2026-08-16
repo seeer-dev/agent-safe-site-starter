@@ -165,7 +165,7 @@ Use these acceptance boundaries:
 
 - Full-site render only; no incremental page graph yet.
 - The sample is content/API infrastructure, not a finished admin UI.
-- Supabase token verification uses the Auth server `/auth/v1/user` endpoint for clarity. A cached JWKS verifier can replace the adapter later without changing modules.
+- Supabase token verification defaults to the remote `/auth/v1/user` endpoint (`SUPABASE_VERIFIER_MODE=remote`), providing immediate revocation and legacy compatibility. Projects issuing asymmetric tokens can select local verification (`SUPABASE_VERIFIER_MODE=jwks`) to avoid per-request network hops; in JWKS mode, server-side sign-out is recognized upon token expiry, and operators can roll back to remote verification by changing the environment variable and redeploying.
 - `body_html` is treated as trusted CMS-authored HTML. Sanitize it before persistence if untrusted users can author content.
 - `scopecheck` operates as a local narrow-diff gate with two supported modes:
   - **Legacy mode** reads `.ai/scope.json` for single-task/clean working trees, but is not durable cross-task attribution proof.

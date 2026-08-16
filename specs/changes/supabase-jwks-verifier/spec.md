@@ -2,7 +2,7 @@
 
 Change ID: supabase-jwks-verifier
 Revision: 4
-Status: Applying
+Status: Verifying
 Decision authority: Repository owner/user
 Approval basis: Repository owner authorized implementation by Agy on 2026-08-16. Revision 4 rebases the controlled baseline after the scoped-worktree implementation commit, preserves fail-closed verifier, claim, cache, and rollback defaults, and leaves live Supabase compatibility evidence environment-blocked.
 Repository baseline: e09f8079b126c6a8cf39ef43910064959a2b57ce

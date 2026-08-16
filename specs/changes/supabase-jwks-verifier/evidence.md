@@ -2,25 +2,27 @@
 
 ## Delivery Status
 
-Revision 2 remains Draft. No product or dependency edit is authorized or implemented. Local implementation evidence is pending, and live Supabase compatibility evidence is environment-blocked.
+Revision 4 is Verifying. Packets S02-S05 were implemented in a temporary
+linked worktree and independently replayed; S01 remains environment-blocked.
+No live Supabase signing/session claim is inferred from local fixtures.
 
 ## Observed Evidence
 
 | ID | Status | Proof |
 |---|---|---|
-| REQ-001 | pending |  |
-| REQ-002 | pending |  |
-| REQ-003 | pending |  |
-| REQ-004 | pending |  |
-| AC-001 | pending |  |
-| AC-002 | pending |  |
-| AC-003 | pending |  |
-| AC-004 | pending |  |
-| AC-005 | pending |  |
+| REQ-001 | passed | Revision 4 configuration and bootstrap selection replayed; see `receipts/consumer-reachability-rev4.md`. |
+| REQ-002 | passed | Revision 4 local verification, resolver boundary, and handler reachability replayed; see `receipts/consumer-reachability-rev4.md` and `receipts/security-review-rev4.md`. |
+| REQ-003 | passed | Revision 4 bounded refresh, cache, and failure separation replayed; see `receipts/security-review-rev4.md`. |
+| REQ-004 | blocked | Requires non-secret signing, issuer, audience, access-token-lifetime, protected-endpoint, outage, and explicit rollback observations from the actual Supabase deployment environment. |
+| AC-001 | passed | Revision 4 mode/default/selection trace replayed; see `receipts/consumer-reachability-rev4.md`. |
+| AC-002 | passed | Revision 4 trust-input, algorithm, claim, and URL-boundary review replayed; see `receipts/security-review-rev4.md`. |
+| AC-003 | passed | Revision 4 warm-cache and resolver/consumer trace replayed; see `receipts/consumer-reachability-rev4.md` and `receipts/security-review-rev4.md`. |
+| AC-004 | passed | Revision 4 invalid-token, 401, no-resolver, and no-fallback review replayed; see `receipts/security-review-rev4.md`. |
+| AC-005 | passed | Revision 4 refresh coordination, cache bound, timeout, and failure-classification review replayed; see `receipts/security-review-rev4.md`. |
 | AC-006 | blocked | Requires non-secret signing, issuer, audience, access-token-lifetime, protected-endpoint, outage, and explicit rollback observations from the actual Supabase deployment environment. |
 
-## Planning Evidence
+## Replay Commands
 
-- Expansion inspected HEAD `bc1d17f10d258c337efab975466949c92a5ec956` and the current auth/config/bootstrap seams.
-- `go test ./server/internal/auth ./server/internal/config -count=1` passed before revision 2 planning; this is baseline evidence only and does not prove the proposed behavior.
-- The proposed `github.com/lestrrat-go/jwx/v3` v3.2.0 module declares Go 1.25, matching `go.mod`; it is not yet a repository dependency.
+- `go test -race ./server/internal/auth -run 'TestJWKSVerifier(ConcurrentUnknownKIDRefreshIsCoordinated|KnownKeyNotBlockedDuringRefresh|InvalidTokenDoesNotInvokeStaffResolver|WarmCacheAvoidsNetwork|DoesNotUseExpiredKeyAfterRefreshFailure)$' -count=20` passed.
+- `go test -race ./server/internal/auth ./server/internal/config ./server/internal/bootstrap -count=1` passed.
+- `go test ./server/... -count=1`, `go vet ./server/internal/auth ./server/internal/config ./server/internal/bootstrap`, `go mod verify`, `git diff --check`, and selected `scopecheck` passed before the final evidence update.

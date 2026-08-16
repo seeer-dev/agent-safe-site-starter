@@ -3,6 +3,8 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"net"
+	"net/url"
 	"os"
 	"strings"
 )
@@ -22,6 +24,7 @@ type Config struct {
 	DevAuthToken           string
 	SupabaseURL            string
 	SupabasePublishableKey string
+	SupabaseVerifierMode   string
 
 	R2AccountID       string
 	R2AccessKeyID     string
@@ -80,6 +83,7 @@ func Load() Config {
 		DevAuthToken:           env("DEV_AUTH_TOKEN", "dev-admin"),
 		SupabaseURL:            strings.TrimRight(os.Getenv("SUPABASE_URL"), "/"),
 		SupabasePublishableKey: os.Getenv("SUPABASE_PUBLISHABLE_KEY"),
+		SupabaseVerifierMode:   normalizeVerifierMode(env("SUPABASE_VERIFIER_MODE", "remote")),
 
 		R2AccountID:       os.Getenv("R2_ACCOUNT_ID"),
 		R2AccessKeyID:     os.Getenv("R2_ACCESS_KEY_ID"),
@@ -111,12 +115,22 @@ func (c Config) Validate() error {
 
 	switch c.AuthMode {
 	case "dev":
-		if c.AppEnv == "production" {
+		if isProductionValue(c.AppEnv) {
 			return fmt.Errorf("AUTH_MODE=dev is forbidden in production")
 		}
 	case "supabase":
 		if c.SupabaseURL == "" || c.SupabasePublishableKey == "" {
 			return fmt.Errorf("SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are required for AUTH_MODE=supabase")
+		}
+		switch c.SupabaseVerifierMode {
+		case "", "remote":
+			// Remote mode remains the default and rollback mode.
+		case "jwks":
+			if err := validateSupabaseJWKSURL(c.SupabaseURL, c.AppEnv); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("SUPABASE_VERIFIER_MODE must be remote or jwks, got %q", c.SupabaseVerifierMode)
 		}
 	default:
 		return fmt.Errorf("AUTH_MODE must be dev or supabase, got %q", c.AuthMode)
@@ -131,7 +145,11 @@ func (c Config) R2Enabled() bool {
 // isProductionEnv reports whether the process environment — not any dotenv
 // file — declares production. Only the process boundary can make this true.
 func isProductionEnv() bool {
-	return strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "production")
+	return isProductionValue(os.Getenv("APP_ENV"))
+}
+
+func isProductionValue(v string) bool {
+	return strings.EqualFold(strings.TrimSpace(v), "production")
 }
 
 func env(name, fallback string) string {
@@ -139,6 +157,57 @@ func env(name, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func normalizeVerifierMode(v string) string {
+	mode := strings.ToLower(strings.TrimSpace(v))
+	if mode == "" {
+		return "remote"
+	}
+	return mode
+}
+
+func validateSupabaseJWKSURL(rawURL, appEnv string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid SUPABASE_URL: %w", err)
+	}
+	if !u.IsAbs() || u.Host == "" {
+		return fmt.Errorf("SUPABASE_URL must be an absolute URL with host")
+	}
+	if u.User != nil {
+		return fmt.Errorf("SUPABASE_URL must not contain userinfo")
+	}
+	if u.RawQuery != "" || u.Fragment != "" {
+		return fmt.Errorf("SUPABASE_URL must not contain query or fragment")
+	}
+	if u.Path != "" && u.Path != "/" {
+		return fmt.Errorf("SUPABASE_URL must not contain a path")
+	}
+	if isProductionValue(appEnv) {
+		if u.Scheme != "https" {
+			return fmt.Errorf("SUPABASE_URL must use https in production")
+		}
+	} else {
+		if u.Scheme != "https" && u.Scheme != "http" {
+			return fmt.Errorf("SUPABASE_URL must use https or http in development")
+		}
+		if u.Scheme == "http" {
+			host := u.Hostname()
+			if !isLoopbackHost(host) {
+				return fmt.Errorf("SUPABASE_URL over http must use a loopback host (localhost, 127.0.0.1, ::1)")
+			}
+		}
+	}
+	return nil
+}
+
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 func loadDotEnv(path string) error {
