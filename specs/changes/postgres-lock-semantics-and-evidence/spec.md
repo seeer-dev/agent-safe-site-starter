@@ -2,7 +2,7 @@
 
 Change ID: postgres-lock-semantics-and-evidence
 Revision: 1
-Status: Applying
+Status: Verifying
 Decision authority: Repository owner/user
 Approval basis: Repository owner approved opening and delegating this next phase on 2026-08-14 after reviewing the exact fresh-migration, lock-semantics, and named-test evidence outcomes.
 Repository baseline: f8053f8ea3ac640586384e24667933e5f556b689

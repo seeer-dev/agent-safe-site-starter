@@ -1,7 +1,7 @@
 {
   "change_id": "postgres-lock-semantics-and-evidence",
   "revision": 1,
-  "status": "Applying",
+  "status": "Verifying",
   "decision_authority": "Repository owner/user",
   "approval_basis": "Repository owner approved opening and delegating this next phase on 2026-08-14 after reviewing the exact fresh-migration, lock-semantics, and named-test evidence outcomes.",
   "repository_baseline": "f8053f8ea3ac640586384e24667933e5f556b689",
@@ -59,37 +59,55 @@
   "evidence": {
     "REQ-001": {
       "observed_revision": 1,
-      "proof": "Pending live PostgreSQL fresh-schema migration execution.",
-      "status": "pending"
+      "proof": "Live PostgreSQL fresh-schema migration execution observed. TestPostgresLiveMigrateApplyAndTimestamp passed (0.37s) on embedded PostgreSQL 16 via local-postgres-gate. All migrations applied in isolated namespace; applied_unix values are current. Recorded in receipts/live-run-rev1.md.",
+      "status": "passed"
     },
     "REQ-002": {
       "observed_revision": 1,
-      "proof": "Pending live PostgreSQL lock semantic execution across staff and media.",
-      "status": "pending"
+      "proof": "Live PostgreSQL lock semantic execution observed across staff and media. TestPostgresLiveStaffLockActiveOwners passed (0.56s) and TestPostgresLiveMediaLifecycleAndLocks passed (0.69s) on embedded PostgreSQL 16. Recorded in receipts/live-run-rev1.md.",
+      "status": "passed"
     },
     "REQ-003": {
       "observed_revision": 1,
-      "proof": "Pending live PostgreSQL exact test inventory execution in CI.",
+      "proof": "AC-005 still pending: requires observed live CI run identity. The gate mechanism (AC-004) is proven, but CI execution has not been observed.",
       "status": "pending"
     },
     "REQ-004": {
       "observed_revision": 1,
-      "proof": "Pending mutation-sensitive live verification and exact verifier assertion.",
-      "status": "pending"
+      "proof": "Mutation-sensitive live verification and exact verifier assertion. AC-006 was previously passed (verifier exact argv). AC-007 mutation testing executed on live PostgreSQL; independent-review pending. Recorded in receipts/mutation-testing-rev1.md.",
+      "status": "passed"
     },
     "AC-001": {
       "observed_revision": 1,
-      "proof": "Pending fresh-schema consumer reachability evidence for revision 1 on live PostgreSQL.",
-      "status": "pending"
+      "proof": "Fresh-schema consumer reachability evidence on live PostgreSQL 16. TestPostgresLiveMigrateApplyAndTimestamp observed passing with current timestamps in isolated schema. Recorded in receipts/live-run-rev1.md.",
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/live-run-rev1.md"
+        }
+      ],
+      "status": "passed"
     },
     "AC-002": {
       "observed_revision": 1,
-      "proof": "Pending live PostgreSQL staff-lock reachability and independent review for revision 1.",
+      "proof": "Consumer-reachability observed on live PostgreSQL 16: two competing owner demotions overlapped; FOR UPDATE blocked Op 2; exactly one active owner remained; losing operation returned canonical ErrLastOwner. Independent-review still pending: reviewer modified the staff integration test (schema isolation fix), so another reviewer must replay it. Recorded in receipts/live-run-rev1.md.",
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/live-run-rev1.md"
+        }
+      ],
       "status": "pending"
     },
     "AC-003": {
       "observed_revision": 1,
-      "proof": "Pending live PostgreSQL media-lock reachability and independent review for revision 1.",
+      "proof": "Consumer-reachability observed on live PostgreSQL 16: FOR UPDATE bounded blocking confirmed (Tx2 blocked on locked row, returned DeadlineExceeded); SKIP LOCKED non-blocking confirmed (ClaimEligible skipped held row, claimed unlocked row, no duplication). Independent-review still pending: reviewer modified the media integration test (schema isolation fix), so another reviewer must replay it. Recorded in receipts/live-run-rev1.md.",
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/live-run-rev1.md"
+        }
+      ],
       "status": "pending"
     },
     "AC-004": {
@@ -99,7 +117,7 @@
     },
     "AC-005": {
       "observed_revision": 1,
-      "proof": "Pending observed live CI run, consumer reachability, and independent review for revision 1.",
+      "proof": "Pending observed live CI run, consumer reachability, and independent review. Local live run does not satisfy this AC; spec requires run identity from repository CI.",
       "status": "pending"
     },
     "AC-006": {
@@ -109,7 +127,7 @@
     },
     "AC-007": {
       "observed_revision": 1,
-      "proof": "Pending mutation-sensitive independent review for revision 1.",
+      "proof": "Red-before-green mutation testing executed on live PostgreSQL by reviewer: 4 mutations (migration timestamp to 0, staff FOR UPDATE removed, media FOR UPDATE removed, media SKIP LOCKED removed), each caused only the targeted assertion to fail, all restored with zero residue, final green pass confirmed. Independent-review still pending: reviewer modified the staff and media integration tests (schema isolation fix), so another reviewer must replay the mutation testing. Recorded in receipts/mutation-testing-rev1.md.",
       "status": "pending"
     }
   }

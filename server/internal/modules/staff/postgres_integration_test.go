@@ -4,8 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -55,25 +57,51 @@ func TestPostgresLiveStaffLockActiveOwners(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
+	// Isolate this test in a unique PostgreSQL schema so parallel package tests
+	// do not race on CREATE TABLE/type catalog entries during migrate.Apply.
+	adminDB, _, err := database.Open(ctx, "postgres", dsn)
+	if err != nil {
+		t.Fatalf("Open adminDB(postgres) failed: %v", err)
+	}
+	schemaName := fmt.Sprintf("staff_test_%d", time.Now().UnixNano())
+	if _, err := adminDB.ExecContext(ctx, fmt.Sprintf(`CREATE SCHEMA %s`, schemaName)); err != nil {
+		t.Fatalf("create schema %s: %v", schemaName, err)
+	}
+	defer func() {
+		cleanCtx, cancelClean := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelClean()
+		_, _ = adminDB.ExecContext(cleanCtx, fmt.Sprintf(`DROP SCHEMA IF EXISTS %s CASCADE`, schemaName))
+		adminDB.Close()
+	}()
+
+	sep := "?"
+	if strings.Contains(dsn, "?") {
+		sep = "&"
+	}
+	schemaDSN := fmt.Sprintf("%s%ssearch_path=%s", dsn, sep, schemaName)
+
 	// Open two independent connection pools to live PostgreSQL to guarantee
 	// separate backend connections and distinct concurrent transactions.
-	db1, dialect, err := database.Open(ctx, "postgres", dsn)
+	// SetMaxOpenConns(1) preserves the connection-scoped search_path.
+	db1, dialect, err := database.Open(ctx, "postgres", schemaDSN)
 	if err != nil {
 		t.Fatalf("Open db1(postgres) failed: %v", err)
 	}
 	defer db1.Close()
+	db1.SetMaxOpenConns(1)
 
-	db2, _, err := database.Open(ctx, "postgres", dsn)
+	db2, _, err := database.Open(ctx, "postgres", schemaDSN)
 	if err != nil {
 		t.Fatalf("Open db2(postgres) failed: %v", err)
 	}
 	defer db2.Close()
+	db2.SetMaxOpenConns(1)
 
 	if dialect != database.Postgres {
 		t.Fatalf("expected dialect %q, got %q", database.Postgres, dialect)
 	}
 
-	// Ensure migrations applied
+	// Ensure migrations applied to the isolated schema
 	if err := migrate.Apply(ctx, db1, dialect, root); err != nil {
 		t.Fatalf("apply migrations: %v", err)
 	}
