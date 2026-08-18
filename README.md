@@ -67,7 +67,7 @@ Production configuration lives in the provider, not in this repository. With `AP
 
 For Pages, use either:
 
-1. **Git build:** build command `go run ./server/tools/render`, output `dist`; this is the preferred CMS/deploy-hook path when Pages can reach the production database.
+1. **Git build:** build command `make site`, output `dist`; this is the preferred CMS/deploy-hook path when Pages can reach the production database. `make site` builds the theme bundle and then renders. The renderer alone is not enough: the bundle is git-ignored, so a clean checkout has none and `go run ./server/tools/render` fails closed until it is built. The build image therefore needs Node as well as Go.
 2. **Direct upload:** `CF_PAGES_PROJECT=... go run ./server/tools/publish`; useful for AI/CI-driven publishing.
 
 Cloudflare Pages' build image supports Go and custom build commands, so the renderer does not require a JavaScript site framework.
