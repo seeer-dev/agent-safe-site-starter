@@ -117,7 +117,7 @@ func (h VerifyHandler) Verify(w http.ResponseWriter, r *http.Request) {
 		// All other errors are provider/internal failures. Return a
 		// generic 503 without exposing internal state. The wrapped
 		// error is available for server-side logging.
-		httpx.Error(w, http.StatusServiceUnavailable, "verification temporarily unavailable")
+		httpx.ErrorWithCause(w, r, http.StatusServiceUnavailable, "verification temporarily unavailable", err)
 		return
 	}
 	httpx.JSON(w, http.StatusOK, result)

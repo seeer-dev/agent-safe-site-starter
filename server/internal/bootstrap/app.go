@@ -5,10 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"github.com/example/ai-site-starter/server/internal/auth"
 	"github.com/example/ai-site-starter/server/internal/config"
@@ -200,7 +198,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("PATCH /api/admin/staff/{id}/status", staffHandler.UpdateStatus)
 	mux.HandleFunc("DELETE /api/admin/staff/{id}", staffHandler.Delete)
 
-	return &App{Handler: withAccessLog(withCORS(cfg.SiteOrigin, mux)), DB: db, Dialect: dialect}, nil
+	return &App{Handler: withRequestObservability(withCORS(cfg.SiteOrigin, mux)), DB: db, Dialect: dialect}, nil
 }
 
 func withCORS(origin string, next http.Handler) http.Handler {
@@ -218,14 +216,6 @@ func withCORS(origin string, next http.Handler) http.Handler {
 			return
 		}
 		next.ServeHTTP(w, r)
-	})
-}
-
-func withAccessLog(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		next.ServeHTTP(w, r)
-		log.Printf("http %s %s %s", r.Method, r.URL.Path, time.Since(start).Round(time.Millisecond))
 	})
 }
 

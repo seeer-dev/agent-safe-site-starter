@@ -1,0 +1,78 @@
+{
+  "change_id": "structured-request-observability",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved the pre-launch operability batch on 2026-08-18 after review found the access log cannot distinguish a 200 from a 500 and business modules emit no diagnostics at all.",
+  "repository_baseline": "e1b7cc623dbb5edebc1132bd3bc05a260d71cb0b",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/bootstrap/app.go",
+    "server/internal/bootstrap/observability.go",
+    "server/internal/bootstrap/observability_test.go",
+    "server/internal/httpx/httpx.go",
+    "server/internal/httpx/httpx_test.go",
+    "server/internal/modules/media/http.go",
+    "specs/changes/structured-request-observability/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-004": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "withRequestObservability assigns a correlation identifier per request, honouring a sanitized caller-supplied X-Request-Id and generating one otherwise, and echoes it back in the response header. Proved by TestRequestRecordFields.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "statusRecorder wraps the ResponseWriter and records the status actually written, defaulting to 200 for handlers that write a body or nothing without calling WriteHeader. Proved by TestStatusCaptureExplicitAndImplicit across explicit, implicit, and no-write cases.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "httpx.ErrorWithCause records a redacted server-side diagnostic for 5xx while writing the unchanged public body, and media/http.go:120 now uses it so the comment at :84 claiming server-side logging is true. Proved by TestServerFailureLeavesDiagnostic.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "The record carries request_id, method, path, status, bytes, duration, and peer; a supplied identifier is used verbatim and echoed, an absent one is generated. A forwarded header is recorded as forwarded_for_claim and never as client_ip. Mutation-verified: renaming the field to client_ip turned the assertion red, and restoration returned it to green.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Explicit status 418 recorded as 418; a body write without WriteHeader recorded as 200 with the body reaching the client unchanged; a handler writing nothing recorded as 200. Mutation-verified: returning a fixed 599 from statusOrOK turned the assertion red, and restoration returned it to green.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "A 5xx served through the stack returns the generic public message with the cause absent from the body, while the server-side record carries the cause and a correlatable request_id. Proved by TestServerFailureLeavesDiagnostic.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "A request carrying a bearer token, a cookie, and a query-string token, served by a handler failing with a cause containing a connection string and an email, produces a record containing none of them, while retaining controlled context (connect, failed, status=500). The assertion was initially non-sensitive to URL redaction because the chosen DSN host matched the email pattern; the fixture was changed to a host without a dot-TLD so only URL redaction can remove it. Mutation-verified after that fix: removing the URL redactor turned the assertion red, and restoration returned it to green. Recorded in receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    }
+  }
+}
