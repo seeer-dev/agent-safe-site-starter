@@ -12,10 +12,15 @@ import (
 )
 
 type Config struct {
-	AppEnv        string
-	HTTPAddr      string
-	SiteAddr      string
-	SiteOrigin    string
+	AppEnv     string
+	HTTPAddr   string
+	SiteAddr   string
+	SiteOrigin string
+
+	// EdgeSecret authenticates the hop, not the caller. When set, the API
+	// refuses requests that do not present it, so edge protection stops
+	// depending on the origin being undiscoverable. Empty disables the check.
+	EdgeSecret    string
 	PublicSiteURL string
 	PublicAPIBase string
 
@@ -82,6 +87,7 @@ func Load() Config {
 		HTTPAddr:      env("HTTP_ADDR", ":8080"),
 		SiteAddr:      env("SITE_ADDR", ":4173"),
 		SiteOrigin:    env("SITE_ORIGIN", "http://localhost:4173"),
+		EdgeSecret:    os.Getenv("EDGE_SECRET"),
 		PublicSiteURL: env("PUBLIC_SITE_URL", "http://localhost:4173"),
 		PublicAPIBase: env("PUBLIC_API_BASE", "http://localhost:8080"),
 

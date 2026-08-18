@@ -203,7 +203,10 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("PATCH /api/admin/staff/{id}/status", staffHandler.UpdateStatus)
 	mux.HandleFunc("DELETE /api/admin/staff/{id}", staffHandler.Delete)
 
-	return &App{Handler: withRequestObservability(withCORS(cfg.SiteOrigin, mux)), DB: db, Dialect: dialect}, nil
+	// Order matters: observability wraps everything so a rejected request still
+	// gets a record, and the edge guard runs before CORS so a bypass attempt is
+	// refused rather than answered with CORS headers.
+	return &App{Handler: withRequestObservability(withEdgeAuth(cfg.EdgeSecret, withCORS(cfg.SiteOrigin, mux))), DB: db, Dialect: dialect}, nil
 }
 
 func withCORS(origin string, next http.Handler) http.Handler {

@@ -1,0 +1,79 @@
+{
+  "change_id": "edge-origin-authentication",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved on 2026-08-18 after review established that the Go API performs no edge-to-origin authentication, so any edge protection can be bypassed by reaching the origin directly.",
+  "repository_baseline": "d3896491a9ccf43cfdaa8bce99a88d806665d91c",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/config/config.go",
+    "server/internal/bootstrap/app.go",
+    "server/internal/bootstrap/edge_auth.go",
+    "server/internal/bootstrap/edge_auth_test.go",
+    ".env.development.example",
+    ".env.production.example",
+    "docs/environment-configuration.md",
+    "specs/changes/edge-origin-authentication/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-004": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "withEdgeAuth rejects any request that does not present the configured secret in X-Edge-Secret before the handler runs, wired in bootstrap as withRequestObservability(withEdgeAuth(cfg.EdgeSecret, withCORS(...))) so a rejection is still recorded and a bypass attempt is refused rather than answered with CORS headers.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "An empty EDGE_SECRET returns the inner handler untouched, so behavior is unchanged until an operator opts in. The health path is exempt because the platform probes it directly per railway.toml.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Comparison uses crypto/subtle.ConstantTimeCompare. The rejection record names method, path, request id, and peer, and never the configured or supplied value.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "TestEdgeAuthRefusesNonEdgeTraffic covers absent, empty, wrong, prefix-only, and trailing-space values: each returns 403, no handler runs, and the response never echoes the secret. The bodies of all five failure modes are compared against each other and must be identical, so a prober cannot distinguish them. TestEdgeAuthAdmitsValidCredential confirms the correct value is admitted.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "TestEdgeAuthIsOptIn serves both a bare request and one carrying an irrelevant header with no secret configured; both reach the handler with 200. Mutation-verified: removing the empty-secret early return turned it red.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "TestEdgeAuthExemptsHealthProbe requests the health path without the header while a secret is configured and asserts the handler is reached. Mutation-verified: replacing the path check with a constant false produced status 403 and turned it red.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "Constant-time comparison plus a disclosure gate driving a near-miss supplied value and a bearer token into the rejection path; neither reaches the response nor the log record, while the record retains rejected, the path, and a request id so an over-broad redactor cannot pass. Mutation-verified: adding the supplied value to the record leaked it and turned the assertion red. Recorded in receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    }
+  }
+}

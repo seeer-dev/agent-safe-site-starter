@@ -89,6 +89,7 @@ Key characteristics and operational boundaries:
 | `APP_ENV=production` | ● | ● | | |
 | `HTTP_ADDR` | ● | | | |
 | `SITE_ORIGIN` | ● | | | |
+| `EDGE_SECRET` | ● | | | ● |
 | `PUBLIC_SITE_URL` | ● | ● | | |
 | `PUBLIC_API_BASE` | ● | ● | | |
 | `ADMIN_API_BASE` | | ● | ● | |
@@ -143,6 +144,34 @@ right numbers depend on what sits in front of PostgreSQL:
 SQLite is unaffected and stays at one connection. That is deliberate: several
 lock guards are documented as SQLite no-ops precisely because its access is
 serialized.
+
+### Edge-to-origin authentication
+
+Edge rate limiting and WAF rules only apply to traffic that reaches the edge.
+If the origin is directly reachable, they can be bypassed by connecting to it,
+and an origin hostname is discoverable through Certificate Transparency logs
+and historical DNS rather than only by guessing.
+
+`EDGE_SECRET` closes that. When set, the API refuses any request that does not
+carry it in `X-Edge-Secret`, so edge protection stops depending on the origin
+being undiscoverable. Configure the same value as a header the edge injects
+(a Cloudflare Transform Rule, for example).
+
+It authenticates the **hop, not the caller**. It proves a request traversed the
+proxy; it says nothing about who sent it, and nothing in this repository uses
+it for an authorization decision.
+
+Operational notes:
+
+- **Opt-in.** Unset means the check is absent and behavior is exactly as
+  before, so local development and existing deployments are unaffected.
+- **The health path is exempt.** The platform probes `/healthz` directly rather
+  than through the edge, so guarding it would fail every probe.
+- **Every rejection looks the same.** Absent, empty, and wrong all return the
+  same 403 body, so a prober cannot learn whether the header name is right.
+- **Rotation is a two-step.** Set the new value at the edge first, then at the
+  origin; between those steps both are accepted only if you run two edge rules,
+  otherwise expect a brief window of refusals.
 
 ## The browser boundary
 
