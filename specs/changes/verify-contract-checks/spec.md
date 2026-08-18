@@ -1,14 +1,11 @@
 # Frontend Contract Verification Gate Specification
-| 2 | none | Proposal targeted baseline 7e5aa90 | Proposal targets baseline 3ecc1b6 | Seventeen commits landed since revision 1. | Owner instruction to refresh draft baselines on 2026-08-18 | No evidence existed to invalidate; all records remain pending. |
-| 2 | REQ-001 | applies_to named only this proposal directory, so an apply could authorize no CI change | applies_to adds .github/workflows/ci.yml | AC-001 and AC-002 name CI determinately, so the surface is known. Without it an apply would be rejected by speccheck for touching an unauthorized path. | same | — |
-| 2 | REQ-002 | — | still no implementation path | Deliberate. Whether the local command is server/tools/verify or a separate frontend verifier is an unresolved owner decision that changes the development prerequisite contract. Scoping it now would pre-decide it. | same | — |
 
 Change ID: verify-contract-checks
 Revision: 2
 Status: Draft
 Decision authority: Repository owner/user
 Approval basis: Pending repository owner decision whether Node becomes a required dependency of the full verifier or frontend contract checks remain a separate mandatory gate.
-Repository baseline: 3ecc1b63b85f13be773af79453a2c29f868903e4
+Repository baseline: 6a3c113e9d4957617a532ab2d10701a6fbc66db9
 Supersedes: none
 
 ## Outcome
@@ -50,4 +47,6 @@ The repository MUST expose one documented local command for the same checks. Mis
 
 ## Amendments
 
-None.
+Revision 2 rebases the proposal onto baseline 6a3c113. Seventeen commits landed since revision 1, including the live PostgreSQL gate, the commerce boolean adapter fix, request observability, connection pool bounds, and a single-command site build. Evidence binds to the baseline, so a stale one cannot carry acceptance once an apply begins.
+
+Scope is unchanged. An earlier refresh added `.github/workflows/ci.yml` to `control.json` on the reasoning that AC-001 and AC-002 name CI determinately. That was withdrawn: it contradicted this document's own Scope section and the plan's Scope Lock, both of which state that this revision authorizes no CI change, and it altered what the proposal permits without amending the text that describes it. The proposal remains blocked on the REQ-002 ownership decision, so authorizing CI alone would license a half-implementation.

@@ -4,10 +4,9 @@
   "status": "Draft",
   "decision_authority": "Repository owner/user",
   "approval_basis": "Pending repository owner decision whether Node becomes a required dependency of the full verifier or frontend contract checks remain a separate mandatory gate.",
-  "repository_baseline": "3ecc1b63b85f13be773af79453a2c29f868903e4",
+  "repository_baseline": "6a3c113e9d4957617a532ab2d10701a6fbc66db9",
   "supersedes": [],
   "applies_to": [
-    ".github/workflows/ci.yml",
     "specs/changes/verify-contract-checks/**"
   ],
   "requirements": [

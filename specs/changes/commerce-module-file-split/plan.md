@@ -15,7 +15,7 @@ Normative specification: [`spec.md`](spec.md)
 
 Proposal revision: 2
 Proposal status: Draft
-Repository baseline: `7e5aa90b92d23c8c316d44ca935be7af8d150a1c`
+Repository baseline: `6a3c113e9d4957617a532ab2d10701a6fbc66db9`
 Observed HEAD: `7e5aa90b92d23c8c316d44ca935be7af8d150a1c`
 Pre-existing dirty paths:
 - `.github/workflows/ci.yml`, staff/media/migrate integration work, `server/tools/verify/main_test.go`, `server/tools/postgres-live-gate/**`, and their controlled specs — preserve; unrelated active changes.

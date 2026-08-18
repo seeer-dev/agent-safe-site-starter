@@ -2,7 +2,7 @@
 
 ## Delivery Status
 
-Revision 1 is Draft and decision-blocked. Evidence remains pending.
+Revision 2 is Draft and decision-blocked. Evidence remains pending.
 
 ## Observed Evidence
 

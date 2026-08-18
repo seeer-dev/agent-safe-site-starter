@@ -2,7 +2,7 @@
 
 ## Delivery Status
 
-Revision 2 is Draft. Evidence remains pending until apply.
+Revision 3 is Draft. Evidence remains pending until apply.
 
 ## Observed Evidence
 

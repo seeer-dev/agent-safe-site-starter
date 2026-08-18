@@ -1,13 +1,11 @@
 # Commerce Production File Decomposition Specification
-| 3 | none | Proposal targeted baseline 7e5aa90 | Proposal targets baseline 3ecc1b6 | Seventeen commits landed since revision 2, including the live PostgreSQL gate, the commerce boolean adapter fix, request observability, and connection pool bounds. Evidence binds to the baseline, so a stale one cannot carry acceptance. | Owner instruction to refresh draft baselines on 2026-08-18 | No evidence existed to invalidate; all records remain pending. |
-| 3 | scope | — | unchanged | The scope already named server/internal/modules/commerce/** and no requirement changed. Note for the implementer: commerce writes media_assets.unassociated_since_unix (store.go:434,440), a table media owns, recorded in architecture.yaml under known_cross_module_data_writes. Decomposition must not make that coupling harder to see. | same | — |
 
 Change ID: commerce-module-file-split
 Revision: 3
 Status: Draft
 Decision authority: Repository owner/user
 Approval basis: Pending repository owner approval of the corrected 2026-08-15 proposal summary.
-Repository baseline: 3ecc1b63b85f13be773af79453a2c29f868903e4
+Repository baseline: 6a3c113e9d4957617a532ab2d10701a6fbc66db9
 Supersedes: none
 
 ## Outcome
@@ -53,3 +51,7 @@ The change MUST preserve exported symbols, HTTP behavior, authorization, error m
 ## Amendments
 
 Revision 2 removes the earlier test-file split. Moving 208 tests would create review and blame churn without improving runtime behavior; untouched tests are a stronger preservation boundary for this refactor.
+
+Revision 3 rebases the proposal onto baseline 6a3c113. Seventeen commits landed since revision 2. Scope and requirements are unchanged.
+
+One note for the implementer, recorded here because it is easy to lose during decomposition: `commerce` writes `media_assets.unassociated_since_unix` (`server/internal/modules/commerce/store.go:434,440`), a table the `media` module owns. `architecture.yaml` now records it under `known_cross_module_data_writes` with `detected_by: none`, because `archcheck` inspects Go imports and does not read SQL. Splitting files must not move that write somewhere it is harder to see.

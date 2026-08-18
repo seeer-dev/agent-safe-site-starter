@@ -1,13 +1,11 @@
 # Public Endpoint Abuse-Control Specification
-| 3 | none | Proposal targeted baseline 7e5aa90 | Proposal targets baseline 3ecc1b6 | Seventeen commits landed since revision 2, including request observability, which now records the transport peer and an X-Forwarded-For claim. Those are diagnostic only and nothing consumes them for a decision, so they do not supply the trusted client identity AC-002 requires. | Owner instruction to refresh draft baselines on 2026-08-18 | No evidence existed to invalidate; all records remain pending. |
-| 3 | scope | — | unchanged, deliberately | Revision 2 withdrew the implementation assumption, and the surface still depends on four unresolved owner decisions: replica topology, trusted client-IP source, enforcement owner, and acceptable operating cost. Edge enforcement would touch no Go file; shared-state in-app enforcement would add a dependency and middleware. Naming a surface now would pre-decide the topology. | same | — |
 
 Change ID: public-endpoint-rate-limit
 Revision: 3
 Status: Draft
 Decision authority: Repository owner/user
 Approval basis: Pending repository owner decision on production replica topology, trusted client-IP source, enforcement owner, and acceptable operating cost.
-Repository baseline: 3ecc1b63b85f13be773af79453a2c29f868903e4
+Repository baseline: 6a3c113e9d4957617a532ab2d10701a6fbc66db9
 Supersedes: none
 
 ## Outcome
@@ -57,3 +55,7 @@ Excess requests MUST receive a documented response, normally HTTP 429 with Retry
 ## Amendments
 
 Revision 2 withdraws the previous in-memory per-IP implementation assumption. Repository evidence does not establish a single-replica Railway topology or a trustworthy client-IP header contract.
+
+Revision 3 rebases the proposal onto baseline 6a3c113. Seventeen commits landed since revision 2, including request observability, which now records the transport peer address and an `X-Forwarded-For` value under `forwarded_for_claim`. Both are diagnostic only and nothing consumes them for a decision, so they do not supply the trusted client identity AC-002 requires.
+
+Scope remains limited to this proposal directory, deliberately. The implementation surface still depends on four unresolved owner decisions: replica topology, trusted client-IP source, enforcement owner, and acceptable operating cost. Edge enforcement would touch no Go file; shared-state in-app enforcement would add a dependency and middleware. Naming a surface now would pre-decide the topology, which revision 2 explicitly declined to do.
