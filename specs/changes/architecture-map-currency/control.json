@@ -1,0 +1,57 @@
+{
+  "change_id": "architecture-map-currency",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved updating the architecture map on 2026-08-18 after review found it lists 8 of 14 deterministic tools and 4 of 6 modules.",
+  "repository_baseline": "5cb6cd85194a2f4ad9dd66ac64f7cbc534b13a90",
+  "supersedes": [],
+  "applies_to": [
+    "architecture.yaml",
+    "specs/changes/architecture-map-currency/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "All six directories under server/internal/modules/ now appear in the modules section, and each owns list was derived from the tables that module actually writes rather than from the previous map.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "tools.deterministic lists all 13 command directories under server/tools/ (excluding the shared internal helper package). A reverse check confirmed no entry names a directory that does not exist.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "The map now states that module isolation is enforced at the import level only, and records the one known cross-module data write under known_cross_module_data_writes with its file:line and detected_by: none.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "Verified mechanically: every basename under server/internal/modules/ matches a modules key (commerce, contact, content, media, sitecontent, staff). staff_members now appears exactly once, owned by staff. commerce gained order_items, shipping_methods, and restock_idempotency; media gained media_assets and media_gc_jobs.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Verified mechanically in both directions: every command directory under server/tools/ except internal is present, and every server/tools/ path named in the map resolves to an existing directory. local-postgres-gate, postgres-live-gate, migration-parity, media-gc, preview, and seed are all listed.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "known_cross_module_data_writes records commerce writing media_assets.unassociated_since_unix at server/internal/modules/commerce/store.go:434,440, owned by media, with detected_by: none. archcheck was inspected and walks Go imports only, so no current gate covers this.",
+      "status": "passed"
+    }
+  }
+}

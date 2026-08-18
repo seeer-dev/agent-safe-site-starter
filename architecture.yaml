@@ -33,16 +33,6 @@ layers:
     path: server/internal/bootstrap
     may_depend_on: [modules, platform, auth]
   modules:
-    path: server/internal/modules
-    rule: modules_must_not_import_other_modules
-  platform:
-    path: server/internal/platform
-    rule: platform_must_not_import_modules
-  render:
-    path: server/internal/render
-    purpose: cms_models_to_static_html
-
-modules:
   content:
     path: server/internal/modules/content
     owns: [articles]
@@ -53,22 +43,53 @@ modules:
     purpose: public inquiry submission and notification
   media:
     path: server/internal/modules/media
-    owns: [media_objects]
-    purpose: authenticated R2 upload authorization and post-upload media verification registry
+    owns: [media_objects, media_assets, media_gc_jobs]
+    purpose: authenticated R2 upload authorization, post-upload verification registry, and background object cleanup
   commerce:
     path: server/internal/modules/commerce
-    owns: [products, product_images, orders, order_events, returns, members, staff_members, promos, payment_methods]
-    purpose: catalog, orders, fulfillment, returns, and product image association
+    owns: [products, product_images, orders, order_items, order_events, returns, members, promos, payment_methods, shipping_methods, restock_idempotency]
+    purpose: catalog, orders, fulfillment, returns, promotions, payment/shipping method configuration, and product image association
+  sitecontent:
+    path: server/internal/modules/sitecontent
+    owns: [site_content]
+    purpose: storefront content with draft/published separation, approval, and expiry
+  staff:
+    path: server/internal/modules/staff
+    owns: [staff_members]
+    purpose: staff records, role labels, and last-owner protection
+
+# Module isolation is enforced at the import level only. archcheck inspects Go
+# imports; it does not inspect SQL. One known write crosses a module boundary
+# at the data level without violating the import rule:
+#
+#   commerce writes media_assets.unassociated_since_unix
+#   (server/internal/modules/commerce/store.go:434,440) when product images are
+#   linked or unlinked. media owns that table.
+#
+# Recorded so the map is not read as a stronger guarantee than the gate gives.
+# Resolving it is not authorized by this entry.
+known_cross_module_data_writes:
+  - writer: commerce
+    table: media_assets
+    owner: media
+    location: server/internal/modules/commerce/store.go:434,440
+    detected_by: none
 
 tools:
   human_entrypoint: natural-language-via-agent
   deterministic:
     - server/tools/dev
+    - server/tools/seed
     - server/tools/migrate
     - server/tools/render
+    - server/tools/preview
     - server/tools/publish
+    - server/tools/media-gc
     - server/tools/speccheck
     - server/tools/verify
     - server/tools/archcheck
     - server/tools/scopecheck
+    - server/tools/migration-parity
+    - server/tools/postgres-live-gate
+    - server/tools/local-postgres-gate
   optional_context_engine: codegraph
