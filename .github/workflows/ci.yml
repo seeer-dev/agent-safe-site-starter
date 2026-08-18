@@ -38,6 +38,14 @@ jobs:
         run: test -z "$(gofmt -l server)"
       - name: architecture import check
         run: go run ./server/tools/archcheck
+      # Pinned deliberately. admin/scripts/check-resource-contracts.mjs uses
+      # import.meta.dirname, which exists only from Node 20.11, and a runner
+      # default could silently regress below that floor.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.11.0'
+      - name: frontend contract gate
+        run: make verify-contracts
       - name: migration parity check
         run: go run ./server/tools/migration-parity
       - name: controlled spec gate

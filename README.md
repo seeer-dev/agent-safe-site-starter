@@ -145,6 +145,22 @@ go run ./server/tools/speccheck
 go run ./server/tools/verify
 ```
 
+Frontend contract checks run separately:
+
+```bash
+make verify-contracts
+```
+
+It runs `admin/scripts/check-resource-contracts.mjs` and
+`site/themes/minimal-cart/scripts/check-openapi-contracts.mjs` against
+`contracts/openapi.yaml`, and CI runs the same command as a required gate.
+It needs **Node 20.11 or newer** — `check-resource-contracts.mjs` uses
+`import.meta.dirname` — but no `npm install`, because both scripts import only
+Node standard-library modules.
+
+`go run ./server/tools/verify` stays Go-only and never invokes Node, so a
+contributor without a Node toolchain is not blocked by the repository verifier.
+
 Pull-request CI runs the same gate against the event's base commit and accepts only an `Accepted` spec that is part of the current comparison diff. Merged Accepted/Superseded specs are immutable and cannot authorize later changes. This makes missing specs, artifact drift, stale-spec reuse, unapproved states, uncovered protected paths, duplicate spec ownership, and false `Accepted` claims fail mechanically instead of relying only on agent instructions.
 
 ### Evidence that can pass
