@@ -1,0 +1,63 @@
+{
+  "change_id": "public-endpoint-rate-limit",
+  "revision": 3,
+  "status": "Draft",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Pending repository owner decision on production replica topology, trusted client-IP source, enforcement owner, and acceptable operating cost.",
+  "repository_baseline": "3ecc1b63b85f13be773af79453a2c29f868903e4",
+  "supersedes": [],
+  "applies_to": [
+    "specs/changes/public-endpoint-rate-limit/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": [
+      "security-review"
+    ],
+    "AC-002": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "status": "pending",
+      "proof": "",
+      "observed_revision": 3
+    },
+    "REQ-002": {
+      "status": "pending",
+      "proof": "",
+      "observed_revision": 3
+    },
+    "AC-001": {
+      "status": "pending",
+      "proof": "",
+      "observed_revision": 3
+    },
+    "AC-002": {
+      "status": "pending",
+      "proof": "",
+      "observed_revision": 3
+    },
+    "AC-003": {
+      "status": "pending",
+      "proof": "",
+      "observed_revision": 3
+    },
+    "AC-004": {
+      "status": "pending",
+      "proof": "",
+      "observed_revision": 3
+    }
+  }
+}
