@@ -16,6 +16,8 @@ func TestGatePassesExactInventory(t *testing.T) {
 {"Time":"2026-08-14T20:00:03Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/staff","Test":"TestPostgresLiveStaffLockActiveOwners"}
 {"Time":"2026-08-14T20:00:04Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
 {"Time":"2026-08-14T20:00:05Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
+{"Time":"2026-08-14T20:00:06Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
+{"Time":"2026-08-14T20:00:07Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
 `
 	err := ValidateTestEvents(strings.NewReader(jsonStream), RequiredLiveTests)
 	if err != nil {
@@ -32,6 +34,8 @@ func TestGateRejectsMissingTest(t *testing.T) {
 {"Time":"2026-08-14T20:00:01Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/migrate","Test":"TestPostgresLiveMigrateApplyAndTimestamp"}
 {"Time":"2026-08-14T20:00:02Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/staff","Test":"TestPostgresLiveStaffLockActiveOwners"}
 {"Time":"2026-08-14T20:00:03Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/staff","Test":"TestPostgresLiveStaffLockActiveOwners"}
+{"Time":"2026-08-14T20:00:06Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
+{"Time":"2026-08-14T20:00:07Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
 `
 	err := ValidateTestEvents(strings.NewReader(jsonStream), RequiredLiveTests)
 	if err == nil {
@@ -53,6 +57,8 @@ func TestGateRejectsSkippedTest(t *testing.T) {
 {"Time":"2026-08-14T20:00:03Z","Action":"skip","Package":"github.com/example/ai-site-starter/server/internal/modules/staff","Test":"TestPostgresLiveStaffLockActiveOwners"}
 {"Time":"2026-08-14T20:00:04Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
 {"Time":"2026-08-14T20:00:05Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
+{"Time":"2026-08-14T20:00:06Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
+{"Time":"2026-08-14T20:00:07Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
 `
 	err := ValidateTestEvents(strings.NewReader(jsonStream), RequiredLiveTests)
 	if err == nil {
@@ -74,6 +80,8 @@ func TestGateRejectsFailedTest(t *testing.T) {
 {"Time":"2026-08-14T20:00:03Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/staff","Test":"TestPostgresLiveStaffLockActiveOwners"}
 {"Time":"2026-08-14T20:00:04Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
 {"Time":"2026-08-14T20:00:05Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
+{"Time":"2026-08-14T20:00:06Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
+{"Time":"2026-08-14T20:00:07Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
 `
 	err := ValidateTestEvents(strings.NewReader(jsonStream), RequiredLiveTests)
 	if err == nil {
@@ -95,6 +103,8 @@ func TestGateRejectsDuplicateRunWithoutPass(t *testing.T) {
 {"Time":"2026-08-14T20:00:03Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/staff","Test":"TestPostgresLiveStaffLockActiveOwners"}
 {"Time":"2026-08-14T20:00:04Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
 {"Time":"2026-08-14T20:00:05Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/media","Test":"TestPostgresLiveMediaLifecycleAndLocks"}
+{"Time":"2026-08-14T20:00:06Z","Action":"run","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
+{"Time":"2026-08-14T20:00:07Z","Action":"pass","Package":"github.com/example/ai-site-starter/server/internal/modules/commerce","Test":"TestPostgresLiveCommerceBooleanAdaptersAndCheckout"}
 `
 	err := ValidateTestEvents(strings.NewReader(jsonStream), RequiredLiveTests)
 	if err == nil {

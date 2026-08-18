@@ -22,6 +22,9 @@ var RequiredLiveTests = map[string][]string{
 	"github.com/example/ai-site-starter/server/internal/modules/media": {
 		"TestPostgresLiveMediaLifecycleAndLocks",
 	},
+	"github.com/example/ai-site-starter/server/internal/modules/commerce": {
+		"TestPostgresLiveCommerceBooleanAdaptersAndCheckout",
+	},
 }
 
 // TestEvent represents a line emitted by `go test -json`.

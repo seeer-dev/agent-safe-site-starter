@@ -1104,9 +1104,9 @@ func (s SQLStore) ListPromos(ctx context.Context) ([]Promo, error) {
 
 func (s SQLStore) GetActivePromoByCode(ctx context.Context, code string, now int64) (Promo, error) {
 	query := database.Bind(s.dialect, `SELECT id, code, label, type, value, enabled, starts_unix, expires_unix, updated_unix
-		FROM promos WHERE code = ? AND enabled = 1 AND starts_unix <= ? AND (expires_unix = 0 OR expires_unix >= ?) LIMIT 1`)
+		FROM promos WHERE code = ? AND enabled = ? AND starts_unix <= ? AND (expires_unix = 0 OR expires_unix >= ?) LIMIT 1`)
 	var p Promo
-	if err := s.db.QueryRowContext(ctx, query, code, now, now).Scan(
+	if err := s.db.QueryRowContext(ctx, query, code, true, now, now).Scan(
 		&p.ID, &p.Code, &p.Label, &p.Type, &p.Value, &p.Enabled, &p.StartsUnix, &p.ExpiresUnix, &p.UpdatedUnix,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -1118,10 +1118,6 @@ func (s SQLStore) GetActivePromoByCode(ctx context.Context, code string, now int
 }
 
 func (s SQLStore) UpsertPromo(ctx context.Context, p Promo) error {
-	enabled := 0
-	if p.Enabled {
-		enabled = 1
-	}
 	query := database.Bind(s.dialect, `INSERT INTO promos
 		(id, code, label, type, value, enabled, starts_unix, expires_unix, updated_unix)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -1135,7 +1131,7 @@ func (s SQLStore) UpsertPromo(ctx context.Context, p Promo) error {
 			expires_unix = excluded.expires_unix,
 			updated_unix = excluded.updated_unix`)
 	_, err := s.db.ExecContext(ctx, query,
-		p.ID, p.Code, p.Label, p.Type, p.Value, enabled, p.StartsUnix, p.ExpiresUnix, p.UpdatedUnix)
+		p.ID, p.Code, p.Label, p.Type, p.Value, p.Enabled, p.StartsUnix, p.ExpiresUnix, p.UpdatedUnix)
 	if err != nil {
 		return fmt.Errorf("upsert promo: %w", err)
 	}
@@ -1163,21 +1159,15 @@ func (s SQLStore) ListPaymentMethods(ctx context.Context) ([]PaymentMethod, erro
 	var out []PaymentMethod
 	for rows.Next() {
 		var pm PaymentMethod
-		var enabled int
-		if err := rows.Scan(&pm.ID, &pm.Method, &pm.ProviderLabel, &pm.Environment, &pm.ReadinessStatus, &enabled, &pm.UpdatedUnix); err != nil {
+		if err := rows.Scan(&pm.ID, &pm.Method, &pm.ProviderLabel, &pm.Environment, &pm.ReadinessStatus, &pm.Enabled, &pm.UpdatedUnix); err != nil {
 			return nil, err
 		}
-		pm.Enabled = enabled == 1
 		out = append(out, pm)
 	}
 	return out, rows.Err()
 }
 
 func (s SQLStore) UpsertPaymentMethod(ctx context.Context, pm PaymentMethod) error {
-	enabled := 0
-	if pm.Enabled {
-		enabled = 1
-	}
 	query := database.Bind(s.dialect, `INSERT INTO payment_methods
 		(id, method, provider_label, environment, readiness_status, enabled, updated_unix)
 		VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -1189,7 +1179,7 @@ func (s SQLStore) UpsertPaymentMethod(ctx context.Context, pm PaymentMethod) err
 			enabled = excluded.enabled,
 			updated_unix = excluded.updated_unix`)
 	_, err := s.db.ExecContext(ctx, query,
-		pm.ID, pm.Method, pm.ProviderLabel, pm.Environment, pm.ReadinessStatus, enabled, pm.UpdatedUnix)
+		pm.ID, pm.Method, pm.ProviderLabel, pm.Environment, pm.ReadinessStatus, pm.Enabled, pm.UpdatedUnix)
 	if err != nil {
 		return fmt.Errorf("upsert payment method: %w", err)
 	}
