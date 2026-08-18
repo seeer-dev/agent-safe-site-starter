@@ -1,0 +1,58 @@
+{
+  "change_id": "postgres-connection-pool-configuration",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved the pre-launch operability batch on 2026-08-18. PostgreSQL now executes in tests and is the production default, while the pool is left at database/sql defaults of unlimited open connections and two idle.",
+  "repository_baseline": "70c7098865909617e6b3774f3b86ca2a08cb4edd",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/config/config.go",
+    "server/internal/config/config_test.go",
+    "server/internal/platform/database/database.go",
+    "server/internal/platform/database/database_test.go",
+    "server/internal/bootstrap/app.go",
+    ".env.development.example",
+    ".env.production.example",
+    "docs/environment-configuration.md",
+    "specs/changes/postgres-connection-pool-configuration/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "database.PoolConfig plus OpenWithPool apply MaxOpenConns, MaxIdleConns, ConnMaxLifetime, and ConnMaxIdleTime for PostgreSQL, sourced from DB_MAX_OPEN_CONNS, DB_MAX_IDLE_CONNS, DB_CONN_MAX_LIFETIME, and DB_CONN_MAX_IDLE_TIME through config.Load and wired in bootstrap. Open retains its previous signature and delegates with an empty PoolConfig.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "applyPool keeps SQLite at SetMaxOpenConns(1) in a separate branch, and all four settings appear in the ownership table, the production inventory, and the development example, with an explicit statement that sizing depends on the pooler mode.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "TestPoolConfigWithDefaults covers empty, supplied, zero, negative, and idle-above-open input; envInt and envDuration return 0 for absent, unparseable, zero, or negative values so the platform default applies rather than an unbounded pool. TestApplyPoolPerDialect asserts a configured bound of 7 is applied and that an empty config applies DefaultMaxOpenConns. Mutation-verified: removing db.SetMaxOpenConns from the PostgreSQL branch turned the assertion red (got 0), and restoration returned it to green.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "TestApplyPoolPerDialect opens SQLite with a 50-connection PoolConfig and asserts Stats().MaxOpenConnections is still 1. Mutation-verified: replacing the SQLite branch condition with a constant false turned the assertion red, and restoration returned it to green.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "All four names appear in docs/environment-configuration.md (ownership table plus a Connection pool bounds section), .env.production.example with Railway ownership comments, and .env.development.example as commented defaults. The documentation states the defaults are a conservative floor, distinguishes session from transaction pooler sizing, notes the pgx simple_protocol requirement under transaction pooling, and records that choosing the pooler mode is an operator decision this repository does not make.",
+      "status": "passed"
+    }
+  }
+}

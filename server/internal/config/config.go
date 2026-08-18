@@ -6,7 +6,9 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -19,6 +21,13 @@ type Config struct {
 
 	DBDriver    string
 	DatabaseURL string
+
+	// PostgreSQL pool bounds. Zero means "use the platform default"; the
+	// database layer never leaves a pool unbounded.
+	DBMaxOpenConns    int
+	DBMaxIdleConns    int
+	DBConnMaxLifetime time.Duration
+	DBConnMaxIdleTime time.Duration
 
 	AuthMode               string
 	DevAuthToken           string
@@ -78,6 +87,11 @@ func Load() Config {
 
 		DBDriver:    strings.ToLower(env("DB_DRIVER", "sqlite")),
 		DatabaseURL: env("DATABASE_URL", "file:var/site.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"),
+
+		DBMaxOpenConns:    envInt("DB_MAX_OPEN_CONNS"),
+		DBMaxIdleConns:    envInt("DB_MAX_IDLE_CONNS"),
+		DBConnMaxLifetime: envDuration("DB_CONN_MAX_LIFETIME"),
+		DBConnMaxIdleTime: envDuration("DB_CONN_MAX_IDLE_TIME"),
 
 		AuthMode:               strings.ToLower(env("AUTH_MODE", "dev")),
 		DevAuthToken:           env("DEV_AUTH_TOKEN", "dev-admin"),
@@ -240,4 +254,25 @@ func loadDotEnv(path string) error {
 		}
 	}
 	return scanner.Err()
+}
+
+// envInt reads a positive integer setting. Anything absent, unparseable, zero,
+// or negative returns 0, which the database layer treats as "use the default"
+// rather than as "unbounded".
+func envInt(name string) int {
+	v, err := strconv.Atoi(strings.TrimSpace(os.Getenv(name)))
+	if err != nil || v <= 0 {
+		return 0
+	}
+	return v
+}
+
+// envDuration reads a Go duration setting (for example "30m"). Anything absent,
+// unparseable, zero, or negative returns 0 and falls back to the default.
+func envDuration(name string) time.Duration {
+	d, err := time.ParseDuration(strings.TrimSpace(os.Getenv(name)))
+	if err != nil || d <= 0 {
+		return 0
+	}
+	return d
 }

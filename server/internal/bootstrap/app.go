@@ -29,7 +29,12 @@ type App struct {
 }
 
 func New(ctx context.Context, cfg config.Config) (*App, error) {
-	db, dialect, err := database.Open(ctx, cfg.DBDriver, cfg.DatabaseURL)
+	db, dialect, err := database.OpenWithPool(ctx, cfg.DBDriver, cfg.DatabaseURL, database.PoolConfig{
+		MaxOpenConns:    cfg.DBMaxOpenConns,
+		MaxIdleConns:    cfg.DBMaxIdleConns,
+		ConnMaxLifetime: cfg.DBConnMaxLifetime,
+		ConnMaxIdleTime: cfg.DBConnMaxIdleTime,
+	})
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	_ "modernc.org/sqlite"
@@ -19,7 +20,76 @@ const (
 	Postgres Dialect = "postgres"
 )
 
+// Open uses the default pool bounds. Callers that carry configuration should
+// use OpenWithPool.
+
+// PoolConfig bounds a PostgreSQL connection pool. database/sql defaults to an
+// unlimited number of open connections and two idle ones, which lets a traffic
+// spike exhaust a provider connection allowance and makes steady-state traffic
+// churn connections. These are a conservative floor for one small instance,
+// not a sizing recommendation: the right numbers depend on whether a session
+// pooler or a transaction pooler sits in front of PostgreSQL, and this package
+// does not make that decision.
+type PoolConfig struct {
+	MaxOpenConns    int
+	MaxIdleConns    int
+	ConnMaxLifetime time.Duration
+	ConnMaxIdleTime time.Duration
+}
+
+// Default pool bounds. Each is applied when the corresponding field is not a
+// positive value, so an unset, zero, negative, or unparseable setting can never
+// produce an unbounded pool.
+const (
+	DefaultMaxOpenConns    = 10
+	DefaultMaxIdleConns    = 10
+	DefaultConnMaxLifetime = 30 * time.Minute
+	DefaultConnMaxIdleTime = 5 * time.Minute
+)
+
+// withDefaults replaces any non-positive field with its default.
+func (p PoolConfig) withDefaults() PoolConfig {
+	if p.MaxOpenConns <= 0 {
+		p.MaxOpenConns = DefaultMaxOpenConns
+	}
+	if p.MaxIdleConns <= 0 {
+		p.MaxIdleConns = DefaultMaxIdleConns
+	}
+	if p.ConnMaxLifetime <= 0 {
+		p.ConnMaxLifetime = DefaultConnMaxLifetime
+	}
+	if p.ConnMaxIdleTime <= 0 {
+		p.ConnMaxIdleTime = DefaultConnMaxIdleTime
+	}
+	// Idle above open is meaningless to database/sql, which silently reduces
+	// it; clamping here keeps the effective configuration inspectable.
+	if p.MaxIdleConns > p.MaxOpenConns {
+		p.MaxIdleConns = p.MaxOpenConns
+	}
+	return p
+}
+
+// applyPool sets the bounds for PostgreSQL. SQLite is deliberately excluded:
+// its single connection is load-bearing, because several lock guards are
+// documented as SQLite no-ops that rely on that serialization.
+func applyPool(db *sql.DB, dialect Dialect, pool PoolConfig) {
+	if dialect == SQLite {
+		db.SetMaxOpenConns(1)
+		return
+	}
+	p := pool.withDefaults()
+	db.SetMaxOpenConns(p.MaxOpenConns)
+	db.SetMaxIdleConns(p.MaxIdleConns)
+	db.SetConnMaxLifetime(p.ConnMaxLifetime)
+	db.SetConnMaxIdleTime(p.ConnMaxIdleTime)
+}
+
 func Open(ctx context.Context, driver, dsn string) (*sql.DB, Dialect, error) {
+	return OpenWithPool(ctx, driver, dsn, PoolConfig{})
+}
+
+// OpenWithPool opens a database and applies the given pool bounds.
+func OpenWithPool(ctx context.Context, driver, dsn string, pool PoolConfig) (*sql.DB, Dialect, error) {
 	var sqlDriver string
 	var dialect Dialect
 
@@ -41,9 +111,7 @@ func Open(ctx context.Context, driver, dsn string) (*sql.DB, Dialect, error) {
 	if err != nil {
 		return nil, "", err
 	}
-	if dialect == SQLite {
-		db.SetMaxOpenConns(1)
-	}
+	applyPool(db, dialect, pool)
 	if err := db.PingContext(ctx); err != nil {
 		db.Close()
 		return nil, "", fmt.Errorf("database ping: %w", err)

@@ -94,6 +94,10 @@ Key characteristics and operational boundaries:
 | `ADMIN_API_BASE` | | ● | ● | |
 | `DB_DRIVER` | ● | ● | | |
 | `DATABASE_URL` | ● | ● | | ● |
+| `DB_MAX_OPEN_CONNS` | ● | | | |
+| `DB_MAX_IDLE_CONNS` | ● | | | |
+| `DB_CONN_MAX_LIFETIME` | ● | | | |
+| `DB_CONN_MAX_IDLE_TIME` | ● | | | |
 | `AUTH_MODE` | ● | ● | ● | |
 | `SUPABASE_URL` | ● | ● | ● | |
 | `SUPABASE_PUBLISHABLE_KEY` | ● | ● | ● | |
@@ -111,6 +115,34 @@ Key characteristics and operational boundaries:
 | `CONTACT_NOTIFY_TO` | ● | | | |
 | `CF_PAGES_PROJECT` | | ● | | |
 | `CF_DEPLOY_HOOK_URL` | ● | | | ● |
+
+### Connection pool bounds
+
+`database/sql` defaults to an **unlimited** number of open connections and two
+idle ones. Unlimited lets a traffic spike exhaust the provider's connection
+allowance; two idle makes steady traffic churn connections. Both are wrong for
+a hosted PostgreSQL.
+
+The Go API therefore always applies bounds. Defaults are
+`DB_MAX_OPEN_CONNS=10`, `DB_MAX_IDLE_CONNS=10`, `DB_CONN_MAX_LIFETIME=30m`,
+`DB_CONN_MAX_IDLE_TIME=5m`. An unset, zero, negative, or unparseable value
+falls back to its default, so no configuration mistake can produce an
+unbounded pool. Idle above open is clamped to open.
+
+**These defaults are a conservative floor, not a sizing recommendation.** The
+right numbers depend on what sits in front of PostgreSQL:
+
+- Direct connections, or a **session** pooler: size `DB_MAX_OPEN_CONNS` to the
+  instance's allowance divided by the number of API replicas.
+- A **transaction** pooler: the pooler owns the real connection count, so keep
+  this small. Note that pgx's prepared statements need
+  `default_query_exec_mode=simple_protocol` in the DSN under transaction
+  pooling. Choosing the pooler mode is an operator decision this repository
+  does not make.
+
+SQLite is unaffected and stays at one connection. That is deliberate: several
+lock guards are documented as SQLite no-ops precisely because its access is
+serialized.
 
 ## The browser boundary
 
