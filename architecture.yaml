@@ -2,12 +2,24 @@ version: 1
 name: ai-site-starter
 
 principles:
+  - beginner-single-site
   - static-site-first
   - one-go-backend
   - explicit-dependencies
   - vertical-modules
   - local-first
   - ai-safe-change
+
+# archcheck reads this deliberately small subsection as its authority for Go
+# import-boundary enforcement. Keep it flat: missing, unknown, or unsafe values
+# fail closed rather than falling back to checker-local architecture defaults.
+enforcement:
+  import_rules:
+    scan_root: server/internal
+    module_root: server/internal/modules
+    platform_root: server/internal/platform
+    deny_cross_module_imports: true
+    deny_platform_module_imports: true
 
 runtime:
   site:

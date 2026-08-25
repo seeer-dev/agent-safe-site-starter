@@ -1,0 +1,81 @@
+{
+  "change_id": "sitecore-lessons-for-beginner-starter",
+  "revision": 1,
+  "status": "Verifying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner explicitly approved implementation on 2026-08-26 after clarifying that this repository is a beginner-facing single-site starter whose AI machinery must stay hidden behind the propose/apply workflow.",
+  "repository_baseline": "ade97a8d58dfffe1d2b61633d552dfffcb7ba3f6",
+  "supersedes": [],
+  "applies_to": [
+    "architecture.yaml",
+    "AGENTS.md",
+    ".github/workflows/ci.yml",
+    "server/tools/archcheck/**",
+    "skills/site/SKILL.md",
+    "skills/site/references/architecture-boundaries.md",
+    "skills/site/references/change-safety.md",
+    "specs/changes/sitecore-lessons-for-beginner-starter/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "PR #1 CI run 32873109532 ran `go test ./server/tools/archcheck -count=1` successfully and then ran the manifest-driven real-repository scan with `archcheck: ok`; frontend contract checks and migration parity also passed before the expected Verifying-vs-Accepted spec gate stop."
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "AGENTS.md, skills/site/SKILL.md, and skills/site/references/architecture-boundaries.md explicitly preserve one site, one Go backend, static-first delivery, separate Vue admin, scoped islands, and forbid speculative multi-site/runtime platform machinery."
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "AGENTS.md and architecture-boundaries.md require consumer-owned typed ports wired in bootstrap, cohesive internal splits before top-level module proliferation, and existing UI/reference surfaces as the user-facing acceptance contract unless a reviewed design change supersedes them."
+    },
+    "REQ-004": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "skills/site/SKILL.md retains propose <outcome> -> concise proposal review -> plain apply and states architecture machinery remains agent-owned; no new user lifecycle command was added."
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "PR #1 CI run 32873109532 passed TestCheckArchitectureUsesConfiguredModuleRoot as part of `go test ./server/tools/archcheck -count=1`, proving an alternate configured module root drives cross-module detection without checker code changes."
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "PR #1 CI run 32873109532 passed TestLoadImportPolicyFailsClosedOnInvalidPolicy, covering a missing required field, an unsupported rule key, and an unsafe repository root."
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "The new architecture-boundaries reference and AGENTS.md explicitly prohibit speculative runtime site selection, provider/module registries, Composer/ResolvedPlan-style planning, service locators, runtime DI containers, and abstractions justified only by hypothetical future sites/providers."
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "The site skill and architecture-boundaries reference directly specify consumer-owned typed ports plus bootstrap wiring, cohesion-first commerce growth, and preservation of checked-in UI routes, visible fields, actions, states, and navigation."
+    },
+    "AC-005": {
+      "observed_revision": 1,
+      "status": "passed",
+      "proof": "The site skill still exposes only propose/review/apply for normal controlled work and explicitly keeps spec IDs, architecture choices, verification commands, and provider details behind the agent."
+    }
+  }
+}

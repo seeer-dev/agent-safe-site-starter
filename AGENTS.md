@@ -1,13 +1,19 @@
 # Agent Rules
 
-Read `architecture.yaml` and `skills/site/SKILL.md` before broad changes.
+Read `architecture.yaml`, `skills/site/SKILL.md`, and `skills/site/references/architecture-boundaries.md` before broad changes.
+
+## Product positioning
+
+This repository is a beginner-facing starter for one site. The user should describe the outcome they want; the agent owns architecture vocabulary, controlled-change IDs, verification commands, and provider details.
+
+Do not turn the starter into a multi-site/application platform while solving a local feature. In particular, do not add runtime site selection, a site/module provider registry, Composer/`ResolvedPlan`-style planning, dynamic plugin loading, a service locator, or a runtime DI container unless the user explicitly changes the product architecture.
 
 ## Hard boundaries
 
 - Keep Cloudflare Pages static. Do not add Nuxt, Next.js, Pages Functions, or a second backend unless the user explicitly changes the architecture.
 - Go is the only application backend.
 - Browser code must not query PostgreSQL/Supabase Database directly.
-- `server/internal/modules/<name>` must not import another module directly.
+- `server/internal/modules/<name>` must not import another module directly. If synchronous behavior crosses modules, the consumer defines the smallest typed interface it needs and bootstrap owns the adapter/wiring.
 - `server/internal/platform` must not import business modules.
 - Keep `auth.Principal` explicit at handler/service boundaries. Do not hide it in `context.Context`.
 - Database changes require a SQLite migration and a PostgreSQL migration unless the feature explicitly drops one driver.
@@ -18,6 +24,9 @@ Read `architecture.yaml` and `skills/site/SKILL.md` before broad changes.
 - Protected implementation and governance changes require one valid controlled change under `specs/changes/<change-id>/`; a Draft or Superseded spec never authorizes product edits.
 - Treat `server/tools/speccheck`, `server/tools/verify`, CI workflows, `AGENTS.md`, `architecture.yaml`, and `skills/` as protected governance surfaces. Changes to the gate must pass the gate.
 - Keep the normal controlled-change interface to `propose <outcome>` -> proposal summary -> plain `apply`. The agent owns change IDs, revisions, statuses, REQ/AC traceability, slice ordering, required walkthroughs, and verification; do not ask the user to operate that machinery.
+- Treat an existing checked-in UI/mockup/reference flow as the user-facing contract for routes, visible fields, actions, states, and navigation unless a reviewed product/design change supersedes it. Backend ownership does not authorize a new UI surface by itself.
+- Split an oversized module by cohesive internal seams before creating new top-level modules. Promote a seam only when independent ownership/lifecycle/contracts or multiple real consumers justify it.
+- Add a reusable abstraction only for two real implementations/consumers, a test seam around an external/nondeterministic boundary, or a cross-cutting security/correctness primitive. Hypothetical future sites/providers are not sufficient.
 
 ## Change procedure
 
@@ -34,4 +43,4 @@ Read `architecture.yaml` and `skills/site/SKILL.md` before broad changes.
 
 Interrupt the two-step flow only when multiple current proposals make plain `apply` ambiguous, a newly discovered decision materially changes product behavior, cost, permissions, data handling, or another trust boundary, or a genuine blocker prevents implementation or verification.
 
-Do not make architecture more generic for hypothetical future providers. Add a seam only when two real implementations exist or tests need one.
+Do not make architecture more generic for hypothetical future providers. Add a seam only when two real implementations exist, tests need one around an external/nondeterministic boundary, or the seam protects a cross-cutting security/correctness primitive.
