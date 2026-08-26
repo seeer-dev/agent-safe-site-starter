@@ -178,13 +178,21 @@ func cleanRelativeRoot(value string) (string, error) {
 }
 
 func checkArchitecture(repositoryRoot string, policy importPolicy) ([]string, coverage, error) {
-	for label, root := range map[string]string{"scan_root": policy.ScanRoot, "module_root": policy.ModuleRoot, "platform_root": policy.PlatformRoot} {
-		info, err := os.Stat(filepath.Join(repositoryRoot, filepath.FromSlash(root)))
+	roots := []struct {
+		label string
+		root  string
+	}{
+		{"scan_root", policy.ScanRoot},
+		{"module_root", policy.ModuleRoot},
+		{"platform_root", policy.PlatformRoot},
+	}
+	for _, item := range roots {
+		info, err := os.Stat(filepath.Join(repositoryRoot, filepath.FromSlash(item.root)))
 		if err != nil {
-			return nil, coverage{}, fmt.Errorf("%s %q: %w", label, root, err)
+			return nil, coverage{}, fmt.Errorf("%s %q: %w", item.label, item.root, err)
 		}
 		if !info.IsDir() {
-			return nil, coverage{}, fmt.Errorf("%s %q is not a directory", label, root)
+			return nil, coverage{}, fmt.Errorf("%s %q is not a directory", item.label, item.root)
 		}
 	}
 
