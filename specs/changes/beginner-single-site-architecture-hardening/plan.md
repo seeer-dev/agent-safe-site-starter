@@ -2,7 +2,7 @@
 
 Change ID: beginner-single-site-architecture-hardening
 Revision: 1
-Status: Verifying
+Status: Accepted
 
 Repository baseline: `ade97a8d58dfffe1d2b61633d552dfffcb7ba3f6`
 
@@ -33,8 +33,7 @@ go run ./server/tools/archcheck
 
 ### Slice 3: Repository verification and merge
 
-- run architecture tests and real scan in PR CI;
-- reconcile controlled evidence;
-- move the change to Accepted only after the targeted architecture gate has passed;
+- targeted architecture tests and real scan passed in PR #2 CI run 32968611776;
+- controlled evidence was reconciled and the change moved to Accepted;
 - rerun the full CI chain, including migrations, unit tests, live PostgreSQL gate, concurrency stress tests, and `go vet`;
 - merge only after the full CI is green.
