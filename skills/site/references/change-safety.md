@@ -2,7 +2,7 @@
 
 Before editing across modules or shared infrastructure:
 
-1. Inspect `architecture.yaml`.
+1. Inspect `architecture.yaml` and `architecture-boundaries.md`. Broad work must preserve the beginner single-site product shape unless the user explicitly changes that architecture.
 2. Use CodeGraph `explore`/`impact` and `affected` when available.
 3. Create or select a controlled change under `specs/changes/` before editing protected paths.
 4. Establish the appropriate scope gate for the working tree:
@@ -11,7 +11,9 @@ Before editing across modules or shared infrastructure:
 5. Run `go run ./server/tools/speccheck`, then make the change.
 6. Run `go run ./server/tools/scopecheck` before broadening scope.
 7. If a new path is genuinely required, update both controlled `applies_to` and task scope with a reason rather than silently editing outside them.
-8. Forbid in-repository scratch files and secrets in reports; in `finally`, remove temporary worktrees and prune Git metadata.
-9. Run the full verifier (`go run ./server/tools/verify`).
+8. When a broad change suggests a new module, provider, or framework, first prove the current local seam cannot safely solve the real requirement. Prefer consumer-owned typed ports, cohesive internal splits, and the existing provider path over speculative platform abstractions.
+9. Preserve existing UI/reference behavior unless the controlled change explicitly authorizes a product/design change; backend ownership is not permission to invent a new page or workflow.
+10. Forbid in-repository scratch files and secrets in reports; in `finally`, remove temporary worktrees and prune Git metadata.
+11. Run the full verifier (`go run ./server/tools/verify`).
 
-CodeGraph is context discovery, not write authorization. `speccheck`, the scope gate, and CI provide enforcement.
+CodeGraph is context discovery, not write authorization. `architecture.yaml` supplies the versioned import policy consumed by `archcheck`; `speccheck`, the scope gate, architecture gate, and CI provide enforcement.
