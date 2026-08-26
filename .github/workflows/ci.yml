@@ -37,7 +37,9 @@ jobs:
       - name: gofmt
         run: test -z "$(gofmt -l server)"
       - name: architecture import check
-        run: go run ./server/tools/archcheck
+        run: |
+          go test ./server/tools/archcheck -count=1
+          go run ./server/tools/archcheck
       # Pinned deliberately. admin/scripts/check-resource-contracts.mjs uses
       # import.meta.dirname, which exists only from Node 20.11, and a runner
       # default could silently regress below that floor.
