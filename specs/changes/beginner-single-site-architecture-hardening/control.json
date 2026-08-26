@@ -1,0 +1,45 @@
+{
+  "change_id": "beginner-single-site-architecture-hardening",
+  "revision": 1,
+  "status": "Verifying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner explicitly requested a clean replacement branch and authorized merging the corrected architecture hardening into main on 2026-08-26.",
+  "repository_baseline": "ade97a8d58dfffe1d2b61633d552dfffcb7ba3f6",
+  "supersedes": [],
+  "applies_to": [
+    "architecture.yaml",
+    "AGENTS.md",
+    ".github/workflows/ci.yml",
+    "server/tools/archcheck/**",
+    "skills/site/SKILL.md",
+    "skills/site/references/architecture-boundaries.md",
+    "skills/site/references/change-safety.md",
+    "specs/changes/beginner-single-site-architecture-hardening/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004",
+    "REQ-005"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {"observed_revision": 1, "status": "pending", "proof": "Pending executable architecture gate."},
+    "REQ-002": {"observed_revision": 1, "status": "pending", "proof": "Pending executable fail-closed regression tests."},
+    "REQ-003": {"observed_revision": 1, "status": "passed", "proof": "AGENTS.md and the site architecture reference preserve a beginner-facing single-site, one-Go-backend, static-first product shape and prohibit speculative runtime platform machinery using starter-owned generic terminology."},
+    "REQ-004": {"observed_revision": 1, "status": "passed", "proof": "AGENTS.md, the site skill, and architecture-boundaries.md require consumer-owned typed ports wired in bootstrap, cohesion-first module growth, and preservation of checked-in UI/reference surfaces."},
+    "REQ-005": {"observed_revision": 1, "status": "passed", "proof": "The site skill preserves propose/review/apply as the normal user-facing flow and keeps architecture/checking machinery agent-owned."},
+    "AC-001": {"observed_revision": 1, "status": "pending", "proof": "Pending configured-root regression test in PR CI."},
+    "AC-002": {"observed_revision": 1, "status": "pending", "proof": "Pending schema/deny regression test in PR CI."},
+    "AC-003": {"observed_revision": 1, "status": "pending", "proof": "Pending missing-root regression test in PR CI."},
+    "AC-004": {"observed_revision": 1, "status": "pending", "proof": "Pending zero-coverage regression test in PR CI."}
+  }
+}
