@@ -41,5 +41,8 @@ Covers REQ-003, AC-003, REQ-004, AC-004.
 
 - keep `specs/changes/beginner-single-site-architecture-hardening/**` synchronized with revision 1;
 - targeted architecture checks passed in PR #2 CI run 32968611776;
+- ensure a fresh CI checkout installs/builds the theme bundle before renderer-dependent Go tests;
+- provide the CI PostgreSQL test URL to `go test ./...` because live database tests intentionally fail rather than skip under CI;
+- preserve the existing scope-workflow documentation contract while extending site guidance;
 - rerun the full repository CI after Accepted status;
 - merge only after every CI gate succeeds.
