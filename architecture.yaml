@@ -2,12 +2,22 @@ version: 1
 name: ai-site-starter
 
 principles:
+  - beginner-single-site
   - static-site-first
   - one-go-backend
   - explicit-dependencies
   - vertical-modules
   - local-first
   - ai-safe-change
+
+enforcement:
+  version: 1
+  import_rules:
+    scan_root: server/internal
+    module_root: server/internal/modules
+    platform_root: server/internal/platform
+    cross_module_imports: deny
+    platform_to_modules: deny
 
 runtime:
   site:
