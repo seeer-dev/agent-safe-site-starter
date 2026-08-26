@@ -2,9 +2,9 @@
 
 Change ID: beginner-single-site-architecture-hardening
 Revision: 1
-Status: Verifying
+Status: Accepted
 Decision authority: Repository owner/user
-Approval basis: Repository owner explicitly requested a clean replacement branch and authorized merging the corrected architecture hardening into main on 2026-08-26.
+Approval basis: Repository owner explicitly requested a clean replacement branch and authorized merging the corrected architecture hardening into main on 2026-08-26. Targeted PR CI then passed before acceptance.
 Repository baseline: ade97a8d58dfffe1d2b61633d552dfffcb7ba3f6
 Supersedes: none
 
