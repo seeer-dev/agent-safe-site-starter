@@ -3,7 +3,7 @@
   "revision": 1,
   "status": "Accepted",
   "decision_authority": "Repository owner/user",
-  "approval_basis": "Repository owner explicitly requested a clean replacement branch and authorized merging the corrected architecture hardening into main on 2026-08-26. PR #2 CI run 32968611776 then independently passed gofmt, the archcheck regression tests and real repository scan, frontend contract checks, and migration parity before stopping only at the expected Accepted-only controlled-spec gate.",
+  "approval_basis": "Repository owner requested a clean replacement branch and authorized merging the corrected starter-owned architecture hardening into main on 2026-08-26 after review.",
   "repository_baseline": "ade97a8d58dfffe1d2b61633d552dfffcb7ba3f6",
   "supersedes": [],
   "applies_to": [
@@ -16,19 +16,18 @@
     "skills/site/references/change-safety.md",
     "specs/changes/beginner-single-site-architecture-hardening/**"
   ],
-  "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004", "REQ-005"],
+  "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004"],
   "acceptance": ["AC-001", "AC-002", "AC-003", "AC-004"],
   "strict_evidence": true,
   "evidence_requirements": {},
   "evidence": {
-    "REQ-001": {"observed_revision": 1, "status": "passed", "proof": "PR #2 CI run 32968611776 passed `go test ./server/tools/archcheck -count=1` and the manifest-driven real-repository scan. architecture.yaml now owns enforcement.version and import roots/deny semantics; archcheck has no hard-coded module marker or scan root."},
-    "REQ-002": {"observed_revision": 1, "status": "passed", "proof": "The same CI architecture step passed regression coverage for unsupported schema/weakening attempts, missing roots, and zero protected-file coverage; real repository coverage also passed."},
-    "REQ-003": {"observed_revision": 1, "status": "passed", "proof": "AGENTS.md and architecture-boundaries.md preserve the beginner-facing single-site, one-Go-backend, static-first shape and prohibit speculative multi-site/runtime platform machinery using starter-owned generic terminology."},
-    "REQ-004": {"observed_revision": 1, "status": "passed", "proof": "AGENTS.md, the site skill, and architecture-boundaries.md require consumer-owned typed ports wired in bootstrap, cohesion-first module growth, and preservation of checked-in UI/reference surfaces."},
-    "REQ-005": {"observed_revision": 1, "status": "passed", "proof": "The site skill preserves propose/review/apply as the normal user-facing flow and keeps architecture/checking machinery agent-owned."},
-    "AC-001": {"observed_revision": 1, "status": "passed", "proof": "TestCheckArchitectureUsesConfiguredRoots passed in PR #2 CI run 32968611776 and detected both cross-module and platform-to-module violations under alternate configured roots."},
-    "AC-002": {"observed_revision": 1, "status": "passed", "proof": "TestLoadImportPolicyFailsClosed passed in PR #2 CI run 32968611776, including unsupported version and an attempted allow value for a version-1 hard deny rule."},
-    "AC-003": {"observed_revision": 1, "status": "passed", "proof": "TestCheckArchitectureFailsOnMissingRoots passed in PR #2 CI run 32968611776 and requires a missing protected root to return an error before scanning succeeds."},
-    "AC-004": {"observed_revision": 1, "status": "passed", "proof": "TestCoverageFailsClosed passed in PR #2 CI run 32968611776 for zero scan, module, and platform non-test Go coverage."}
+    "REQ-001": {"observed_revision": 1, "status": "passed", "proof": "PR #2 CI run 32968611776 passed the archcheck regression tests and manifest-driven repository scan, proving architecture.yaml drives the versioned import roots and hard deny semantics."},
+    "REQ-002": {"observed_revision": 1, "status": "passed", "proof": "PR #2 CI run 32968611776 passed fail-closed tests for unsupported policy values, missing protected roots, and zero module or platform Go-file coverage."},
+    "REQ-003": {"observed_revision": 1, "status": "passed", "proof": "AGENTS.md, the site skill, and architecture-boundaries.md preserve one site, one Go backend, static-first delivery, separate Vue admin, scoped islands, and starter-owned generic terminology."},
+    "REQ-004": {"observed_revision": 1, "status": "passed", "proof": "Agent guidance requires consumer-owned typed ports wired in bootstrap, cohesion-first module growth, preservation of checked-in UI contracts, and the existing propose-review-apply user workflow."},
+    "AC-001": {"observed_revision": 1, "status": "passed", "proof": "TestCheckArchitectureUsesConfiguredRoots passed in PR #2 CI run 32968611776 and detected cross-module plus platform-to-module imports under alternate configured roots."},
+    "AC-002": {"observed_revision": 1, "status": "passed", "proof": "TestLoadImportPolicyFailsClosed, TestCheckArchitectureFailsOnMissingRoots, and TestCoverageFailsClosed passed in PR #2 CI run 32968611776."},
+    "AC-003": {"observed_revision": 1, "status": "passed", "proof": "The checked-in architecture guidance explicitly prohibits speculative runtime multi-site selection, dynamic module selection, global service lookup, provider registries, and runtime DI containers."},
+    "AC-004": {"observed_revision": 1, "status": "passed", "proof": "The checked-in site guidance explicitly names typed ports, bootstrap wiring, cohesion-first splitting, UI-contract preservation, and propose-review-apply as the normal collaboration and user workflow."}
   }
 }
