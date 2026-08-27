@@ -84,12 +84,12 @@ func TestMigration016Parity(t *testing.T) {
 
 // TestShippingStoreBindsEnabledAsBool is a static driver-parity check.
 // PostgreSQL 016 defines enabled as BOOLEAN; binding Go int 0/1 is not
-// portable. This inspects store.go source and is not live PostgreSQL evidence.
+// portable. This inspects store_shipping_methods.go source and is not live PostgreSQL evidence.
 func TestShippingStoreBindsEnabledAsBool(t *testing.T) {
 	t.Parallel()
-	body, err := os.ReadFile("store.go")
+	body, err := os.ReadFile("store_shipping_methods.go")
 	if err != nil {
-		t.Fatalf("read store.go: %v", err)
+		t.Fatalf("read store_shipping_methods.go: %v", err)
 	}
 	src := string(body)
 	for _, name := range []string{"CreateShippingMethod", "UpdateShippingMethod"} {
@@ -108,7 +108,7 @@ func shippingSQLStoreMethodSource(t *testing.T, src, name string) string {
 	sig := "func (s SQLStore) " + name
 	start := strings.Index(src, sig)
 	if start < 0 {
-		t.Fatalf("store.go missing %s", sig)
+		t.Fatalf("store_shipping_methods.go missing %s", sig)
 	}
 	rest := src[start:]
 	next := strings.Index(rest[1:], "\nfunc ")
