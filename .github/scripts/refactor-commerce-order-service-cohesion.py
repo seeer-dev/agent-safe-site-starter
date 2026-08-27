@@ -17,12 +17,15 @@ order_status = src[status:returns].rstrip()
 return_status = src[returns:restock].rstrip()
 restock_body = src[restock:members].rstrip()
 
-# Remove the contiguous Orders section from the central service file.
-path.write_text(src[:orders] + src[members:])
+# Remove the contiguous Orders section from the central service file and
+# normalize imports whose only consumer moved with that section.
+central = src[:orders] + src[members:]
+central = central.replace('\t"net/mail"\n', '')
+path.write_text(central)
 
 (root / "service_orders.go").write_text('''package commerce\n\nimport (\n\t"context"\n\t"fmt"\n\t"strings"\n\t"time"\n\n\t"github.com/example/ai-site-starter/server/internal/auth"\n)\n\n''' + order_lookup + "\n\n" + order_status + "\n")
 
-(root / "service_checkout.go").write_text('''package commerce\n\nimport (\n\t"context"\n\t"errors"\n\t"fmt"\n\t"strings"\n\t"time"\n\n\t"github.com/example/ai-site-starter/server/internal/auth"\n)\n\n''' + checkout + "\n")
+(root / "service_checkout.go").write_text('''package commerce\n\nimport (\n\t"context"\n\t"errors"\n\t"fmt"\n\t"net/mail"\n\t"strings"\n\t"time"\n\n\t"github.com/example/ai-site-starter/server/internal/auth"\n)\n\n''' + checkout + "\n")
 
 (root / "service_returns.go").write_text('''package commerce\n\nimport (\n\t"context"\n\t"strings"\n\t"time"\n\n\t"github.com/example/ai-site-starter/server/internal/auth"\n)\n\n''' + return_status + "\n")
 
