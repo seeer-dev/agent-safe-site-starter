@@ -11,8 +11,8 @@ import (
 )
 
 // ShippingMethod is an admin-managed shipping option. Fee and
-// free_threshold are stored for quote/order use and are not exposed on the
-// public discovery endpoint.
+// free_threshold are stored for later quote/order use (slice 2) and are
+// not exposed on the public discovery endpoint.
 type ShippingMethod struct {
 	ID            string `json:"id"`
 	Method        string `json:"method"`
@@ -27,6 +27,8 @@ type ShippingMethod struct {
 }
 
 // ShippingMethodInput is the browser-supplied create payload.
+// JSON decoding is strict (unknown fields rejected). expected_version
+// is not a create field.
 type ShippingMethodInput struct {
 	Method        string `json:"method"`
 	Label         string `json:"label"`
@@ -38,6 +40,8 @@ type ShippingMethodInput struct {
 }
 
 // ShippingMethodUpdateInput is the browser-supplied update payload.
+// method may be sent and is ignored; the stored key is immutable.
+// expected_version is required.
 type ShippingMethodUpdateInput struct {
 	Method          string `json:"method"`
 	Label           string `json:"label"`
@@ -129,7 +133,18 @@ func (s Service) CreateShippingMethod(ctx context.Context, principal auth.Princi
 	if err != nil {
 		return ShippingMethod{}, err
 	}
-	m := ShippingMethod{ID: id, Method: in.Method, Label: in.Label, Description: in.Description, Fee: in.Fee, FreeThreshold: in.FreeThreshold, Enabled: in.Enabled, SortOrder: in.SortOrder, Version: 1, UpdatedUnix: time.Now().Unix()}
+	m := ShippingMethod{
+		ID:            id,
+		Method:        in.Method,
+		Label:         in.Label,
+		Description:   in.Description,
+		Fee:           in.Fee,
+		FreeThreshold: in.FreeThreshold,
+		Enabled:       in.Enabled,
+		SortOrder:     in.SortOrder,
+		Version:       1,
+		UpdatedUnix:   time.Now().Unix(),
+	}
 	if err := s.store.CreateShippingMethod(ctx, m); err != nil {
 		return ShippingMethod{}, err
 	}
@@ -150,11 +165,31 @@ func (s Service) UpdateShippingMethod(ctx context.Context, principal auth.Princi
 	if err != nil {
 		return ShippingMethod{}, err
 	}
-	validated := ShippingMethodInput{Method: existing.Method, Label: strings.TrimSpace(in.Label), Description: in.Description, Fee: in.Fee, FreeThreshold: in.FreeThreshold, Enabled: in.Enabled, SortOrder: in.SortOrder}
+	// Method is immutable. Validate against the stored key so a tampered
+	// payload cannot rename the row, and so label/fee checks still run.
+	validated := ShippingMethodInput{
+		Method:        existing.Method,
+		Label:         strings.TrimSpace(in.Label),
+		Description:   in.Description,
+		Fee:           in.Fee,
+		FreeThreshold: in.FreeThreshold,
+		Enabled:       in.Enabled,
+		SortOrder:     in.SortOrder,
+	}
 	if err := validateShippingMethodInput(validated); err != nil {
 		return ShippingMethod{}, err
 	}
-	m := ShippingMethod{ID: existing.ID, Method: existing.Method, Label: validated.Label, Description: validated.Description, Fee: validated.Fee, FreeThreshold: validated.FreeThreshold, Enabled: validated.Enabled, SortOrder: validated.SortOrder, UpdatedUnix: time.Now().Unix()}
+	m := ShippingMethod{
+		ID:            existing.ID,
+		Method:        existing.Method,
+		Label:         validated.Label,
+		Description:   validated.Description,
+		Fee:           validated.Fee,
+		FreeThreshold: validated.FreeThreshold,
+		Enabled:       validated.Enabled,
+		SortOrder:     validated.SortOrder,
+		UpdatedUnix:   time.Now().Unix(),
+	}
 	if err := s.store.UpdateShippingMethod(ctx, m, in.ExpectedVersion); err != nil {
 		return ShippingMethod{}, err
 	}
