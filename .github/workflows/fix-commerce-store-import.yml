@@ -1,0 +1,31 @@
+name: fix-commerce-store-import
+
+on:
+  push:
+    branches:
+      - refactor/commerce-store-cohesion
+    paths:
+      - .github/fix-commerce-store-import.trigger
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/commerce-store-cohesion
+          fetch-depth: 0
+      - name: remove unused import
+        shell: bash
+        run: |
+          sed -i '/^[[:space:]]*"time"$/d' server/internal/modules/commerce/store_orders.go
+          gofmt -w server/internal/modules/commerce/store_orders.go
+          rm .github/fix-commerce-store-import.trigger
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/internal/modules/commerce/store_orders.go .github/fix-commerce-store-import.trigger
+          git commit -m "fix: remove unused order store import"
+          git push origin HEAD:refactor/commerce-store-cohesion
