@@ -70,7 +70,24 @@ func NewECPayConfig(environment, apiOrigin, siteOrigin, merchantID, hashKey, has
 	if strings.TrimSpace(merchantID) == "" || strings.TrimSpace(hashKey) == "" || strings.TrimSpace(hashIV) == "" {
 		return ECPayConfig{}, ErrECPayInvalidConfig
 	}
+	if environment == "production" && isKnownECPayTestCredential(merchantID, hashKey, hashIV) {
+		return ECPayConfig{}, ErrECPayInvalidConfig
+	}
 	return cfg, nil
+}
+
+func isKnownECPayTestCredential(merchantID, hashKey, hashIV string) bool {
+	known := [][3]string{
+		{"3002607", "pwFHCqoQZGmho4w6", "EkRm7iFT261dpevs"},
+		{"2000132", "5294y06JbISpM5x9", "v77hoKGq4kWxNNIS"},
+		{"2000213", "Xd668CHQNfTzKtB5", "Uj35oQ3X2v5YNhQX"},
+	}
+	for _, credential := range known {
+		if merchantID == credential[0] && hashKey == credential[1] && hashIV == credential[2] {
+			return true
+		}
+	}
+	return false
 }
 
 func normalizedHTTPSOrigin(raw string) (string, error) {
@@ -209,10 +226,14 @@ func ecpayCheckMacValue(fields url.Values, hashKey, hashIV string) string {
 	b.WriteString("&HashIV=")
 	b.WriteString(hashIV)
 	encoded := strings.ToLower(url.QueryEscape(b.String()))
-	replacements := map[string]string{"%2d": "-", "%5f": "_", "%2e": ".", "%21": "!", "%2a": "*", "%28": "(", "%29": ")", "~": "%7e"}
-	for from, to := range replacements {
-		encoded = strings.ReplaceAll(encoded, from, to)
-	}
+	encoded = strings.ReplaceAll(encoded, "~", "%7e")
+	encoded = strings.ReplaceAll(encoded, "%2d", "-")
+	encoded = strings.ReplaceAll(encoded, "%5f", "_")
+	encoded = strings.ReplaceAll(encoded, "%2e", ".")
+	encoded = strings.ReplaceAll(encoded, "%21", "!")
+	encoded = strings.ReplaceAll(encoded, "%2a", "*")
+	encoded = strings.ReplaceAll(encoded, "%28", "(")
+	encoded = strings.ReplaceAll(encoded, "%29", ")")
 	sum := sha256.Sum256([]byte(encoded))
 	return strings.ToUpper(hex.EncodeToString(sum[:]))
 }
