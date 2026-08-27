@@ -1,0 +1,46 @@
+name: implement-ecpay-payment-flow
+
+on:
+  push:
+    branches:
+      - feat/commerce-ecpay-payment-flow
+    paths:
+      - .github/implement-ecpay-payment-flow.trigger
+
+permissions:
+  contents: write
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/commerce-ecpay-payment-flow
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply implementation
+        run: python3 .github/scripts/implement_ecpay.py
+      - name: Format Go
+        run: gofmt -w server/internal/config/config.go server/internal/bootstrap/app.go server/internal/modules/commerce/service.go server/internal/modules/commerce/store.go server/internal/modules/commerce/ecpay.go server/internal/modules/commerce/ecpay_payment.go server/internal/modules/commerce/store_ecpay.go server/internal/modules/commerce/ecpay_http.go
+      - name: Verify focused backend
+        run: |
+          go test ./server/internal/config ./server/internal/bootstrap ./server/internal/modules/commerce
+          go run ./server/tools/migration-parity
+      - name: Verify storefront
+        working-directory: site/themes/minimal-cart
+        run: |
+          npm ci
+          npm run build
+      - name: Commit implementation
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add -A
+          git commit -m "feat: connect ecpay payment flow" || exit 0
+          git push origin HEAD:feat/commerce-ecpay-payment-flow
