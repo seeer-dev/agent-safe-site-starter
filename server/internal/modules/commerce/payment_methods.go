@@ -39,30 +39,6 @@ type PublicPaymentMethod struct {
 	Available bool   `json:"available"`
 }
 
-// ListPublicShippingMethods returns enabled admin-managed shipping methods.
-// Public id is the stable method key. Empty configuration returns an empty
-// slice (never null, never hardcoded unavailable methods). Store failure
-// is returned to the handler so it can fail closed.
-func (s Service) ListPublicShippingMethods(ctx context.Context) ([]PublicShippingMethod, error) {
-	methods, err := s.store.ListShippingMethods(ctx)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]PublicShippingMethod, 0)
-	for _, m := range methods {
-		if !m.Enabled {
-			continue
-		}
-		out = append(out, PublicShippingMethod{
-			ID:          m.Method,
-			Label:       m.Label,
-			Available:   true,
-			Description: m.Description,
-		})
-	}
-	return out, nil
-}
-
 // ListPublicPaymentMethods returns the admin-managed payment methods that
 // are enabled and ready for customer use. Methods that are disabled or not
 // yet set up are excluded.
