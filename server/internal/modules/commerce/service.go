@@ -163,6 +163,7 @@ type Service struct {
 	store         Store
 	mediaVerifier MediaVerifier // nil if not wired — product image association is rejected
 	publicBaseURL string        // R2 public base URL for deriving image URLs
+	ecpay         *ECPayConfig  // nil when ECPay is not configured
 }
 
 // NewService constructs a Service backed by the given Store.

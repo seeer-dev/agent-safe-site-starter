@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, reactive } from 'vue'
+import { ref, computed, watch, reactive, onMounted } from 'vue'
 import {
   Truck, Store, Banknote, Check, ChevronLeft,
   Package, MapPin, ArrowRight, PartyPopper, X, AlertCircle,
@@ -10,6 +10,7 @@ import { useUiStore } from '@/shared/stores/ui'
 import { useToast } from '@/shared/composables/use-toast'
 import {
   createOrder, createOrderForMember, fetchQuote, fetchShippingMethods, fetchPaymentMethods,
+  prepareECPayPayment, submitHostedPayment, getGuestOrder,
   ApiRequestError,
   type QuoteResult, type ShippingMethodResult, type PaymentMethodResult,
 } from '@/shared/lib/api'
@@ -115,6 +116,59 @@ const checkoutFingerprint = computed(() => {
 // Invalidate the idempotency key when material inputs change.
 watch(checkoutFingerprint, () => {
   idempotencyKey.value = null
+})
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
+
+async function resumeECPayBrowserReturn() {
+  const params = new URLSearchParams(window.location.search)
+  if (params.get('payment') !== 'returned') return
+
+  params.delete('payment')
+  const nextQuery = params.toString()
+  history.replaceState(null, '', `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ''}${window.location.hash}`)
+
+  const raw = sessionStorage.getItem('ecpay.pendingOrder')
+  if (!raw) {
+    toast.error('已返回商店，但找不到此分頁的付款確認資料；請至訂單查詢確認付款狀態')
+    return
+  }
+
+  let pending: { orderId?: string; accessToken?: string }
+  try {
+    pending = JSON.parse(raw)
+  } catch {
+    sessionStorage.removeItem('ecpay.pendingOrder')
+    toast.error('付款確認資料已失效，請至訂單查詢確認付款狀態')
+    return
+  }
+  if (!pending.orderId || !pending.accessToken) {
+    sessionStorage.removeItem('ecpay.pendingOrder')
+    toast.error('付款確認資料不完整，請至訂單查詢確認付款狀態')
+    return
+  }
+
+  // Provider ReturnURL and browser navigation can race. The browser only
+  // re-queries durable server truth; it never infers paid from navigation.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      const order = await getGuestOrder(pending.orderId, pending.accessToken)
+      if (order?.payment_status === 'paid') {
+        sessionStorage.removeItem('ecpay.pendingOrder')
+        cart.clear()
+        toast.success(`付款完成，訂單 ${pending.orderId} 已確認`)
+        return
+      }
+    } catch {
+      // Preserve the existing credential for manual lookup on transient reads.
+    }
+    if (attempt < 4) await sleep(800)
+  }
+  toast.error('付款結果仍在確認中，請稍後至訂單查詢確認狀態')
+}
+
+onMounted(() => {
+  void resumeECPayBrowserReturn()
 })
 
 const steps: { key: Step; label: string }[] = [
@@ -369,6 +423,22 @@ async function placeOrder() {
       placedAt: Date.now(),
       timeline: [],
       accessToken: o.access_token || undefined,
+    }
+
+    if (selectedPaymentMethod.value?.method.toLowerCase() === 'ecpay') {
+      if (!o.access_token || typeof o.access_token !== 'string') {
+        throw new Error('綠界付款需要訂單存取憑證，但伺服器未回傳')
+      }
+      const launch = await prepareECPayPayment(o.id, o.access_token)
+      // The order is already durable at this point. The browser only
+      // transports the signed public form to ECPay; payment truth comes
+      // back later through the verified server-to-server ReturnURL.
+      sessionStorage.setItem('ecpay.pendingOrder', JSON.stringify({
+        orderId: o.id,
+        accessToken: o.access_token,
+      }))
+      submitHostedPayment(launch)
+      return
     }
 
     placedOrder.value = order

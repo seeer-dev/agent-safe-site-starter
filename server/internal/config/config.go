@@ -52,6 +52,11 @@ type Config struct {
 
 	CFPagesProject string
 
+	ECPayEnvironment string
+	ECPayMerchantID  string
+	ECPayHashKey     string
+	ECPayHashIV      string
+
 	// CFDeployHookURL is the Cloudflare Pages Deploy Hook URL. When set,
 	// the publish tool POSTs to this URL after a successful render to
 	// trigger a deployment. The response is logged as a receipt.
@@ -117,6 +122,11 @@ func Load() Config {
 
 		CFPagesProject: os.Getenv("CF_PAGES_PROJECT"),
 
+		ECPayEnvironment: strings.ToLower(strings.TrimSpace(os.Getenv("ECPAY_ENVIRONMENT"))),
+		ECPayMerchantID:  strings.TrimSpace(os.Getenv("ECPAY_MERCHANT_ID")),
+		ECPayHashKey:     strings.TrimSpace(os.Getenv("ECPAY_HASH_KEY")),
+		ECPayHashIV:      strings.TrimSpace(os.Getenv("ECPAY_HASH_IV")),
+
 		CFDeployHookURL: os.Getenv("CF_DEPLOY_HOOK_URL"),
 
 		SiteTheme: env("SITE_THEME", ""),
@@ -155,7 +165,25 @@ func (c Config) Validate() error {
 	default:
 		return fmt.Errorf("AUTH_MODE must be dev or supabase, got %q", c.AuthMode)
 	}
+
+	ecpayValues := []string{c.ECPayEnvironment, c.ECPayMerchantID, c.ECPayHashKey, c.ECPayHashIV}
+	configured := 0
+	for _, value := range ecpayValues {
+		if strings.TrimSpace(value) != "" {
+			configured++
+		}
+	}
+	if configured != 0 && configured != len(ecpayValues) {
+		return fmt.Errorf("ECPAY_ENVIRONMENT, ECPAY_MERCHANT_ID, ECPAY_HASH_KEY, and ECPAY_HASH_IV must be configured together")
+	}
+	if configured == len(ecpayValues) && c.ECPayEnvironment != "stage" && c.ECPayEnvironment != "production" {
+		return fmt.Errorf("ECPAY_ENVIRONMENT must be stage or production, got %q", c.ECPayEnvironment)
+	}
 	return nil
+}
+
+func (c Config) ECPayEnabled() bool {
+	return c.ECPayEnvironment != "" && c.ECPayMerchantID != "" && c.ECPayHashKey != "" && c.ECPayHashIV != ""
 }
 
 func (c Config) R2Enabled() bool {

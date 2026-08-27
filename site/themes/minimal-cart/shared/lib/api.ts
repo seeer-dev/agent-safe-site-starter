@@ -285,6 +285,42 @@ export async function createOrderForMember(
   return { order: data }
 }
 
+export interface ECPayLaunchForm {
+  action: string
+  fields: Record<string, string>
+}
+
+export async function prepareECPayPayment(orderId: string, accessToken: string): Promise<ECPayLaunchForm> {
+  const res = await fetch(apiUrl(`/api/orders/${encodeURIComponent(orderId)}/payments/ecpay`), {
+    method: 'POST',
+    headers: { 'X-Order-Access-Token': accessToken },
+  })
+  if (!res.ok) {
+    throw new ApiRequestError(res.status, await readErrorMessage(res, 'prepareECPayPayment'))
+  }
+  const data = await res.json()
+  if (!data || typeof data.action !== 'string' || !data.action || !data.fields || typeof data.fields !== 'object') {
+    throw new Error('綠界付款初始化回應格式不完整')
+  }
+  return data as ECPayLaunchForm
+}
+
+export function submitHostedPayment(form: ECPayLaunchForm): void {
+  const element = document.createElement('form')
+  element.method = 'POST'
+  element.action = form.action
+  element.style.display = 'none'
+  for (const [name, value] of Object.entries(form.fields)) {
+    const input = document.createElement('input')
+    input.type = 'hidden'
+    input.name = name
+    input.value = value
+    element.appendChild(input)
+  }
+  document.body.appendChild(element)
+  element.submit()
+}
+
 // Look up a guest order by ID + opaque access token. The token is sent
 // via the X-Order-Access-Token header (NOT the query string) to avoid
 // logging it in URLs, browser history, and Referer headers. Returns the
