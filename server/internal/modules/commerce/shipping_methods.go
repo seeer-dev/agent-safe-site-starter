@@ -195,3 +195,70 @@ func (s Service) UpdateShippingMethod(ctx context.Context, principal auth.Princi
 	}
 	return s.store.GetShippingMethod(ctx, id)
 }
+
+// PublicShippingMethod is the public-facing shipping method descriptor.
+// ID is the stable method key (not the opaque admin id). Fees are never
+// included. Only enabled admin-managed rows are returned; available is
+// always true for those rows.
+type PublicShippingMethod struct {
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Available   bool   `json:"available"`
+	Description string `json:"description"`
+}
+
+// ListPublicShippingMethods returns enabled admin-managed shipping methods.
+// Public id is the stable method key. Empty configuration returns an empty
+// slice (never null, never hardcoded unavailable methods). Store failure
+// is returned to the handler so it can fail closed.
+func (s Service) ListPublicShippingMethods(ctx context.Context) ([]PublicShippingMethod, error) {
+	methods, err := s.store.ListShippingMethods(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]PublicShippingMethod, 0)
+	for _, m := range methods {
+		if !m.Enabled {
+			continue
+		}
+		out = append(out, PublicShippingMethod{
+			ID:          m.Method,
+			Label:       m.Label,
+			Available:   true,
+			Description: m.Description,
+		})
+	}
+	return out, nil
+}
+
+// computeShipping validates the shipping method against the current
+// shipping_methods rows and returns the server-authoritative fee.
+// Empty, missing, and disabled methods return ErrInvalidShippingMethod.
+// Store read failure returns ErrShippingConfigUnavailable without wrapping
+// the database error. Quote and new-order checkout share this helper.
+func (s Service) computeShipping(ctx context.Context, method string, subtotal int) (int, error) {
+	method = strings.TrimSpace(method)
+	if method == "" {
+		return 0, ErrInvalidShippingMethod
+	}
+	methods, err := s.store.ListShippingMethods(ctx)
+	if err != nil {
+		return 0, ErrShippingConfigUnavailable
+	}
+	for _, m := range methods {
+		if m.Method != method {
+			continue
+		}
+		if !m.Enabled {
+			return 0, ErrInvalidShippingMethod
+		}
+		if m.Fee == 0 {
+			return 0, nil
+		}
+		if m.FreeThreshold != nil && subtotal >= *m.FreeThreshold {
+			return 0, nil
+		}
+		return m.Fee, nil
+	}
+	return 0, ErrInvalidShippingMethod
+}
