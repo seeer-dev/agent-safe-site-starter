@@ -207,6 +207,30 @@ type PublicShippingMethod struct {
 	Description string `json:"description"`
 }
 
+// ListPublicShippingMethods returns enabled admin-managed shipping methods.
+// Public id is the stable method key. Empty configuration returns an empty
+// slice (never null, never hardcoded unavailable methods). Store failure
+// is returned to the handler so it can fail closed.
+func (s Service) ListPublicShippingMethods(ctx context.Context) ([]PublicShippingMethod, error) {
+	methods, err := s.store.ListShippingMethods(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]PublicShippingMethod, 0)
+	for _, m := range methods {
+		if !m.Enabled {
+			continue
+		}
+		out = append(out, PublicShippingMethod{
+			ID:          m.Method,
+			Label:       m.Label,
+			Available:   true,
+			Description: m.Description,
+		})
+	}
+	return out, nil
+}
+
 // computeShipping validates the shipping method against the current
 // shipping_methods rows and returns the server-authoritative fee.
 // Empty, missing, and disabled methods return ErrInvalidShippingMethod.
