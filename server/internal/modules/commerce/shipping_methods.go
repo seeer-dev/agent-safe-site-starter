@@ -10,6 +10,49 @@ import (
 	"github.com/example/ai-site-starter/server/internal/auth"
 )
 
+// ShippingMethod is an admin-managed shipping option. Fee and
+// free_threshold are stored for later quote/order use (slice 2) and are
+// not exposed on the public discovery endpoint.
+type ShippingMethod struct {
+	ID            string `json:"id"`
+	Method        string `json:"method"`
+	Label         string `json:"label"`
+	Description   string `json:"description"`
+	Fee           int    `json:"fee"`
+	FreeThreshold *int   `json:"free_threshold"`
+	Enabled       bool   `json:"enabled"`
+	SortOrder     int    `json:"sort_order"`
+	Version       int    `json:"version"`
+	UpdatedUnix   int64  `json:"updated_unix"`
+}
+
+// ShippingMethodInput is the browser-supplied create payload.
+// JSON decoding is strict (unknown fields rejected). expected_version
+// is not a create field.
+type ShippingMethodInput struct {
+	Method        string `json:"method"`
+	Label         string `json:"label"`
+	Description   string `json:"description"`
+	Fee           int    `json:"fee"`
+	FreeThreshold *int   `json:"free_threshold"`
+	Enabled       bool   `json:"enabled"`
+	SortOrder     int    `json:"sort_order"`
+}
+
+// ShippingMethodUpdateInput is the browser-supplied update payload.
+// method may be sent and is ignored; the stored key is immutable.
+// expected_version is required.
+type ShippingMethodUpdateInput struct {
+	Method          string `json:"method"`
+	Label           string `json:"label"`
+	Description     string `json:"description"`
+	Fee             int    `json:"fee"`
+	FreeThreshold   *int   `json:"free_threshold"`
+	Enabled         bool   `json:"enabled"`
+	SortOrder       int    `json:"sort_order"`
+	ExpectedVersion int    `json:"expected_version"`
+}
+
 const (
 	shippingMethodKeyMax   = 64
 	shippingMethodLabelMax = 80
