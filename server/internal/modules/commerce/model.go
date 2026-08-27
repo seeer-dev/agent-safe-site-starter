@@ -8,25 +8,25 @@ import (
 // Product is a sellable item in the commerce catalog. Prices and stock are
 // stored as integers because the storefront prices everything in TWD.
 type Product struct {
-	ID              string  `json:"id"`
-	SKU             string  `json:"sku"`
-	Name            string  `json:"name"`
-	Slug            string  `json:"slug"`
-	Description     string  `json:"description"`
-	LongDescription string  `json:"long_description"`
-	Image           string  `json:"image"`
-	Images          string  `json:"-"`
-	Category        string  `json:"category"`
-	Status          string  `json:"status"`
-	Material        string  `json:"material"`
-	Origin          string  `json:"origin"`
-	Price           int     `json:"price"`
-	OriginalPrice   int     `json:"original_price"`
-	Stock           int     `json:"stock"`
-	Tag             string  `json:"tag"`
-	Rating          float64 `json:"rating"`
-	ReviewsCount    int     `json:"reviews_count"`
-	UpdatedUnix     int64   `json:"updated_unix"`
+	ID              string         `json:"id"`
+	SKU             string         `json:"sku"`
+	Name            string         `json:"name"`
+	Slug            string         `json:"slug"`
+	Description     string         `json:"description"`
+	LongDescription string         `json:"long_description"`
+	Image           string         `json:"image"`
+	Images          string         `json:"-"`
+	Category        string         `json:"category"`
+	Status          string         `json:"status"`
+	Material        string         `json:"material"`
+	Origin          string         `json:"origin"`
+	Price           int            `json:"price"`
+	OriginalPrice   int            `json:"original_price"`
+	Stock           int            `json:"stock"`
+	Tag             string         `json:"tag"`
+	Rating          float64        `json:"rating"`
+	ReviewsCount    int            `json:"reviews_count"`
+	UpdatedUnix     int64          `json:"updated_unix"`
 	ProductImages   []ProductImage `json:"-"`
 }
 
@@ -139,34 +139,34 @@ type OrderEvent struct {
 }
 
 type Order struct {
-	ID                  string      `json:"id"`
-	MemberID            string      `json:"member_id"`
-	CustomerName        string      `json:"customer_name"`
-	Email               string      `json:"email"`
-	Phone               string      `json:"phone"`
-	Items               []OrderItem `json:"items"`
-	ItemsJSON           string      `json:"-"`
-	ShippingAddress     string      `json:"shipping_address"`
-	ShippingMethod      string      `json:"shipping_method"`
-	PaymentMethod       string      `json:"payment_method"`
-	TrackingNumber      string      `json:"tracking_number"`
-	Subtotal            int         `json:"subtotal"`
-	Discount            int         `json:"discount"`
-	Shipping            int         `json:"shipping"`
-	Total               int         `json:"total"`
-	Status              string      `json:"status"`
-	PaymentStatus       string      `json:"payment_status"`
-	ReturnRequestStatus string      `json:"return_request_status"`
-	PaymentIntentID     string      `json:"payment_intent_id"`
-	IdempotencyKey      string      `json:"idempotency_key,omitempty"`
-	AccessToken         string      `json:"access_token,omitempty"`
-	AccessTokenHash     string      `json:"-"`
-	RequestFingerprint  string      `json:"-"`
+	ID                  string          `json:"id"`
+	MemberID            string          `json:"member_id"`
+	CustomerName        string          `json:"customer_name"`
+	Email               string          `json:"email"`
+	Phone               string          `json:"phone"`
+	Items               []OrderItem     `json:"items"`
+	ItemsJSON           string          `json:"-"`
+	ShippingAddress     string          `json:"shipping_address"`
+	ShippingMethod      string          `json:"shipping_method"`
+	PaymentMethod       string          `json:"payment_method"`
+	TrackingNumber      string          `json:"tracking_number"`
+	Subtotal            int             `json:"subtotal"`
+	Discount            int             `json:"discount"`
+	Shipping            int             `json:"shipping"`
+	Total               int             `json:"total"`
+	Status              string          `json:"status"`
+	PaymentStatus       string          `json:"payment_status"`
+	ReturnRequestStatus string          `json:"return_request_status"`
+	PaymentIntentID     string          `json:"payment_intent_id"`
+	IdempotencyKey      string          `json:"idempotency_key,omitempty"`
+	AccessToken         string          `json:"access_token,omitempty"`
+	AccessTokenHash     string          `json:"-"`
+	RequestFingerprint  string          `json:"-"`
 	Timeline            []TimelineEvent `json:"timeline,omitempty"`
-	TimelineJSON        string      `json:"-"`
-	ExpectedStatus      string      `json:"expected_status,omitempty"`
-	Version             int         `json:"version"`
-	UpdatedUnix         int64       `json:"updated_unix"`
+	TimelineJSON        string          `json:"-"`
+	ExpectedStatus      string          `json:"expected_status,omitempty"`
+	Version             int             `json:"version"`
+	UpdatedUnix         int64           `json:"updated_unix"`
 }
 
 type OrderInput struct {
