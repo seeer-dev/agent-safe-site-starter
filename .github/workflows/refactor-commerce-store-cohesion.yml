@@ -1,0 +1,137 @@
+name: commerce-store-cohesion-refactor
+
+on:
+  push:
+    branches:
+      - refactor/commerce-store-cohesion
+    paths:
+      - .github/refactor-commerce-store-cohesion.trigger
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/commerce-store-cohesion
+          fetch-depth: 0
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.5'
+      - name: relocate commerce store sections
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          p = Path('server/internal/modules/commerce/store.go')
+          src = p.read_text()
+
+          markers = [
+              ('catalog', '// ----- Products -------------------------------------------------------------'),
+              ('members', '// ----- Members --------------------------------------------------------------'),
+              ('orders', '// ----- Orders ---------------------------------------------------------------'),
+              ('promotions', '// ----- Promos ---------------------------------------------------------------'),
+              ('payment', '// ----- Payment methods ------------------------------------------------------'),
+              ('shipping', '// ----- Shipping methods -----------------------------------------------------'),
+              ('helpers', '// ----- helpers --------------------------------------------------------------'),
+          ]
+          pos = {name: src.index(marker) for name, marker in markers}
+
+          catalog = src[pos['catalog']:pos['members']].rstrip()
+          members = src[pos['members']:pos['orders']].rstrip()
+          orders = src[pos['orders']:pos['promotions']].rstrip()
+          promotions = src[pos['promotions']:pos['payment']].rstrip()
+          payment = src[pos['payment']:pos['shipping']].rstrip()
+          shipping = src[pos['shipping']:pos['helpers']].rstrip()
+
+          # Keep Store interface, SQLStore construction and shared scan/helpers in store.go.
+          p.write_text(src[:pos['catalog']] + src[pos['helpers']:])
+
+          root = p.parent
+          (root / 'store_catalog.go').write_text('''package commerce
+
+import (
+    "context"
+    "database/sql"
+    "fmt"
+    "strings"
+    "time"
+
+    "github.com/example/ai-site-starter/server/internal/platform/database"
+)
+
+''' + catalog + '\n')
+          (root / 'store_members.go').write_text('''package commerce
+
+import (
+    "context"
+    "database/sql"
+    "errors"
+    "fmt"
+    "strings"
+
+    "github.com/example/ai-site-starter/server/internal/platform/database"
+)
+
+''' + members + '\n')
+          (root / 'store_orders.go').write_text('''package commerce
+
+import (
+    "context"
+    "database/sql"
+    "encoding/json"
+    "errors"
+    "fmt"
+    "time"
+
+    "github.com/example/ai-site-starter/server/internal/platform/database"
+)
+
+''' + orders + '\n')
+          (root / 'store_promotions.go').write_text('''package commerce
+
+import (
+    "context"
+    "database/sql"
+    "errors"
+    "fmt"
+
+    "github.com/example/ai-site-starter/server/internal/platform/database"
+)
+
+''' + promotions + '\n')
+          (root / 'store_payment_methods.go').write_text('''package commerce
+
+import (
+    "context"
+    "fmt"
+
+    "github.com/example/ai-site-starter/server/internal/platform/database"
+)
+
+''' + payment + '\n')
+          (root / 'store_shipping_methods.go').write_text('''package commerce
+
+import (
+    "context"
+    "database/sql"
+    "errors"
+    "fmt"
+
+    "github.com/example/ai-site-starter/server/internal/platform/database"
+)
+
+''' + shipping + '\n')
+          PY
+          gofmt -w server/internal/modules/commerce/store*.go
+          go test ./server/internal/modules/commerce -run '^$'
+          rm .github/refactor-commerce-store-cohesion.trigger
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add server/internal/modules/commerce .github/refactor-commerce-store-cohesion.trigger
+          git commit -m "refactor: split commerce store by cohesion"
+          git push origin HEAD:refactor/commerce-store-cohesion
