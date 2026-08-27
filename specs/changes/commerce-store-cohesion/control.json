@@ -1,0 +1,27 @@
+{
+  "change_id": "commerce-store-cohesion",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Owner approved continued Phase 2 commerce cohesion refactoring on 2026-08-27 with behavior-preserving slices merged to main after verification.",
+  "repository_baseline": "7d44ebb42928ab13a8fa28864c1fa054e803b473",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/modules/commerce/store.go",
+    "server/internal/modules/commerce/store_catalog.go",
+    "server/internal/modules/commerce/store_members.go",
+    "server/internal/modules/commerce/store_orders.go",
+    "server/internal/modules/commerce/store_promotions.go",
+    "server/internal/modules/commerce/store_payment_methods.go",
+    "server/internal/modules/commerce/store_shipping_methods.go",
+    "server/internal/modules/commerce/shipping_methods_test.go"
+  ],
+  "requirements": ["REQ-001", "REQ-002"],
+  "acceptance": ["AC-001", "AC-002"],
+  "evidence": {
+    "REQ-001": {"status": "passed", "proof": "Store, SQLStore, NewSQLStore, shared scanner helpers, exported method signatures, and persistence contracts remain in package commerce with no interface split or caller-facing contract change."},
+    "AC-001": {"status": "passed", "proof": "The Store interface and SQLStore constructor are preserved while domain-specific SQLStore method bodies are relocated without changing method signatures, SQL statements, or transaction behavior."},
+    "REQ-002": {"status": "passed", "proof": "Catalog, member, order, promotion, payment-method, and shipping-method persistence implementations are colocated in dedicated store files within package commerce; the static shipping driver-parity test follows the new source ownership."},
+    "AC-002": {"status": "passed", "proof": "The refactor introduces no route, API payload, database schema, migration, provider, UI, authorization, idempotency, or transaction-semantic change."}
+  }
+}
