@@ -10,6 +10,7 @@ import { useUiStore } from '@/shared/stores/ui'
 import { useToast } from '@/shared/composables/use-toast'
 import {
   createOrder, createOrderForMember, fetchQuote, fetchShippingMethods, fetchPaymentMethods,
+  prepareECPayPayment, submitHostedPayment,
   ApiRequestError,
   type QuoteResult, type ShippingMethodResult, type PaymentMethodResult,
 } from '@/shared/lib/api'
@@ -369,6 +370,18 @@ async function placeOrder() {
       placedAt: Date.now(),
       timeline: [],
       accessToken: o.access_token || undefined,
+    }
+
+    if (selectedPaymentMethod.value?.method.toLowerCase() === 'ecpay') {
+      if (!o.access_token || typeof o.access_token !== 'string') {
+        throw new Error('綠界付款需要訂單存取憑證，但伺服器未回傳')
+      }
+      const launch = await prepareECPayPayment(o.id, o.access_token)
+      // The order is already durable at this point. The browser only
+      // transports the signed public form to ECPay; payment truth comes
+      // back later through the verified server-to-server ReturnURL.
+      submitHostedPayment(launch)
+      return
     }
 
     placedOrder.value = order

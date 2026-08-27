@@ -94,6 +94,11 @@ type Store interface {
 	ListOrderEvents(ctx context.Context, orderID string) ([]OrderEvent, error)
 	CountOrders(ctx context.Context) (int, error)
 
+	// ECPay payment attempts
+	EnsureECPayAttempt(ctx context.Context, attempt ECPayPaymentAttempt) (ECPayPaymentAttempt, error)
+	GetECPayAttemptByMerchantTradeNo(ctx context.Context, merchantTradeNo string) (ECPayPaymentAttempt, error)
+	ClaimECPayCallback(ctx context.Context, merchantTradeNo, callbackFingerprint, providerTradeNo, rtnCode, status string, captured bool, updatedUnix int64) (bool, error)
+
 	// Promos
 	ListPromos(ctx context.Context) ([]Promo, error)
 	GetActivePromoByCode(ctx context.Context, code string, now int64) (Promo, error)

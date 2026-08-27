@@ -1,0 +1,32 @@
+{
+  "change_id": "commerce-ecpay-payment-flow",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Owner approved adapting the proven ECPay payment protocol into the independent starter project on 2026-08-27.",
+  "baseline": "8968f4943b6697a70d981ed3e5338d4584518b6f",
+  "applies_to": [
+    "server/internal/config/config.go",
+    "server/internal/modules/commerce/service.go",
+    "server/internal/modules/commerce/store.go",
+    "server/internal/modules/commerce/ecpay.go",
+    "server/internal/modules/commerce/ecpay_payment.go",
+    "server/internal/modules/commerce/store_ecpay.go",
+    "server/internal/modules/commerce/ecpay_http.go",
+    "server/internal/bootstrap/app.go",
+    "db/migrations/sqlite/017_ecpay_payment_attempts.sql",
+    "db/migrations/postgres/017_ecpay_payment_attempts.sql",
+    "site/themes/minimal-cart/shared/lib/api.ts",
+    "site/themes/minimal-cart/islands/CheckoutDialog/CheckoutDialog.vue",
+    ".env.example",
+    ".env.development.example",
+    ".env.production.example"
+  ],
+  "requirements": [
+    {"id":"REQ-001","proof":"ECPay launch configuration and signing are server-owned and secret-backed."},
+    {"id":"REQ-002","proof":"Verified ReturnURL callbacks reconcile against a durable payment attempt and order amount before paid transition."},
+    {"id":"REQ-003","proof":"Callback fingerprint compare-and-set makes identical replay one-effect and rejects conflicts."},
+    {"id":"REQ-004","proof":"Browser return verifies and redirects without payment mutation."},
+    {"id":"REQ-005","proof":"Minimal-cart launches the server-signed hosted payment form only after durable order creation."}
+  ]
+}

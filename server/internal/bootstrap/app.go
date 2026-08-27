@@ -93,6 +93,13 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	commerceService := commerce.NewService(commerceStore).
 		WithMediaVerifier(mediaVerifierAdapter{registry: mediaRegistry}).
 		WithPublicBaseURL(cfg.R2PublicBaseURL)
+	if cfg.ECPayEnabled() {
+		ecpayConfig, err := commerce.NewECPayConfig(cfg.ECPayEnvironment, cfg.PublicAPIBase, cfg.PublicSiteURL, cfg.ECPayMerchantID, cfg.ECPayHashKey, cfg.ECPayHashIV)
+		if err != nil {
+			return nil, fmt.Errorf("configure ecpay: %w", err)
+		}
+		commerceService = commerceService.WithECPay(ecpayConfig)
+	}
 	commerceHandler := commerce.NewHandler(commerceService, authenticator)
 
 	siteContentStore := sitecontent.NewSQLStore(db, dialect)
@@ -145,6 +152,9 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("GET /api/orders/{id}", commerceHandler.GetOrderForGuest)
 	mux.HandleFunc("GET /api/orders/mine", commerceHandler.ListMyOrders)
 	mux.HandleFunc("GET /api/orders/mine/{id}", commerceHandler.GetMyOrder)
+	mux.HandleFunc("POST /api/orders/{id}/payments/ecpay", commerceHandler.PrepareECPayPayment)
+	mux.HandleFunc("POST /api/payments/ecpay/return", commerceHandler.ReceiveECPayReturn)
+	mux.HandleFunc("POST /api/payments/ecpay/browser-return", commerceHandler.ECPayBrowserReturn)
 
 	// Public site content endpoint (no auth)
 	mux.HandleFunc("GET /api/site-content/published", siteContentHandler.ListPublished)
