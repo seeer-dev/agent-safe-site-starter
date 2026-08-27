@@ -3,13 +3,13 @@ from pathlib import Path
 path = Path("server/internal/modules/commerce/store.go")
 src = path.read_text()
 markers = {
-    "Products": "// ----- Products -------------------------------------------------------------",
-    "Members": "// ----- Members --------------------------------------------------------------",
-    "Orders": "// ----- Orders ---------------------------------------------------------------",
-    "Promos": "// ----- Promos ---------------------------------------------------------------",
-    "Payment methods": "// ----- Payment methods ------------------------------------------------------",
-    "Shipping methods": "// ----- Shipping methods -----------------------------------------------------",
-    "helpers": "// ----- helpers --------------------------------------------------------------",
+    "Products": "// ----- Products",
+    "Members": "// ----- Members",
+    "Orders": "// ----- Orders",
+    "Promos": "// ----- Promos",
+    "Payment methods": "// ----- Payment methods",
+    "Shipping methods": "// ----- Shipping methods",
+    "helpers": "// ----- helpers",
 }
 pos = {k: src.index(v) for k, v in markers.items()}
 sections = {
