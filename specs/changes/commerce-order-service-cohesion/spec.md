@@ -3,6 +3,10 @@
 Change ID: commerce-order-service-cohesion
 Revision: 1
 Status: Accepted
+Decision authority: Repository owner
+Approval basis: Owner approved continued Phase 2 commerce cohesion refactoring on 2026-08-27 with behavior-preserving slices merged to main after verification.
+Repository baseline: 2ae36c9476b134806f4be81e7bbdb222a9b00298
+Supersedes: none
 
 ### REQ-001: Preserve commerce order behavior while relocating ownership
 
