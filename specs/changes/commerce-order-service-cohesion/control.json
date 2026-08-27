@@ -1,0 +1,24 @@
+{
+  "change_id": "commerce-order-service-cohesion",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Owner approved continued Phase 2 commerce cohesion refactoring on 2026-08-27 with behavior-preserving slices merged to main after verification.",
+  "repository_baseline": "2ae36c9476b134806f4be81e7bbdb222a9b00298",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/modules/commerce/service.go",
+    "server/internal/modules/commerce/service_orders.go",
+    "server/internal/modules/commerce/service_checkout.go",
+    "server/internal/modules/commerce/service_returns.go",
+    "server/internal/modules/commerce/service_restock.go"
+  ],
+  "requirements": ["REQ-001", "REQ-002"],
+  "acceptance": ["AC-001", "AC-002"],
+  "evidence": {
+    "REQ-001": {"status": "passed", "proof": "Order-facing service behavior remains in package commerce behind the existing Service facade, with no route, API payload, Store contract, authorization, state-machine, idempotency, persistence, or runtime contract change."},
+    "AC-001": {"status": "passed", "proof": "Existing order query/masking, checkout, order status, return status, and restock method bodies are relocated into cohesion-oriented service files while preserving signatures and call order."},
+    "REQ-002": {"status": "passed", "proof": "The central service.go no longer owns the contiguous order service implementation; order lookup/status, checkout, returns, and restock responsibilities are colocated in dedicated files within package commerce."},
+    "AC-002": {"status": "passed", "proof": "The refactor introduces no new module, interface, provider, database migration, SQL change, UI change, or refund capability and retains existing fail-closed refund gating."}
+  }
+}
