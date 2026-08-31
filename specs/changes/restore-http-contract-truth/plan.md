@@ -1,10 +1,10 @@
 # Restore HTTP Contract Truth Delivery Plan
 
 Change ID: restore-http-contract-truth
-Revision: 1
-Status: Ready
+Revision: 2
+Status: Accepted
 
-Repository baseline: `10f805e18e394e7065854dfbceb327114e0d4564`
+Repository baseline: `9755c31048e3594d457748bf3d5dfb9f864a482f`
 
 ## Scope lock
 
@@ -43,3 +43,7 @@ Covers REQ-001, AC-001, REQ-002, AC-002, AC-003, REQ-003, AC-004.
 - Run existing Go/contract checks and the restored `make verify-contracts` entry point.
 - Independently mutation-test at least one route omission and one guarded success contract so AC-004 has real independent-review evidence.
 - Keep generated TypeScript, response-envelope redesign, pagination, admin component splitting, and runtime API rewrites out of this change.
+
+## Revision note
+
+Revision 2 refreshed the repository baseline after governance-review and lifecycle-closure changes landed. Scope, REQ/AC, and delivery semantics remained unchanged from revision 1; the change is Accepted after clean 56/56 route parity and mutation-sensitive contract evidence.

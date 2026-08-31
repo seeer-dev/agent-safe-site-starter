@@ -1,9 +1,10 @@
 openapi: 3.1.0
 info:
   title: AI Site Starter API
-  version: 0.2.0
+  version: 0.3.0
 servers:
   - url: http://localhost:8080
+
 paths:
   /healthz:
     get:
@@ -14,6 +15,7 @@ paths:
           content:
             text/plain:
               schema: {type: string}
+
   /api/articles:
     get:
       operationId: listPublishedArticles
@@ -29,6 +31,8 @@ paths:
                   articles:
                     type: array
                     items: {$ref: '#/components/schemas/Article'}
+        '500': {description: Store failure}
+
   /api/admin/articles:
     post:
       operationId: upsertArticle
@@ -44,8 +48,10 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Article'}
+        '400': {description: Invalid input}
         '401': {description: Unauthorized}
         '403': {description: Admin role required}
+
   /api/contact:
     post:
       operationId: submitContact
@@ -55,6 +61,7 @@ paths:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [name, email, message]
               properties:
                 name: {type: string, maxLength: 120}
@@ -67,8 +74,11 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [ok]
                 properties:
-                  ok: {type: boolean}
+                  ok: {type: boolean, const: true}
+        '400': {description: Invalid inquiry}
+
   /api/media/presign:
     post:
       operationId: presignMediaUpload
@@ -79,59 +89,43 @@ paths:
           application/json:
             schema:
               type: object
-              required: [filename, content_type]
+              additionalProperties: false
+              required: [filename, content_type, purpose]
               properties:
                 filename: {type: string}
-                content_type: {type: string}
+                content_type: {type: string, enum: [image/jpeg, image/png, image/gif]}
+                purpose: {type: string, enum: [product-image]}
       responses:
         '200':
           description: Presigned R2 upload request
           content:
             application/json:
-              schema:
-                type: object
-                required: [url, method, key]
-                properties:
-                  url: {type: string, format: uri}
-                  method: {type: string, const: PUT}
-                  key: {type: string}
-                  headers:
-                    type: object
-                    additionalProperties: {type: string}
+              schema: {$ref: '#/components/schemas/PresignedPut'}
+        '400': {description: Invalid filename, content type, extension, or purpose}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
         '503': {description: R2 not configured}
+
   /api/media/verify:
     post:
       operationId: verifyMediaUpload
       security: [{bearerAuth: []}]
-      summary: Post-upload media verification
-      description: |
-        Validates a server-generated temp upload key by reading the object
-        from R2, checking magic bytes, byte-size, image decode, and
-        dimensions. On success, copies to a stable verified key under
-        verified/product-images/{userID}/{sha256}.{ext}, deletes the temp
-        key, and inserts a registry row. The response contains the
-        verified key that the client sends in the product create/update
-        payload's product_images array.
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              $ref: '#/components/schemas/MediaVerifyInput'
+            schema: {$ref: '#/components/schemas/MediaVerifyInput'}
       responses:
         '200':
           description: Verified media object
           content:
             application/json:
-              schema:
-                $ref: '#/components/schemas/VerifiedMedia'
-        '400':
-          description: Validation error (bad bytes, oversize, corrupt, mismatch)
+              schema: {$ref: '#/components/schemas/VerifiedMedia'}
+        '400': {description: Validation error}
         '401': {description: Unauthorized}
-        '403': {description: Forbidden — missing media.upload capability}
-        '503':
-          description: R2 not configured or verification temporarily unavailable
-  # --- Public commerce ---
+        '403': {description: Forbidden}
+        '503': {description: Storage or verification temporarily unavailable}
+
   /api/products:
     get:
       operationId: listPublishedProducts
@@ -147,6 +141,9 @@ paths:
                   products:
                     type: array
                     items: {$ref: '#/components/schemas/Product'}
+        '500': {description: Store failure}
+        '503': {description: Media public URL is not configured}
+
   /api/products/{slug}:
     get:
       operationId: getProductBySlug
@@ -165,13 +162,17 @@ paths:
                 required: [product]
                 properties:
                   product: {$ref: '#/components/schemas/Product'}
-        '404': {description: Not found}
+        '400': {description: Missing slug}
+        '404': {description: Product not found}
+        '500': {description: Store failure}
+        '503': {description: Media public URL is not configured}
+
   /api/shipping-methods:
     get:
       operationId: listPublicShippingMethods
       responses:
         '200':
-          description: Enabled admin-managed shipping methods. Empty configuration is an empty array. Public id is the stable method key. Fees are not included.
+          description: Enabled admin-managed shipping methods
           content:
             application/json:
               schema:
@@ -181,7 +182,8 @@ paths:
                   shipping_methods:
                     type: array
                     items: {$ref: '#/components/schemas/PublicShippingMethod'}
-        '500': {description: Store failure; generic non-leaking error}
+        '500': {description: Store failure}
+
   /api/payment-methods:
     get:
       operationId: listPublicPaymentMethods
@@ -197,12 +199,14 @@ paths:
                   payment_methods:
                     type: array
                     items: {$ref: '#/components/schemas/PublicPaymentMethod'}
+        '500': {description: Store failure}
+
   /api/site-content/published:
     get:
       operationId: listPublishedSiteContent
       responses:
         '200':
-          description: Published site content blocks (no governance metadata)
+          description: Published site content without governance metadata
           content:
             application/json:
               schema:
@@ -212,6 +216,8 @@ paths:
                   items:
                     type: array
                     items: {$ref: '#/components/schemas/PublicSiteContent'}
+        '500': {description: Store failure}
+
   /api/quote:
     post:
       operationId: createQuote
@@ -228,6 +234,7 @@ paths:
               schema: {$ref: '#/components/schemas/QuoteResult'}
         '400': {description: Invalid items, shipping/payment method, or promo code}
         '503': {description: Shipping configuration or promo validation unavailable}
+
   /api/orders:
     post:
       operationId: createOrder
@@ -238,7 +245,7 @@ paths:
             schema: {$ref: '#/components/schemas/OrderInput'}
       responses:
         '201':
-          description: Created order
+          description: Created guest order
           content:
             application/json:
               schema:
@@ -246,13 +253,13 @@ paths:
                 required: [order]
                 properties:
                   order: {$ref: '#/components/schemas/Order'}
-        '409': {description: Duplicate idempotency key}
-        '400': {description: Invalid request body, order data, shipping/payment method, or promo code}
+        '400': {description: Invalid request body, order data, shipping/payment method, promo code, or idempotency key}
+        '409': {description: Insufficient stock or idempotency conflict}
         '503': {description: Shipping configuration or promo validation unavailable}
+
   /api/orders/{id}:
     get:
       operationId: getOrderForGuest
-      summary: Guest order lookup by order ID + opaque access token in X-Order-Access-Token header (PII masked)
       parameters:
         - name: id
           in: path
@@ -262,19 +269,20 @@ paths:
           in: header
           required: true
           schema: {type: string}
-          description: Opaque access token generated at order creation. Sent via header (not query string) to avoid logging in URLs, browser history, and Referer headers. Prevents enumeration by order ID alone.
+          description: Opaque order credential; kept out of URLs and logs.
       responses:
         '200':
-          description: Order with PII fields masked (phone, email, shipping address). Access token never included.
+          description: Guest order with PII masked and no access token
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
-        '400': {description: Missing id or X-Order-Access-Token header}
-        '404': {description: Order not found (wrong token returns 404, not 403)}
+        '400': {description: Missing order ID or access token}
+        '404': {description: Order not found or credential mismatch}
+        '500': {description: Store failure}
+
   /api/orders/mine:
     post:
       operationId: createOrderForMember
-      summary: Authenticated member checkout (MemberID derived from principal, not client)
       security: [{bearerAuth: []}]
       requestBody:
         required: true
@@ -283,22 +291,21 @@ paths:
             schema: {$ref: '#/components/schemas/OrderInput'}
       responses:
         '201':
-          description: Created order with MemberID set from the authenticated principal
+          description: Created member order
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
-        '400': {description: Invalid request body, order data, shipping/payment method, or promo code}
+        '400': {description: Invalid request body or order data}
         '401': {description: Unauthorized}
-        '403': {description: Member identity required}
-        '409': {description: Duplicate idempotency key}
+        '403': {description: Member identity required or forbidden}
+        '409': {description: Insufficient stock or idempotency conflict}
         '503': {description: Shipping configuration or promo validation unavailable}
     get:
       operationId: listMyOrders
-      summary: Authenticated member order listing (PII masked)
       security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Orders belonging to the authenticated member, with PII masked
+          description: Orders belonging to the authenticated member
           content:
             application/json:
               schema:
@@ -310,10 +317,11 @@ paths:
                     items: {$ref: '#/components/schemas/Order'}
         '401': {description: Unauthorized}
         '403': {description: Member identity required}
+        '500': {description: Store failure}
+
   /api/orders/mine/{id}:
     get:
       operationId: getMyOrder
-      summary: Authenticated member single-order lookup (PII masked, cross-user returns 404)
       security: [{bearerAuth: []}]
       parameters:
         - name: id
@@ -322,33 +330,101 @@ paths:
           schema: {type: string}
       responses:
         '200':
-          description: Order with PII fields masked. Access token never included.
+          description: Member order with PII masked
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
+        '400': {description: Missing order ID}
         '401': {description: Unauthorized}
         '403': {description: Member identity required}
-        '404': {description: Order not found (cross-user returns 404, not 403)}
-  # --- Admin auth ---
+        '404': {description: Order not found or belongs to another member}
+        '500': {description: Store failure}
+
+  /api/orders/{id}/payments/ecpay:
+    post:
+      operationId: prepareECPayPayment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: {type: string}
+        - name: X-Order-Access-Token
+          in: header
+          required: true
+          schema: {type: string}
+          description: Opaque guest-order access credential.
+      responses:
+        '200':
+          description: Server-signed hosted-payment launch form
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ECPayLaunchForm'}
+        '400': {description: Missing order credential or wrong payment method}
+        '404': {description: Order not found}
+        '409': {description: Order already paid or payment attempt conflict}
+        '503': {description: ECPay is not configured}
+        '500': {description: Failed to prepare payment}
+
+  /api/payments/ecpay/return:
+    post:
+      operationId: receiveECPayReturn
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: {$ref: '#/components/schemas/ECPayCallbackForm'}
+      responses:
+        '200':
+          description: Verified callback acknowledged after durable reconciliation
+          content:
+            text/plain:
+              schema: {type: string, const: '1|OK'}
+              example: 1|OK
+        '400': {description: Invalid signature/form or amount mismatch}
+        '404': {description: Durable payment attempt not found}
+        '409': {description: Conflicting callback}
+        '503': {description: ECPay is not configured}
+        '500': {description: Callback processing failure}
+
+  /api/payments/ecpay/browser-return:
+    post:
+      operationId: ecpayBrowserReturn
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema: {$ref: '#/components/schemas/ECPayCallbackForm'}
+      responses:
+        '303':
+          description: Verified browser return redirects to the storefront; it never mutates payment state
+          headers:
+            Location:
+              description: Storefront return URL
+              schema: {type: string, format: uri-reference}
+        '400': {description: Invalid browser-return form or signature}
+
   /api/admin/me:
     get:
       operationId: adminMe
       security: [{bearerAuth: []}]
       responses:
         '200':
-          description: Current staff principal
+          description: Current principal with server-derived capabilities
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MeResponse'}
         '401': {description: Unauthorized}
-  # --- Admin commerce ---
+
   /api/admin/products:
     get:
       operationId: adminMinimalCartProductsList
       security: [{bearerAuth: []}]
+      parameters:
+        - {name: status, in: query, schema: {type: string}}
+        - {name: category, in: query, schema: {type: string}}
       responses:
         '200':
-          description: All products
+          description: All products as admin DTOs
           content:
             application/json:
               schema:
@@ -357,9 +433,10 @@ paths:
                 properties:
                   products:
                     type: array
-                    items: {$ref: '#/components/schemas/Product'}
+                    items: {$ref: '#/components/schemas/AdminProductResponse'}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
+        '500': {description: Store failure}
     post:
       operationId: adminMinimalCartProductsCreate
       security: [{bearerAuth: []}]
@@ -369,37 +446,40 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/ProductInput'}
       responses:
-        '200':
-          description: Created product
+        '201':
+          description: Created product as admin DTO
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Product'}
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        '400': {description: Invalid product input}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
+        '503': {description: Media public URL/configuration unavailable where applicable}
+        '500': {description: Internal failure}
+
   /api/admin/products/{id}:
     get:
       operationId: adminMinimalCartProductsGet
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       responses:
         '200':
-          description: Product detail
+          description: Product detail as admin DTO
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Product'}
-        '404': {description: Not found}
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Product not found}
+        '500': {description: Store failure}
     put:
       operationId: adminMinimalCartProductsUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
@@ -407,20 +487,84 @@ paths:
             schema: {$ref: '#/components/schemas/ProductInput'}
       responses:
         '200':
-          description: Updated product
+          description: Updated product as admin DTO
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/Product'}
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        '400': {description: Invalid product input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Product not found}
+        '500': {description: Internal failure}
     delete:
       operationId: adminMinimalCartProductsDelete
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       responses:
-        '204': {description: Deleted}
+        '200':
+          description: Deleted product identifier
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: {type: string}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Product not found}
+        '500': {description: Internal failure}
+
+  /api/admin/products/{id}/status:
+    patch:
+      operationId: adminMinimalCartProductsUpdateStatus
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/ProductStatusInput'}
+      responses:
+        '200':
+          description: Updated product as admin DTO
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminProductResponse'
+        '400': {description: Invalid status}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Product not found}
+        '500': {description: Internal failure}
+
+  /api/admin/products/bulk:
+    post:
+      operationId: adminMinimalCartProductsBulkUpdate
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/BulkProductUpdateInput'}
+      responses:
+        '200':
+          description: Bulk update count
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated]
+                properties:
+                  updated: {type: integer, minimum: 0}
+        '400': {description: Invalid bulk update}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '500': {description: Internal failure}
+
   /api/admin/shipping-methods:
     get:
       operationId: adminMinimalCartShippingMethodsList
@@ -439,7 +583,7 @@ paths:
                     items: {$ref: '#/components/schemas/ShippingMethod'}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
-        '500': {description: Store failure; generic non-leaking error}
+        '500': {description: Store failure}
     post:
       operationId: adminMinimalCartShippingMethodsCreate
       security: [{bearerAuth: []}]
@@ -458,16 +602,14 @@ paths:
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
         '409': {description: Duplicate method key}
-        '500': {description: Store failure; generic non-leaking error}
+        '500': {description: Store failure}
+
   /api/admin/shipping-methods/{id}:
     put:
       operationId: adminMinimalCartShippingMethodsUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
@@ -482,16 +624,20 @@ paths:
         '400': {description: Invalid input}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
-        '404': {description: Missing row}
-        '409': {description: Stale expected_version; row not overwritten}
-        '500': {description: Store failure; generic non-leaking error}
+        '404': {description: Method not found}
+        '409': {description: Stale expected_version}
+        '500': {description: Store failure}
+
   /api/admin/orders:
     get:
       operationId: adminMinimalCartOrdersList
       security: [{bearerAuth: []}]
+      parameters:
+        - {name: status, in: query, schema: {type: string}}
+        - {name: payment_status, in: query, schema: {type: string}}
       responses:
         '200':
-          description: All orders
+          description: All matching orders
           content:
             application/json:
               schema:
@@ -503,126 +649,289 @@ paths:
                     items: {$ref: '#/components/schemas/Order'}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
+        '500': {description: Store failure}
+
   /api/admin/orders/{id}:
     get:
       operationId: adminMinimalCartOrdersGet
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       responses:
         '200':
           description: Order detail
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
-        '404': {description: Not found}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Order not found}
+        '500': {description: Store failure}
+
   /api/admin/orders/{id}/status:
     patch:
       operationId: adminMinimalCartOrdersStatusUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [expected_version, new_status]
-              properties:
-                expected_version: {type: integer, description: 'Aggregate version for optimistic concurrency; stale version returns 409.'}
-                new_status: {type: string, enum: [pending, processing, shipped, delivered, cancelled]}
-                note: {type: string}
+            schema: {$ref: '#/components/schemas/OrderStatusInput'}
       responses:
         '200':
           description: Updated order
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
-        '409': {description: Stale version or invalid fulfillment-state transition}
+        '400': {description: Invalid input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Order not found}
+        '409': {description: Stale version or invalid fulfillment transition}
+        '500': {description: Internal failure}
+
   /api/admin/orders/{id}/return:
     patch:
       operationId: adminMinimalCartOrdersReturnStatusUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [expected_version, new_status]
-              properties:
-                expected_version: {type: integer, description: 'Aggregate version for optimistic concurrency; stale version returns 409.'}
-                new_status: {type: string, enum: [requested, approved, rejected, received]}
-                note: {type: string}
+            schema: {$ref: '#/components/schemas/OrderReturnInput'}
       responses:
         '200':
-          description: Updated order
+          description: Updated order return state
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
-        '409': {description: Stale version or invalid return-state transition}
+        '400': {description: Invalid input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Order not found}
+        '409': {description: Stale version or invalid return transition}
+        '500': {description: Internal failure}
+
   /api/admin/orders/{id}/restock:
     post:
       operationId: adminMinimalCartOrdersRestock
       security: [{bearerAuth: []}]
-      summary: Per-item restock of received returns. Requires orders.returns AND inventory.adjust capabilities.
-      description: >
-        Atomically increments returned_quantity and restocked_quantity on
-        order_items rows, increments products.stock for the restocked amount,
-        increments the order aggregate version (guarded by expected_version),
-        and appends an order_event with the actor and reason. The order must
-        have return_request_status = "received". The DB CHECK constraint
-        enforces 0 <= restocked_quantity <= returned_quantity <= quantity.
-        Idempotent: same key + same payload returns the same result; same key
-        + different payload returns 409.
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [expected_version, idempotency_key, reason, items]
-              properties:
-                expected_version: {type: integer, description: 'Aggregate version for optimistic concurrency; stale version returns 409.'}
-                idempotency_key: {type: string, description: 'Non-empty. Same key + same payload is a retry; same key + different payload is a 409 conflict.'}
-                reason: {type: string, description: 'Required. Recorded in the append-only order_event.'}
-                items:
-                  type: array
-                  minItems: 1
-                  items:
-                    type: object
-                    required: [sku, returned_quantity, restocked_quantity]
-                    properties:
-                      sku: {type: string}
-                      returned_quantity: {type: integer, minimum: 0, description: 'Units physically received back in this action.'}
-                      restocked_quantity: {type: integer, minimum: 0, description: 'Units being put back into salable inventory. Must be <= returned_quantity.'}
+            schema: {$ref: '#/components/schemas/RestockInput'}
       responses:
         '200':
           description: Updated order with refreshed item ledger
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Order'}
-        '400': {description: Missing reason, missing idempotency key, empty items, over-restock, or SKU not in order}
-        '403': {description: Principal lacks orders.returns or inventory.adjust capability}
-        '409': {description: Stale version, return not received, or idempotency key reused with different payload}
-  # --- Admin staff ---
+        '400': {description: Missing reason/idempotency key, invalid quantities, or SKU not in order}
+        '401': {description: Unauthorized}
+        '403': {description: Missing returns/inventory capability}
+        '404': {description: Order not found}
+        '409': {description: Stale version, return not received, or idempotency conflict}
+        '500': {description: Internal failure}
+
+  /api/admin/members:
+    get:
+      operationId: adminMinimalCartMembersList
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: status, in: query, schema: {type: string}}
+        - {name: tier, in: query, schema: {type: string}}
+      responses:
+        '200':
+          description: Members
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [members]
+                properties:
+                  members:
+                    type: array
+                    items: {$ref: '#/components/schemas/Member'}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '500': {description: Store failure}
+
+  /api/admin/members/{id}:
+    put:
+      operationId: adminMinimalCartMembersUpdate
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MemberInput'}
+      responses:
+        '200':
+          description: Updated member
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Member'}
+        '400': {description: Invalid member input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Member not found}
+        '500': {description: Internal failure}
+
+  /api/admin/members/{id}/status:
+    patch:
+      operationId: adminMinimalCartMembersStatusUpdate
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/MemberStatusInput'}
+      responses:
+        '200':
+          description: Updated member
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Member'}
+        '400': {description: Invalid member status}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Member not found}
+        '500': {description: Internal failure}
+
+  /api/admin/promos:
+    get:
+      operationId: adminMinimalCartPromosList
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Promo definitions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [promos]
+                properties:
+                  promos:
+                    type: array
+                    items: {$ref: '#/components/schemas/Promo'}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '500': {description: Store failure}
+    post:
+      operationId: adminMinimalCartPromosCreate
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PromoInput'}
+      responses:
+        '201':
+          description: Created promo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Promo'}
+        '400': {description: Invalid promo input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '500': {description: Internal failure}
+
+  /api/admin/promos/{id}:
+    put:
+      operationId: adminMinimalCartPromosUpdate
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PromoInput'}
+      responses:
+        '200':
+          description: Updated promo
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Promo'}
+        '400': {description: Invalid promo input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Promo not found}
+        '500': {description: Internal failure}
+    delete:
+      operationId: adminMinimalCartPromosDelete
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      responses:
+        '200':
+          description: Deleted promo identifier
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id: {type: string}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Promo not found}
+        '500': {description: Internal failure}
+
+  /api/admin/payment-methods:
+    get:
+      operationId: adminTwCommerceMethodsList
+      security: [{bearerAuth: []}]
+      responses:
+        '200':
+          description: Payment method configuration
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [payment_methods]
+                properties:
+                  payment_methods:
+                    type: array
+                    items: {$ref: '#/components/schemas/PaymentMethod'}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '500': {description: Store failure}
+
+  /api/admin/payment-methods/{id}:
+    put:
+      operationId: adminTwCommerceMethodsUpdate
+      security: [{bearerAuth: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/PaymentMethodInput'}
+      responses:
+        '200':
+          description: Updated payment method
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/PaymentMethod'}
+        '400': {description: Invalid payment method input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Payment method not found}
+        '500': {description: Internal failure}
+
   /api/admin/staff:
     get:
       operationId: adminStaffMembersList
@@ -634,13 +943,14 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [items]
+                required: [members]
                 properties:
-                  items:
+                  members:
                     type: array
                     items: {$ref: '#/components/schemas/StaffMember'}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
+        '500': {description: Store failure}
     post:
       operationId: adminStaffMembersCreate
       security: [{bearerAuth: []}]
@@ -650,21 +960,21 @@ paths:
           application/json:
             schema: {$ref: '#/components/schemas/StaffMemberInput'}
       responses:
-        '200':
+        '201':
           description: Created staff member
           content:
             application/json:
               schema: {$ref: '#/components/schemas/StaffMember'}
+        '400': {description: Invalid input}
+        '401': {description: Unauthorized}
         '403': {description: Forbidden}
+
   /api/admin/staff/{id}:
     put:
       operationId: adminStaffMembersUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
@@ -676,33 +986,45 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/StaffMember'}
-        '403': {description: Forbidden — self-elevation or last-owner}
+        '400': {description: Invalid input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden or self-role/status change}
+        '404': {description: Staff member not found}
+        '409': {description: Last-owner protection}
     delete:
       operationId: adminStaffMembersDelete
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       responses:
-        '204': {description: Deleted}
-        '403': {description: Forbidden — last-owner protection}
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status: {type: string, const: deleted}
+        '400': {description: Invalid operation}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden or self-delete}
+        '404': {description: Staff member not found}
+        '409': {description: Last-owner protection}
+
   /api/admin/staff/{id}/status:
     patch:
       operationId: adminStaffMembersStatusUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
+              additionalProperties: false
               required: [status]
               properties:
                 status: {type: string, enum: [active, disabled]}
@@ -712,8 +1034,12 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/StaffMember'}
-        '403': {description: Forbidden — last-owner protection}
-  # --- Admin site content ---
+        '400': {description: Invalid status}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden or self-role/status change}
+        '404': {description: Staff member not found}
+        '409': {description: Last-owner protection}
+
   /api/admin/site-content:
     get:
       operationId: adminMinimalCartContentList
@@ -732,6 +1058,7 @@ paths:
                     items: {$ref: '#/components/schemas/SiteContent'}
         '401': {description: Unauthorized}
         '403': {description: Forbidden}
+        '500': {description: Store failure}
     post:
       operationId: adminMinimalCartContentCreate
       security: [{bearerAuth: []}]
@@ -742,20 +1069,20 @@ paths:
             schema: {$ref: '#/components/schemas/SiteContentInput'}
       responses:
         '201':
-          description: Created site content (always draft)
+          description: Created site content; service keeps it draft
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SiteContent'}
+        '400': {description: Invalid input}
+        '401': {description: Unauthorized}
         '403': {description: Forbidden}
+
   /api/admin/site-content/{id}:
     put:
       operationId: adminMinimalCartContentUpdate
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
@@ -763,19 +1090,20 @@ paths:
             schema: {$ref: '#/components/schemas/SiteContentUpdateInput'}
       responses:
         '200':
-          description: Updated site content (status preserved, never promoted)
+          description: Updated draft
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SiteContent'}
-        '409': {description: Conflict — stale draft version}
+        '400': {description: Invalid input}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
+        '404': {description: Site content not found}
+        '409': {description: Stale draft version}
     delete:
       operationId: adminMinimalCartContentDelete
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       responses:
         '200':
           description: Deleted
@@ -783,82 +1111,67 @@ paths:
             application/json:
               schema:
                 type: object
+                required: [status]
                 properties:
-                  status: {type: string, example: deleted}
-        '403': {description: Forbidden — content.publish required for published rows, content.update for drafts}
+                  status: {type: string, const: deleted}
+        '400': {description: Invalid operation}
+        '401': {description: Unauthorized}
+        '403': {description: Forbidden}
         '404': {description: Site content not found}
+
   /api/admin/site-content/{id}/approve:
     post:
       operationId: adminMinimalCartContentApprove
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [expiry_unix, expected_draft_version]
-              properties:
-                expiry_unix:
-                  type: integer
-                  format: int64
-                  description: Unix timestamp when the approval expires; must be in the future.
-                expected_draft_version:
-                  type: integer
-                  minimum: 1
-                  description: The draft_version the approver saw when loading the row; must match the current draft_version or the request is rejected with 409.
+            schema: {$ref: '#/components/schemas/SiteContentApprovalInput'}
       responses:
         '200':
-          description: Approval recorded for the current draft version
+          description: Approval recorded for current draft version
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SiteContent'}
+        '400': {description: Invalid expiry or input}
         '401': {description: Unauthorized}
-        '403': {description: Forbidden — content.approve capability required}
+        '403': {description: Forbidden}
         '404': {description: Site content not found}
-        '409': {description: Conflict — stale draft version}
+        '409': {description: Stale draft version}
+
   /api/admin/site-content/{id}/publish:
     post:
       operationId: adminMinimalCartContentPublish
       security: [{bearerAuth: []}]
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema: {type: string}
+        - {name: id, in: path, required: true, schema: {type: string}}
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [expected_draft_version]
-              properties:
-                expected_draft_version:
-                  type: integer
-                  minimum: 1
-                  description: The draft_version the publisher saw when loading the row; must match the current draft_version or the request is rejected with 409.
+            schema: {$ref: '#/components/schemas/SiteContentPublishInput'}
       responses:
         '200':
-          description: Published site content (approved draft promoted to published snapshot)
+          description: Approved draft promoted to published snapshot
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SiteContent'}
+        '400': {description: Invalid input}
         '401': {description: Unauthorized}
-        '403': {description: Forbidden — content.publish capability required}
+        '403': {description: Forbidden}
         '404': {description: Site content not found}
-        '409': {description: Conflict — stale draft version or no current approval (missing, stale, or expired)}
+        '409': {description: Stale version or missing/stale/expired approval}
+
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
     Article:
       type: object
@@ -871,6 +1184,7 @@ components:
         body_html: {type: string}
         published: {type: boolean}
         updated_unix: {type: integer, format: int64}
+
     ArticleInput:
       type: object
       required: [slug, title, published]
@@ -880,9 +1194,38 @@ components:
         excerpt: {type: string, maxLength: 500}
         body_html: {type: string}
         published: {type: boolean}
+
+    PresignedPut:
+      type: object
+      required: [url, method, key]
+      properties:
+        url: {type: string, format: uri}
+        method: {type: string, const: PUT}
+        key: {type: string}
+        headers:
+          type: object
+          additionalProperties: {type: string}
+
+    MediaVerifyInput:
+      type: object
+      additionalProperties: false
+      required: [key]
+      properties:
+        key: {type: string}
+
+    VerifiedMedia:
+      type: object
+      required: [key, content_type, bytes, width, height]
+      properties:
+        key: {type: string}
+        content_type: {type: string}
+        bytes: {type: integer, format: int64}
+        width: {type: integer}
+        height: {type: integer}
+
     Product:
       type: object
-      required: [id, sku, name, slug, price, stock, status]
+      required: [id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix]
       properties:
         id: {type: string}
         sku: {type: string}
@@ -890,26 +1233,26 @@ components:
         slug: {type: string}
         description: {type: string}
         long_description: {type: string}
-        image:
-          type: string
-          description: 'Derived public URL of the first verified product image. Empty if no product_images are associated. NOT an authority — the legacy products.image column is never read for public responses.'
+        image: {type: string, description: Derived first verified-image public URL}
         images:
           type: array
           items: {type: string}
-          description: 'Derived public URLs of all verified product images, in sort order. Empty array if no product_images are associated. NOT an authority — the legacy products.images column is never read for public responses.'
+          description: Derived verified-image public URLs in sort order
         category: {type: string}
         status: {type: string, enum: [active, draft, out_of_stock, low_stock]}
         material: {type: string}
         origin: {type: string}
-        price: {type: integer, description: 'TWD cents'}
+        price: {type: integer}
         original_price: {type: integer}
         stock: {type: integer}
         tag: {type: string}
         rating: {type: number}
         reviews_count: {type: integer}
         updated_unix: {type: integer, format: int64}
+
     ProductInput:
       type: object
+      additionalProperties: false
       required: [sku, name, slug, price]
       properties:
         sku: {type: string}
@@ -920,47 +1263,47 @@ components:
         product_images:
           type: array
           items: {$ref: '#/components/schemas/ProductImageInput'}
-          description: |
-            Verified product image associations. Each key must be a
-            verified object key returned by POST /api/media/verify.
-            The service validates each key against the media registry
-            and rejects unverified keys with 400. AltText defaults to
-            the product name if empty. SortOrder is derived from array
-            order. Nil preserves existing images; empty clears all.
-            The legacy image/images fields are NOT accepted —
-            DisallowUnknownFields rejects any payload containing them.
         category: {type: string}
-        status: {type: string}
+        status: {type: string, enum: [active, draft, out_of_stock, low_stock]}
         material: {type: string}
         origin: {type: string}
-        price: {type: integer}
-        original_price: {type: integer}
-        stock: {type: integer}
+        price: {type: integer, minimum: 0}
+        original_price: {type: integer, minimum: 0}
+        stock: {type: integer, minimum: 0}
         tag: {type: string}
+
+    OrderItem:
+      type: object
+      required: [sku, name, price, quantity]
+      properties:
+        sku: {type: string}
+        name: {type: string}
+        price: {type: integer}
+        quantity: {type: integer, minimum: 1}
+        returned_quantity: {type: integer, minimum: 0}
+        restocked_quantity: {type: integer, minimum: 0}
+
     ProductImageInput:
       type: object
+      additionalProperties: false
       required: [key]
       properties:
-        key:
-          type: string
-          description: 'Verified object key from POST /api/media/verify (e.g. verified/product-images/{userID}/{sha256}.{ext})'
-        alt_text:
-          type: string
-          description: 'Alt text for accessibility. Defaults to product name if empty.'
+        key: {type: string}
+        alt_text: {type: string}
+
     AdminProductImage:
       type: object
+      required: [id, object_key, alt_text, sort_order, created_unix]
       properties:
         id: {type: string}
         object_key: {type: string}
         alt_text: {type: string}
         sort_order: {type: integer}
         created_unix: {type: integer, format: int64}
-      description: |
-        Admin-facing product image DTO. Exposes the raw verified
-        object key for editing. ONLY output by authorized admin
-        endpoints, never by public catalog endpoints.
+
     AdminProductResponse:
       type: object
+      required: [id, sku, name, slug, description, long_description, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix, product_images]
       properties:
         id: {type: string}
         sku: {type: string}
@@ -982,37 +1325,35 @@ components:
         product_images:
           type: array
           items: {$ref: '#/components/schemas/AdminProductImage'}
-          description: |
-            Raw verified object keys for admin editing. The admin form
-            uses this field exclusively — the legacy image/images
-            fields are NOT present in admin responses. Public Product
-            responses derive image/images URLs from this data.
-    MediaVerifyInput:
+
+    ProductStatusInput:
       type: object
-      required: [key]
+      additionalProperties: false
+      required: [status]
       properties:
-        key:
-          type: string
-          description: 'Server-generated temp upload key (uploads/{userID}/product-images/{random}.{ext}). NOT a URL.'
-    VerifiedMedia:
+        status: {type: string, enum: [active, draft, out_of_stock, low_stock]}
+
+    BulkProductUpdateInput:
       type: object
-      required: [key, content_type, bytes, width, height]
+      additionalProperties: false
+      required: [ids, payload]
       properties:
-        key:
-          type: string
-          description: 'Stable verified object key (verified/product-images/{userID}/{sha256}.{ext}). Send this in product_images[].key.'
-        content_type: {type: string}
-        bytes: {type: integer, format: int64}
-        width: {type: integer}
-        height: {type: integer}
+        ids:
+          type: array
+          items: {type: string}
+        payload:
+          type: object
+          additionalProperties: true
+
     PublicShippingMethod:
       type: object
       required: [id, label, available, description]
       properties:
-        id: {type: string, description: Stable method key from the admin-managed row}
+        id: {type: string}
         label: {type: string}
-        available: {type: boolean, description: Always true for enabled rows returned by this endpoint}
+        available: {type: boolean, const: true}
         description: {type: string}
+
     ShippingMethod:
       type: object
       required: [id, method, label, description, fee, enabled, sort_order, version, updated_unix]
@@ -1022,36 +1363,39 @@ components:
         label: {type: string}
         description: {type: string}
         fee: {type: integer, minimum: 0}
-        free_threshold: {type: integer, nullable: true, minimum: 1, description: Null means no free-shipping threshold}
+        free_threshold: {type: [integer, 'null'], minimum: 1}
         enabled: {type: boolean}
         sort_order: {type: integer, minimum: 0}
         version: {type: integer, minimum: 1}
         updated_unix: {type: integer, format: int64}
+
     ShippingMethodInput:
       type: object
-      required: [method, label, fee, enabled, sort_order]
       additionalProperties: false
+      required: [method, label, fee, enabled, sort_order]
       properties:
         method: {type: string, pattern: '^[a-z0-9_-]+$', minLength: 1, maxLength: 64}
         label: {type: string, minLength: 1, maxLength: 80}
         description: {type: string, maxLength: 500}
         fee: {type: integer, minimum: 0}
-        free_threshold: {type: integer, nullable: true, minimum: 1}
+        free_threshold: {type: [integer, 'null'], minimum: 1}
         enabled: {type: boolean}
         sort_order: {type: integer, minimum: 0}
+
     ShippingMethodUpdateInput:
       type: object
-      required: [label, fee, enabled, sort_order, expected_version]
       additionalProperties: false
+      required: [label, fee, enabled, sort_order, expected_version]
       properties:
         method: {type: string, description: Ignored on update; method is immutable}
         label: {type: string, minLength: 1, maxLength: 80}
         description: {type: string, maxLength: 500}
         fee: {type: integer, minimum: 0}
-        free_threshold: {type: integer, nullable: true, minimum: 1}
+        free_threshold: {type: [integer, 'null'], minimum: 1}
         enabled: {type: boolean}
         sort_order: {type: integer, minimum: 0}
         expected_version: {type: integer, minimum: 1}
+
     PublicPaymentMethod:
       type: object
       required: [id, method, label, available]
@@ -1059,11 +1403,95 @@ components:
         id: {type: string}
         method: {type: string}
         label: {type: string}
-        available: {type: boolean}
+        available: {type: boolean, const: true}
+
+    PaymentMethod:
+      type: object
+      required: [id, method, provider_label, environment, readiness_status, enabled, updated_unix]
+      properties:
+        id: {type: string}
+        method: {type: string}
+        provider_label: {type: string}
+        environment: {type: string, enum: [production, sandbox]}
+        readiness_status: {type: string, enum: [ready, pending_setup]}
+        enabled: {type: boolean}
+        updated_unix: {type: integer, format: int64}
+
+    PaymentMethodInput:
+      type: object
+      additionalProperties: false
+      required: [method, provider_label, environment, readiness_status, enabled]
+      properties:
+        method: {type: string}
+        provider_label: {type: string}
+        environment: {type: string, enum: [production, sandbox]}
+        readiness_status: {type: string, enum: [ready, pending_setup]}
+        enabled: {type: boolean}
+
+    Member:
+      type: object
+      required: [id, email, name, status, tier, tags, notes, total_orders, total_spent, updated_unix]
+      properties:
+        id: {type: string}
+        email: {type: string}
+        name: {type: string}
+        status: {type: string, enum: [active, locked]}
+        tier: {type: string, enum: [regular, vip]}
+        tags: {type: string}
+        notes: {type: string}
+        total_orders: {type: integer}
+        total_spent: {type: integer}
+        updated_unix: {type: integer, format: int64}
+
+    MemberInput:
+      type: object
+      additionalProperties: false
+      required: [email, name, status, tier, tags, notes]
+      properties:
+        email: {type: string}
+        name: {type: string}
+        status: {type: string, enum: [active, locked]}
+        tier: {type: string, enum: [regular, vip]}
+        tags: {type: string}
+        notes: {type: string}
+
+    MemberStatusInput:
+      type: object
+      additionalProperties: false
+      required: [status]
+      properties:
+        status: {type: string, enum: [active, locked]}
+
+    Promo:
+      type: object
+      required: [id, code, label, type, value, enabled, starts_unix, expires_unix, updated_unix]
+      properties:
+        id: {type: string}
+        code: {type: string}
+        label: {type: string}
+        type: {type: string, enum: [percent, fixed]}
+        value: {type: integer, minimum: 0}
+        enabled: {type: boolean}
+        starts_unix: {type: integer, format: int64}
+        expires_unix: {type: integer, format: int64}
+        updated_unix: {type: integer, format: int64}
+
+    PromoInput:
+      type: object
+      additionalProperties: false
+      required: [code, label, type, value, enabled, starts_unix, expires_unix]
+      properties:
+        code: {type: string}
+        label: {type: string}
+        type: {type: string, enum: [percent, fixed]}
+        value: {type: integer, minimum: 0}
+        enabled: {type: boolean}
+        starts_unix: {type: integer, format: int64}
+        expires_unix: {type: integer, format: int64}
+
     PublicSiteContent:
       type: object
-      description: Public site content block — only approved published fields. No approval, version, or governance metadata.
-      required: [id, key, placement, title, body, status, sort_order]
+      required: [id, key, placement, title, body, status, sort_order, updated_unix]
       properties:
         id: {type: string}
         key: {type: string}
@@ -1073,10 +1501,10 @@ components:
         status: {type: string, enum: [published]}
         sort_order: {type: integer}
         updated_unix: {type: integer, format: int64}
+
     SiteContent:
       type: object
-      description: Admin site content block — includes draft/approval/published governance fields.
-      required: [id, key, placement, title, body, status, sort_order]
+      required: [id, key, placement, title, body, status, sort_order, updated_unix]
       properties:
         id: {type: string}
         key: {type: string}
@@ -1086,24 +1514,24 @@ components:
         status: {type: string, enum: [draft, published]}
         sort_order: {type: integer}
         updated_unix: {type: integer, format: int64}
-        draft_version: {type: integer, description: 'Increments on every material draft edit; invalidates prior approval'}
-        approved_version: {type: integer, description: 'The draft_version that the current approval covers; 0/absent means no approval'}
-        approver_user_id: {type: string, description: 'The identity that granted the current approval'}
-        approved_unix: {type: integer, format: int64, description: 'When the current approval was granted'}
-        approved_expiry_unix: {type: integer, format: int64, description: 'When the current approval expires; publish rejects if past'}
-        published_title: {type: string, description: 'Admin-only: the currently-live approved title'}
-        published_body: {type: string, description: 'Admin-only: the currently-live approved body'}
-        published_key: {type: string, description: 'Admin-only: the currently-live approved route key'}
-        published_placement: {type: string, description: 'Admin-only: the currently-live approved placement'}
-        published_sort_order: {type: integer, description: 'Admin-only: the currently-live approved sort order'}
-        published_updated_unix: {type: integer, format: int64, description: 'Admin-only: when the published snapshot was last promoted'}
-        published_version: {type: integer, description: 'Admin-only: the draft_version frozen into the published snapshot at publish time'}
-        published_approver_user_id: {type: string, description: 'Admin-only: the approver identity frozen into the published snapshot at publish time'}
-        published_approved_unix: {type: integer, format: int64, description: 'Admin-only: when the frozen published approval was granted'}
-        published_approval_expiry_unix: {type: integer, format: int64, description: 'Admin-only: when the frozen published approval expires; ListPublished/ListByPlacement filter on this > now'}
+        draft_version: {type: integer}
+        approved_version: {type: integer}
+        approver_user_id: {type: string}
+        approved_unix: {type: integer, format: int64}
+        approved_expiry_unix: {type: integer, format: int64}
+        published_title: {type: string}
+        published_body: {type: string}
+        published_key: {type: string}
+        published_placement: {type: string}
+        published_sort_order: {type: integer}
+        published_updated_unix: {type: integer, format: int64}
+        published_version: {type: integer}
+        published_approver_user_id: {type: string}
+        published_approved_unix: {type: integer, format: int64}
+        published_approval_expiry_unix: {type: integer, format: int64}
+
     SiteContentInput:
       type: object
-      description: Create input — no expected_draft_version (new row has no prior version).
       required: [key, placement, title]
       properties:
         key: {type: string}
@@ -1111,9 +1539,9 @@ components:
         title: {type: string}
         body: {type: string}
         sort_order: {type: integer}
+
     SiteContentUpdateInput:
       type: object
-      description: Update input — requires expected_draft_version for optimistic concurrency.
       required: [key, placement, title, expected_draft_version]
       properties:
         key: {type: string}
@@ -1121,7 +1549,23 @@ components:
         title: {type: string}
         body: {type: string}
         sort_order: {type: integer}
-        expected_draft_version: {type: integer, minimum: 1, description: 'The draft_version the client saw when loading the row; must match or the update is rejected with 409'}
+        expected_draft_version: {type: integer, minimum: 1}
+
+    SiteContentApprovalInput:
+      type: object
+      additionalProperties: false
+      required: [expiry_unix, expected_draft_version]
+      properties:
+        expiry_unix: {type: integer, format: int64}
+        expected_draft_version: {type: integer, minimum: 1}
+
+    SiteContentPublishInput:
+      type: object
+      additionalProperties: false
+      required: [expected_draft_version]
+      properties:
+        expected_draft_version: {type: integer, minimum: 1}
+
     QuoteInput:
       type: object
       required: [items, shipping_method, payment_method]
@@ -1135,15 +1579,9 @@ components:
               sku: {type: string}
               quantity: {type: integer, minimum: 1}
         shipping_method: {type: string}
-        payment_method:
-          type: string
-          description: |
-            Payment method ID or method name. Validated server-side against
-            the payment_methods table (enabled=true, readiness_status=ready).
-            Empty, unknown, disabled, or not-ready methods return 400.
-        promo_code:
-          type: string
-          description: Empty or a code already validated by the successful quote response.
+        payment_method: {type: string}
+        promo_code: {type: string}
+
     QuoteResult:
       type: object
       required: [items, subtotal, discount, shipping, total, shipping_method, payment_method]
@@ -1155,11 +1593,10 @@ components:
         discount: {type: integer}
         shipping: {type: integer}
         total: {type: integer}
-        promo_code:
-          type: string
-          description: Optional customer-entered code. Validated server-side; unknown, disabled, expired, or not-yet-active codes return 400. Valid codes are not publicly enumerated.
+        promo_code: {type: string}
         shipping_method: {type: string}
         payment_method: {type: string}
+
     OrderInput:
       type: object
       required: [items, customer_name, email, phone, shipping_address, shipping_method, payment_method, idempotency_key]
@@ -1171,102 +1608,134 @@ components:
             required: [sku, quantity]
             properties:
               sku: {type: string}
-              name: {type: string}
-              price: {type: integer, description: 'Ignored — server recalculates from catalog'}
+              name: {type: string, description: Ignored as authority}
+              price: {type: integer, description: Ignored; server re-prices from catalog}
               quantity: {type: integer, minimum: 1}
         customer_name: {type: string, maxLength: 100}
         email: {type: string, format: email, maxLength: 254}
         phone: {type: string, maxLength: 30}
         shipping_address: {type: string, maxLength: 500}
         shipping_method: {type: string}
-        payment_method:
-          type: string
-          description: |
-            Payment method ID or method name. Validated server-side against
-            the payment_methods table (enabled=true, readiness_status=ready).
-            Empty, unknown, disabled, or not-ready methods return 400.
-            Persisted on the order for fulfillment.
-        promo_code:
-          type: string
-          description: Optional customer-entered code. Validated server-side; unknown, disabled, expired, or not-yet-active codes return 400. Valid codes are not publicly enumerated.
+        payment_method: {type: string}
+        shipping: {type: integer, description: Ignored as authority}
+        discount: {type: integer, description: Ignored as authority}
+        promo_code: {type: string}
         idempotency_key: {type: string}
-      description: |
-        Member identity is intentionally absent from OrderInput. For guest
-        checkout (POST /api/orders) the MemberID is empty. For member
-        checkout (POST /api/orders/mine) the MemberID is derived from the
-        authenticated principal at the handler boundary — never from
-        client input.
-    OrderItem:
-      type: object
-      required: [sku, name, price, quantity]
-      properties:
-        sku: {type: string}
-        name: {type: string}
-        price: {type: integer}
-        quantity: {type: integer}
-        returned_quantity: {type: integer, description: 'Units confirmed returned. Persisted in order_items ledger; 0 on new orders.'}
-        restocked_quantity: {type: integer, description: 'Units restocked into salable inventory. Persisted in order_items ledger; 0 on new orders. Constrained: 0 <= restocked_quantity <= returned_quantity <= quantity.'}
+
     Order:
       type: object
-      required: [id, status, subtotal, discount, shipping, total, items, customer_name, email, phone, shipping_address, shipping_method, payment_method, version, updated_unix]
+      required: [id, member_id, customer_name, email, phone, items, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, version, updated_unix]
       properties:
         id: {type: string}
-        status: {type: string, enum: [pending, processing, shipped, delivered, cancelled]}
-        payment_status: {type: string, enum: [unpaid, paid, refunded]}
-        return_request_status: {type: string, enum: ['', requested, approved, rejected, received, refunded]}
-        version:
-          type: integer
-          description: 'Aggregate optimistic-concurrency version. Incremented on every order mutation. Clients send expected_version in transition requests; stale version returns 409.'
+        member_id: {type: string}
+        customer_name: {type: string}
+        email: {type: string}
+        phone: {type: string}
+        items:
+          type: array
+          items: {$ref: '#/components/schemas/OrderItem'}
+        shipping_address: {type: string}
+        shipping_method: {type: string}
+        payment_method: {type: string}
+        tracking_number: {type: string}
         subtotal: {type: integer}
         discount: {type: integer}
         shipping: {type: integer}
         total: {type: integer}
-        items:
-          type: array
-          items: {$ref: '#/components/schemas/OrderItem'}
-        customer_name: {type: string}
-        email: {type: string}
-        phone: {type: string}
-        shipping_address: {type: string}
-        shipping_method: {type: string}
-        payment_method:
-          type: string
-          description: |
-            Customer-selected payment method. Validated server-side against
-            the payment_methods table (enabled=true, readiness_status=ready)
-            before order creation. Persisted for fulfillment.
-        promo_code: {type: string}
+        status: {type: string, enum: [pending, processing, shipped, delivered, cancelled]}
+        payment_status: {type: string, enum: [unpaid, paid, refunded]}
+        return_request_status: {type: string, enum: ['', requested, approved, rejected, received, refunded]}
+        payment_intent_id: {type: string}
         idempotency_key: {type: string}
-        access_token:
-          type: string
-          description: |
-            Plaintext access token. ONLY present in the create-order
-            response (one-time display). Never present in guest lookup,
-            member listing, or admin responses. The DB stores only a
-            SHA-256 hash; the plaintext is not persisted.
+        access_token: {type: string, description: Present only in create-order response}
         timeline:
           type: array
           items:
             type: object
+            required: [status, at]
             properties:
-              at: {type: integer, format: int64}
               status: {type: string}
+              at: {type: integer, format: int64}
               note: {type: string}
+        expected_status: {type: string}
+        version: {type: integer, minimum: 1}
         updated_unix: {type: integer, format: int64}
+
+    OrderStatusInput:
+      type: object
+      additionalProperties: false
+      required: [expected_version, new_status]
+      properties:
+        expected_version: {type: integer, minimum: 1}
+        new_status: {type: string, enum: [pending, processing, shipped, delivered, cancelled]}
+        note: {type: string}
+
+    OrderReturnInput:
+      type: object
+      additionalProperties: false
+      required: [expected_version, new_status]
+      properties:
+        expected_version: {type: integer, minimum: 1}
+        new_status: {type: string, enum: [requested, approved, rejected, received]}
+        note: {type: string}
+
+    RestockInput:
+      type: object
+      additionalProperties: false
+      required: [expected_version, idempotency_key, reason, items]
+      properties:
+        expected_version: {type: integer, minimum: 1}
+        idempotency_key: {type: string, minLength: 1}
+        reason: {type: string, minLength: 1}
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            additionalProperties: false
+            required: [sku, returned_quantity, restocked_quantity]
+            properties:
+              sku: {type: string}
+              returned_quantity: {type: integer, minimum: 0}
+              restocked_quantity: {type: integer, minimum: 0}
+
+    ECPayLaunchForm:
+      type: object
+      required: [action, fields]
+      properties:
+        action: {type: string, format: uri}
+        fields:
+          type: object
+          additionalProperties: {type: string}
+          description: Signed ECPay AIO form fields; HashKey and HashIV are never exposed.
+
+    ECPayCallbackForm:
+      type: object
+      required: [CheckMacValue, MerchantID, MerchantTradeNo, TotalAmount, RtnCode, TradeNo]
+      additionalProperties: {type: string}
+      properties:
+        CheckMacValue: {type: string}
+        MerchantID: {type: string}
+        MerchantTradeNo: {type: string}
+        TotalAmount: {type: string}
+        RtnCode: {type: string}
+        TradeNo: {type: string}
+
     MeResponse:
       type: object
-      required: [user_id, role, capabilities]
+      required: [user_id, staff_id, email, role, capabilities]
       properties:
         user_id: {type: string}
         staff_id: {type: string}
         email: {type: string}
-        role: {type: string, enum: [admin, owner, manager, readonly, user, disabled]}
+        role: {type: string}
         capabilities:
           type: array
           items: {type: string}
+
     StaffMember:
       type: object
-      required: [id, display_name, email, role_label, status]
+      required: [id, display_name, email, role_label, supabase_user_id, status, updated_unix]
       properties:
         id: {type: string}
         display_name: {type: string}
@@ -1275,6 +1744,7 @@ components:
         supabase_user_id: {type: string}
         status: {type: string, enum: [active, disabled]}
         updated_unix: {type: integer, format: int64}
+
     StaffMemberInput:
       type: object
       required: [display_name, email, role_label]
@@ -1283,3 +1753,4 @@ components:
         email: {type: string}
         role_label: {type: string, enum: [owner, manager, readonly]}
         supabase_user_id: {type: string}
+        status: {type: string, enum: [active, disabled]}
