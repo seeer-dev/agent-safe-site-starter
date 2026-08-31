@@ -4,7 +4,6 @@ import { resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 const bootstrap = readFileSync(resolve(root, 'server/internal/bootstrap/app.go'), 'utf8')
 const openapi = readFileSync(resolve(root, 'contracts/openapi.yaml'), 'utf8')
-  .replace("        '201':\n          description: Created product as admin DTO", "        '200':\n          description: Created product as admin DTO")
 const errors = []
 
 const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options'])
