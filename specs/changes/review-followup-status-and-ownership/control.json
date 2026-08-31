@@ -7,6 +7,7 @@
   "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
   "supersedes": [],
   "applies_to": [
+    "README.md",
     "architecture.yaml",
     "docs/README.md",
     "docs/project-status.md",
@@ -29,7 +30,7 @@
     "REQ-001": {
       "status": "passed",
       "observed_revision": 1,
-      "proof": "docs/project-status.md now distinguishes implemented commerce/payment behavior from HTTP contract truth, makes contract restoration a v1 pre-deploy blocker, and keeps external stage/deploy acceptance separate."
+      "proof": "README.md and docs/project-status.md now distinguish implemented commerce/payment behavior from HTTP contract truth, make contract restoration a v1 pre-deploy blocker, and keep external stage/deploy acceptance separate."
     },
     "REQ-002": {
       "status": "passed",
@@ -39,12 +40,12 @@
     "REQ-003": {
       "status": "passed",
       "observed_revision": 1,
-      "proof": "docs/review-status.md records the current interpretation of historical reviews, evidence-complete lifecycle closures versus still-pending changes, and the revised priority order; docs/README.md routes readers to it."
+      "proof": "docs/review-status.md records the current interpretation of historical reviews, evidence-complete lifecycle closures versus still-pending changes, and the revised priority order; README.md and docs/README.md route readers to the current status material."
     },
     "AC-001": {
       "status": "passed",
       "observed_revision": 1,
-      "proof": "The canonical status explicitly says source-level commerce can be implemented while runtime/OpenAPI contract truth still needs restoration before v1 deploy-ready acceptance."
+      "proof": "The root and canonical status explicitly say source-level commerce can be implemented while runtime/OpenAPI contract truth still needs restoration before v1 deploy-ready acceptance."
     },
     "AC-002": {
       "status": "passed",
