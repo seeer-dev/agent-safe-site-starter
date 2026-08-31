@@ -33,7 +33,8 @@ See [`review-status.md`](review-status.md) for the current interpretation of his
 - Focused frontend/browser-authority/OpenAPI contract checks that guard named integration invariants; these are useful gates but are **not** a complete runtime/OpenAPI parity proof.
 - Repository tests, live PostgreSQL integration tests, concurrency stress tests, and `go vet` in CI.
 - Commerce cohesion refactor completed across models, service behavior, persistence, order flow, and tests.
-- Evidence-complete lifecycle debt closed for `commerce-boolean-adapter-and-live-evidence`, `ephemeral-postgres-local-gate`, `harden-implementation-handoffs`, and `scoped-worktree-validation`.
+- Evidence-complete lifecycle debt closed for `commerce-boolean-adapter-and-live-evidence`, `ephemeral-postgres-local-gate`, and `harden-implementation-handoffs`.
+- `scoped-worktree-validation` is evidence-complete but intentionally remains `Verifying` until a separate lifecycle-only closure PR avoids overlapping ownership of this review's `README.md` change.
 
 ### Commerce sample
 
@@ -96,6 +97,8 @@ PR #8 and the post-merge `main` CI both passed the full repository verification 
 
 `contracts/openapi.yaml` must not yet be treated as a complete authoritative projection of the Go runtime. Known verified drift includes admin product status/schema mismatches, previously identified missing admin operations, and the later ECPay payment routes.
 
+The review-ready controlled change for this outcome is `specs/changes/restore-http-contract-truth/`.
+
 The repair order is intentionally narrow:
 
 ```mermaid
@@ -113,6 +116,7 @@ Do not redesign runtime responses merely to make the spec look uniform. Restore 
 These are release-readiness tasks, not missing architecture foundations.
 
 1. **HTTP/OpenAPI contract truth restoration**
+   - Apply `restore-http-contract-truth`.
    - Audit registered Go routes against `contracts/openapi.yaml`, including ECPay.
    - Align methods, status codes, request/response schemas, and admin/public DTO boundaries to current runtime behavior without changing runtime semantics merely for uniformity.
    - Strengthen the contract gate so missing operations and representative status/schema drift turn CI red.
@@ -147,6 +151,7 @@ See [`commerce-acceptance.md`](commerce-acceptance.md) for the commerce/deployme
 
 These controlled changes remain honest about missing evidence rather than being mass-accepted for cleanliness:
 
+- `scoped-worktree-validation` — evidence is complete; close in a separate lifecycle-only PR so its historical README scope cannot accidentally own this review change.
 - `postgres-lock-semantics-and-evidence` — remaining independent/CI evidence should be reconciled when that verification is replayed.
 - `verify-contract-checks` — some independent mutation/version-floor evidence remains pending; the new contract-truth restoration work should not pretend the existing checker is complete.
 - `supabase-jwks-verifier` — live Supabase compatibility/rollback evidence is environment-blocked. The remote verifier remains a correctness-preserving fallback unless an auth-path SLA makes JWKS mandatory.
