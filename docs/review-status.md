@@ -1,6 +1,6 @@
 # Architecture review status overlay
 
-Last reviewed against `main@10f805e18e394e7065854dfbceb327114e0d4564` on 2026-08-31.
+Last reviewed against `main@08624e275a107ccca1621806d6e474c593ccc2d5` on 2026-08-31.
 
 This file is the current interpretation layer for the historical architecture assessments in `docs/backend-optimization.md` and `docs/admin-architecture-review.md`. Those reports remain useful audit material, but their original priority tables are **not** the current backlog. When a historical statement conflicts with an Accepted controlled change or `docs/project-status.md`, the newer controlled state wins.
 
@@ -10,15 +10,14 @@ This file is the current interpretation layer for the historical architecture as
 
 Plain `apply` requires one current review-ready proposal. A `Verifying` change is not itself a review-ready proposal, so a large Verifying set does not automatically make `apply` select the wrong change. The real cost is lifecycle/context debt: stale baselines and old evidence remain visible to later agents and make repository state harder to reason about.
 
-This review closed three evidence-complete changes that had no remaining pending/blocked REQ or AC:
+This review sequence closed four evidence-complete changes that had no remaining pending/blocked REQ or AC:
 
 | Change | Previous state | Current state | Why |
 | --- | --- | --- | --- |
 | `commerce-boolean-adapter-and-live-evidence` | Verifying | Accepted | All declared evidence and required receipts were already passed. |
 | `ephemeral-postgres-local-gate` | Verifying | Accepted | All declared evidence and required receipts were already passed. |
 | `harden-implementation-handoffs` | Verifying | Accepted | All declared evidence and required receipts were already passed. |
-
-`scoped-worktree-validation` is also evidence-complete, but this review intentionally leaves it `Verifying` in this PR because its historical `applies_to` includes `README.md`. Changing it to Accepted in the same diff as the review's README update would make that historical change an accidental scope owner. Close it in a separate no-overlap lifecycle-only PR after this review lands.
+| `scoped-worktree-validation` | Verifying | Accepted | All declared evidence and independent-review receipts were already passed; it was closed separately to avoid overlapping ownership of the prior README review diff. |
 
 The following must **not** be mass-promoted merely for hygiene:
 
@@ -94,11 +93,10 @@ A later low-cost guard should scan module SQL writes (`INSERT INTO`, `UPDATE`, `
 
 ## Revised priority order
 
-1. **Governance closure** — close evidence-complete lifecycle debt; keep genuinely blocked/pending changes honest. Finish `scoped-worktree-validation` in its own non-overlapping closure PR.
-2. **HTTP contract truth restoration** — apply `restore-http-contract-truth`: Go routes/methods/status/schema ↔ OpenAPI, including ECPay; strengthen parity checks.
-3. **Deploy readiness** — official ECPay audit, fresh-DB commerce acceptance, provider/env wiring, rate-limit topology decision, one stage transaction.
-4. **Admin contract/locality** — generated OpenAPI types, explicit response access, then split `ResourceListPage.vue` along cohesive seams.
-5. **Data-ownership enforcement** — add SQL-write ownership scanning after the refreshed ownership map proves stable.
-6. **Residual cohesion/performance** — current-baseline commerce splitting, pagination/N+1/index work only when concrete scale or maintenance pressure justifies it.
+1. **HTTP contract truth restoration** — apply `restore-http-contract-truth`: Go routes/methods/status/schema ↔ OpenAPI, including ECPay; strengthen parity checks.
+2. **Deploy readiness** — official ECPay audit, fresh-DB commerce acceptance, provider/env wiring, rate-limit topology decision, one stage transaction.
+3. **Admin contract/locality** — generated OpenAPI types, explicit response access, then split `ResourceListPage.vue` along cohesive seams.
+4. **Data-ownership enforcement** — add SQL-write ownership scanning after the refreshed ownership map proves stable.
+5. **Residual cohesion/performance** — current-baseline commerce splitting, pagination/N+1/index work only when concrete scale or maintenance pressure justifies it.
 
 The architectural decision remains unchanged: beginner single-site, static public output, one Go backend, explicit module ownership, no runtime DI/plugin registry, and no speculative platformization.
