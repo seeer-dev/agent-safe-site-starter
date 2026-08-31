@@ -1,5 +1,9 @@
 # Harden implementation handoffs evidence
 
+Change ID: harden-implementation-handoffs
+Revision: 1
+Status: Accepted
+
 | REQ/AC | Status | Proof |
 |---|---|---|
 | REQ-001 | passed | Defined neutral handoff envelope in skills/expand-implementation/references/handoff-protocol.md with stable packet identity, change ID/revision, named reviewer, explicit modify set, forbidden paths, and expected response schema. |
