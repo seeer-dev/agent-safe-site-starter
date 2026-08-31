@@ -2,7 +2,7 @@
 
 Change ID: restore-http-contract-truth
 Revision: 2
-Status: Applying
+Status: Accepted
 Decision authority: Repository owner
 Approval basis: Repository owner authorized converting the 2026-08-31 reviewed contract-drift conclusion into the sole next review-ready proposal, explicitly excluding response-envelope redesign, generated TypeScript adoption, and runtime behavior changes; on 2026-08-31 the owner then instructed applying the queued changes sequentially and merging them to main.
 Repository baseline: 9755c31048e3594d457748bf3d5dfb9f864a482f
@@ -63,4 +63,4 @@ The repository MUST provide a dependency-free contract check that fails on regis
 
 | Revision | REQ/AC | Old meaning | New meaning | Reason | Approval basis | Invalidated evidence |
 | --- | --- | --- | --- | --- | --- | --- |
-| 2 | all | Revision 1 was Ready against `10f805e18e394e7065854dfbceb327114e0d4564`. | Scope and behavior are unchanged; the baseline is refreshed to `9755c31048e3594d457748bf3d5dfb9f864a482f` and status moves to Applying. | Governance-review and lifecycle-closure PRs landed before implementation; using the old baseline would make their unrelated changes part of the selected diff. | Owner instructed sequential apply and merge on 2026-08-31. | None; revision 1 had no passed evidence. |
+| 2 | all | Revision 1 was Ready against `10f805e18e394e7065854dfbceb327114e0d4564`. | Scope and behavior are unchanged; the baseline is refreshed to `9755c31048e3594d457748bf3d5dfb9f864a482f` and the approved implementation is accepted after mutation-sensitive verification. | Governance-review and lifecycle-closure PRs landed before implementation; using the old baseline would make their unrelated changes part of the selected diff. | Owner instructed sequential apply and merge on 2026-08-31. | None; revision 1 had no passed evidence. |
