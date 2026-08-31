@@ -1,6 +1,6 @@
 # Project status and v1 boundary
 
-Last reviewed against `main@10f805e18e394e7065854dfbceb327114e0d4564` (2026-08-31).
+Last reviewed against `main@08624e275a107ccca1621806d6e474c593ccc2d5` (2026-08-31).
 
 This document is the canonical high-level status for the starter. It distinguishes runtime/source completion, contract truth, deployment acceptance, and optional commerce operations so the project does not grow into a full commerce framework by accident and so a green focused contract check is not mistaken for complete runtime/OpenAPI parity.
 
@@ -9,7 +9,7 @@ This document is the canonical high-level status for the starter. It distinguish
 | Area | Status | Meaning |
 | --- | --- | --- |
 | Starter architecture | Complete for v1 | Beginner single-site boundaries, explicit composition, fail-closed architecture checks, controlled changes, and CI gates are in place. |
-| AI/spec governance | Complete for v1 foundation; lifecycle cleanup ongoing | `architecture.yaml`, `AGENTS.md`, `speccheck`, `archcheck`, evidence rules, and PR verification are operational. Evidence-complete historical changes are being closed; genuinely blocked/pending evidence stays open. |
+| AI/spec governance | Complete for v1 foundation | `architecture.yaml`, `AGENTS.md`, `speccheck`, `archcheck`, evidence rules, PR verification, and the evidence-complete lifecycle cleanup are operational. Genuinely blocked/pending evidence remains open rather than being falsely promoted. |
 | Commerce sample | Runtime core flow complete | Product → cart → quote → checkout → durable order → payment → order lookup is implemented. This does not imply every HTTP operation is correctly represented in OpenAPI. |
 | ECPay AIO credit | Source-level complete | Server-owned signing, durable ReturnURL reconciliation, replay protection, and browser-return non-authority are implemented and CI verified. |
 | HTTP/OpenAPI contract truth | Needs restoration before v1 deploy-ready | Known runtime/OpenAPI route, status, and schema drift remains. Restore truth before generated client types or claiming the API contract is authoritative. |
@@ -33,8 +33,7 @@ See [`review-status.md`](review-status.md) for the current interpretation of his
 - Focused frontend/browser-authority/OpenAPI contract checks that guard named integration invariants; these are useful gates but are **not** a complete runtime/OpenAPI parity proof.
 - Repository tests, live PostgreSQL integration tests, concurrency stress tests, and `go vet` in CI.
 - Commerce cohesion refactor completed across models, service behavior, persistence, order flow, and tests.
-- Evidence-complete lifecycle debt closed for `commerce-boolean-adapter-and-live-evidence`, `ephemeral-postgres-local-gate`, and `harden-implementation-handoffs`.
-- `scoped-worktree-validation` is evidence-complete but intentionally remains `Verifying` until a separate lifecycle-only closure PR avoids overlapping ownership of this review's `README.md` change.
+- Evidence-complete lifecycle debt closed for `commerce-boolean-adapter-and-live-evidence`, `ephemeral-postgres-local-gate`, `harden-implementation-handoffs`, and `scoped-worktree-validation`.
 
 ### Commerce sample
 
@@ -151,7 +150,6 @@ See [`commerce-acceptance.md`](commerce-acceptance.md) for the commerce/deployme
 
 These controlled changes remain honest about missing evidence rather than being mass-accepted for cleanliness:
 
-- `scoped-worktree-validation` — evidence is complete; close in a separate lifecycle-only PR so its historical README scope cannot accidentally own this review change.
 - `postgres-lock-semantics-and-evidence` — remaining independent/CI evidence should be reconciled when that verification is replayed.
 - `verify-contract-checks` — some independent mutation/version-floor evidence remains pending; the new contract-truth restoration work should not pretend the existing checker is complete.
 - `supabase-jwks-verifier` — live Supabase compatibility/rollback evidence is environment-blocked. The remote verifier remains a correctness-preserving fallback unless an auth-path SLA makes JWKS mandatory.
