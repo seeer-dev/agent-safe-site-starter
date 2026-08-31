@@ -6,7 +6,7 @@ Status: Accepted
 
 | ID | Status | Proof |
 | --- | --- | --- |
-| REQ-001 | passed | `README.md` now contains a Current status section that names the completed starter/governance/commerce/ECPay source-level scope and links to detailed documentation. |
-| AC-001 | passed | README explicitly keeps public deploy acceptance and refund/invoice/logistics/reconciliation outside the completed v1 claim. |
-| REQ-002 | passed | `docs/project-status.md` is the canonical overall status/v1-boundary document and `docs/commerce-acceptance.md` defines source-level versus deployment acceptance. |
-| AC-002 | passed | The detailed documents include Mermaid diagrams for the ECPay authority flow, deployment acceptance flow, and v1 release path, plus explicit deferred post-v1 commerce capabilities. |
+| REQ-001 | passed | README now exposes a concise current-status section and links to canonical detailed status/acceptance documents. |
+| AC-001 | passed | The status text distinguishes completed architecture/commerce/ECPay source work from deploy-readiness and optional commerce operations without claiming unrecorded production deployment acceptance. |
+| REQ-002 | passed | docs/README.md indexes the durable documentation; docs/project-status.md records the v1 boundary and roadmap; docs/commerce-acceptance.md separates source-level completion from public deployment/go-live acceptance. |
+| AC-002 | passed | Mermaid diagrams document both the implemented payment authority flow and the v1 release path; optional refund/invoice/logistics/reconciliation work is explicitly non-blocking for starter v1. |
