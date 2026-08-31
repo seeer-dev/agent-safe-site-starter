@@ -2,7 +2,7 @@
 
 ## Delivery Status
 
-Revision 1 is `Verifying` against baseline `2605afefba0ad079353bc50b530b945ba5d1f682`. Implementation is complete. All local verification passed: SQLite tests, live PostgreSQL gate (4 tests), red-before-green mutation testing (4 mutations), independent review (subagent replay), `verify`, `speccheck`, `scopecheck`. All 6 ACs passed. This repository has no CI; AC-005 requires gate enrollment and rejection behavior (proven by gate unit tests), not a CI run.
+Revision 1 is `Accepted` against baseline `2605afefba0ad079353bc50b530b945ba5d1f682`. Implementation and all declared acceptance evidence are complete: SQLite tests, the live PostgreSQL gate (4 tests at the time of this change), red-before-green mutation testing (4 mutations), independent review, `verify`, `speccheck`, and `scopecheck` all passed. AC-005 required gate enrollment and rejection behavior, not a repository CI run. The repository later gained required CI PostgreSQL/live/stress gates; that later state does not alter this change's historical evidence contract.
 
 ## Observed Evidence
 
