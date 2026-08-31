@@ -1,8 +1,8 @@
 # Project status and v1 boundary
 
-Last reviewed against `main@08624e275a107ccca1621806d6e474c593ccc2d5` (2026-08-31).
+Last reviewed against `main@e7af2a704405ba172108d68b1b834e9602fb1d85` (2026-08-31).
 
-This document is the canonical high-level status for the starter. It distinguishes runtime/source completion, contract truth, deployment acceptance, and optional commerce operations so the project does not grow into a full commerce framework by accident and so a green focused contract check is not mistaken for complete runtime/OpenAPI parity.
+This document is the canonical high-level status for the starter. It distinguishes runtime/source completion, contract truth, deployment acceptance, and optional commerce operations so the project does not grow into a full commerce framework by accident.
 
 ## Current position
 
@@ -10,9 +10,9 @@ This document is the canonical high-level status for the starter. It distinguish
 | --- | --- | --- |
 | Starter architecture | Complete for v1 | Beginner single-site boundaries, explicit composition, fail-closed architecture checks, controlled changes, and CI gates are in place. |
 | AI/spec governance | Complete for v1 foundation | `architecture.yaml`, `AGENTS.md`, `speccheck`, `archcheck`, evidence rules, PR verification, and the evidence-complete lifecycle cleanup are operational. Genuinely blocked/pending evidence remains open rather than being falsely promoted. |
-| Commerce sample | Runtime core flow complete | Product → cart → quote → checkout → durable order → payment → order lookup is implemented. This does not imply every HTTP operation is correctly represented in OpenAPI. |
+| Commerce sample | Runtime core flow complete | Product → cart → quote → checkout → durable order → payment → order lookup is implemented. |
 | ECPay AIO credit | Source-level complete | Server-owned signing, durable ReturnURL reconciliation, replay protection, and browser-return non-authority are implemented and CI verified. |
-| HTTP/OpenAPI contract truth | Needs restoration before v1 deploy-ready | Known runtime/OpenAPI route, status, and schema drift remains. Restore truth before generated client types or claiming the API contract is authoritative. |
+| HTTP/OpenAPI contract truth | Complete for current runtime surface | OpenAPI 0.3.0 represents all 56 registered Go operations. Symmetric route/method parity plus guarded observable status/schema checks run in `make verify-contracts`; omission/status mutations were independently proven red. |
 | Deployment readiness | Partial | Provider wiring exists, but a real public deployment and smoke acceptance are not yet recorded. |
 | Full commerce operations | Intentionally incomplete | Refunds, invoices, logistics, reconciliation jobs, and production operations remain optional follow-up work. |
 
@@ -30,7 +30,9 @@ See [`review-status.md`](review-status.md) for the current interpretation of his
 - Supabase Auth integration, R2 media boundary, and Resend email boundary.
 - `architecture.yaml` import policy with fail-closed `archcheck`.
 - Controlled specifications under `specs/changes/<change-id>/` with `speccheck` enforcement.
-- Focused frontend/browser-authority/OpenAPI contract checks that guard named integration invariants; these are useful gates but are **not** a complete runtime/OpenAPI parity proof.
+- Runtime/OpenAPI route and method parity for all 56 registered Go operations through `contracts/check-runtime-openapi.mjs`.
+- Guarded observable contract checks for high-risk status/schema boundaries, with mutation evidence proving route omission and admin-product success-status drift fail the gate.
+- Existing admin resource and public-theme OpenAPI contract checks remain part of the same `make verify-contracts` entry point.
 - Repository tests, live PostgreSQL integration tests, concurrency stress tests, and `go vet` in CI.
 - Commerce cohesion refactor completed across models, service behavior, persistence, order flow, and tests.
 - Evidence-complete lifecycle debt closed for `commerce-boolean-adapter-and-live-evidence`, `ephemeral-postgres-local-gate`, `harden-implementation-handoffs`, and `scoped-worktree-validation`.
@@ -90,48 +92,46 @@ Implemented safety properties:
 - SQLite and PostgreSQL both persist the ECPay payment attempt contract.
 - ECPay-specific signing/tamper/amount/browser-authority tests are included.
 
-PR #8 and the post-merge `main` CI both passed the full repository verification chain for the implemented runtime behavior.
+PR #8 and its post-merge `main` CI passed the full repository verification chain for the implemented runtime behavior.
 
-## Current contract-truth gap
+## HTTP contract truth restoration
 
-`contracts/openapi.yaml` must not yet be treated as a complete authoritative projection of the Go runtime. Known verified drift includes admin product status/schema mismatches, previously identified missing admin operations, and the later ECPay payment routes.
+`restore-http-contract-truth` revision 2 is Accepted and merged. `contracts/openapi.yaml` now describes the current registered Go HTTP surface rather than a desired future shape.
 
-The review-ready controlled change for this outcome is `specs/changes/restore-http-contract-truth/`.
-
-The repair order is intentionally narrow:
+The completed contract chain is:
 
 ```mermaid
 flowchart LR
-    A[Go runtime truth] --> B[OpenAPI route/method/status/schema restoration]
-    B --> C[Mechanical parity gate]
-    C --> D[Generated admin TypeScript types]
-    D --> E[Optional envelope redesign only if product needs it]
+    A[Go runtime registrations] --> B[OpenAPI 0.3.0]
+    B --> C[56/56 path-method parity]
+    C --> D[Guarded status-schema checks]
+    D --> E[Admin resource contract checks]
+    E --> F[Public theme contract checks]
 ```
 
-Do not redesign runtime responses merely to make the spec look uniform. Restore the existing observable contract first. A resource-specific envelope such as `{ products: [...] }` is acceptable when the consumer has an explicit typed contract; guessing with `Object.values(...).find(Array.isArray)` is not.
+Acceptance included two CI mutations:
+
+- removing the ECPay browser-return operation produced explicit missing-runtime / extra-OpenAPI diagnostics;
+- changing admin product create `201` to `200` produced an explicit missing-`201` diagnostic;
+- restoring both returned the contract gate to green with no mutation residue.
+
+This restoration deliberately did **not** normalize all response envelopes or adopt generated TypeScript types. Resource-specific envelopes remain acceptable when consumers use explicit contracts. Generated admin types and `ResourceListPage.vue` decomposition are post-contract locality improvements, not v1 deploy blockers.
 
 ## What remains before calling v1 deploy-ready
 
 These are release-readiness tasks, not missing architecture foundations.
 
-1. **HTTP/OpenAPI contract truth restoration**
-   - Apply `restore-http-contract-truth`.
-   - Audit registered Go routes against `contracts/openapi.yaml`, including ECPay.
-   - Align methods, status codes, request/response schemas, and admin/public DTO boundaries to current runtime behavior without changing runtime semantics merely for uniformity.
-   - Strengthen the contract gate so missing operations and representative status/schema drift turn CI red.
-   - Only after this is green should admin OpenAPI-generated types become the next contract step.
-
-2. **Official ECPay conformance audit**
+1. **Official ECPay conformance audit**
    - Review the current AIO implementation against the official `ECPay/ECPay-API-Skill` references.
    - Confirm current CheckMacValue encoding, required fields, ReturnURL behavior, response status/body, and go-live constraints.
    - Treat this as protocol conformance review, not as a new payment architecture project.
 
-3. **Sample commerce acceptance review**
+2. **Sample commerce acceptance review**
    - Fresh database and deterministic sample data.
    - Browse product → add cart → reload/rehydrate → quote → guest/member order → payment handoff → order lookup → admin lookup → return/restock.
    - Runtime paths that require external providers may be recorded as deploy acceptance when no public environment exists yet.
 
-4. **Deploy readiness**
+3. **Deploy readiness**
    - Railway Go API + PostgreSQL.
    - Cloudflare Pages site build/publish.
    - Supabase Auth production configuration.
@@ -140,7 +140,7 @@ These are release-readiness tasks, not missing architecture foundations.
    - Migration/pre-deploy behavior and smoke tests.
    - Decide public rate-limit enforcement from the real deployment topology and trusted client-IP source; do not assume an in-memory single-process limiter is globally correct.
 
-5. **One ECPay stage transaction before production**
+4. **One ECPay stage transaction before production**
    - Required as go-live/deployment acceptance, not as a source-code completion gate.
    - Verify hosted checkout, external ReturnURL reachability, `1|OK`, durable `paid`, and browser re-query on the deployed environment.
 
@@ -151,7 +151,7 @@ See [`commerce-acceptance.md`](commerce-acceptance.md) for the commerce/deployme
 These controlled changes remain honest about missing evidence rather than being mass-accepted for cleanliness:
 
 - `postgres-lock-semantics-and-evidence` — remaining independent/CI evidence should be reconciled when that verification is replayed.
-- `verify-contract-checks` — some independent mutation/version-floor evidence remains pending; the new contract-truth restoration work should not pretend the existing checker is complete.
+- `verify-contract-checks` — this older lifecycle still has pending evidence and should be reconciled independently; it does not negate the newer Accepted `restore-http-contract-truth` parity gate.
 - `supabase-jwks-verifier` — live Supabase compatibility/rollback evidence is environment-blocked. The remote verifier remains a correctness-preserving fallback unless an auth-path SLA makes JWKS mandatory.
 - `minimal-cart-integration` — historical umbrella with remaining deployment/provider/policy acceptance; later accepted slices do not justify falsely marking unresolved umbrella evidence passed.
 
@@ -176,18 +176,17 @@ Adding these should be driven by a concrete product outcome. They should not be 
 
 ```mermaid
 flowchart LR
-    A[Current main] --> B[Restore HTTP/OpenAPI truth]
-    B --> C[Official ECPay conformance audit]
-    C --> D[Sample commerce acceptance]
-    D --> E[Deploy readiness]
-    E --> F{v1 release blockers?}
-    F -->|No| G[Publish starter v1]
-    F -->|Yes| H[Fix only blocking gaps]
-    H --> E
-    G --> I[Optional post-v1 capabilities]
-    I --> J[Generated/admin locality refinements]
-    I --> K[SQL write ownership gate]
-    I --> L[Refund / invoice / logistics / reconciliation]
+    A[Current main] --> B[Official ECPay conformance audit]
+    B --> C[Sample commerce acceptance]
+    C --> D[Deploy readiness]
+    D --> E{v1 release blockers?}
+    E -->|No| F[Publish starter v1]
+    E -->|Yes| G[Fix only blocking gaps]
+    G --> D
+    F --> H[Optional post-v1 capabilities]
+    H --> I[Generated admin types / locality]
+    H --> J[SQL write ownership gate]
+    H --> K[Refund / invoice / logistics / reconciliation]
 ```
 
 The intended decision rule is simple: **publish once the repository contract is trustworthy, the starter is deployable, and the reference commerce flow is acceptance-tested; do not wait for every commerce operation or optimization to exist.**
