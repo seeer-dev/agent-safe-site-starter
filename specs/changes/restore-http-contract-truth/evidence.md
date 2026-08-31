@@ -1,8 +1,8 @@
 # Restore HTTP Contract Truth Evidence
 
 Change ID: restore-http-contract-truth
-Revision: 1
-Status: Ready
+Revision: 2
+Status: Applying
 
 | ID | Status | Proof |
 | --- | --- | --- |
