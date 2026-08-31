@@ -2,7 +2,7 @@
 
 Change ID: restore-http-contract-truth
 Revision: 2
-Status: Applying
+Status: Accepted
 
 Repository baseline: `9755c31048e3594d457748bf3d5dfb9f864a482f`
 
@@ -46,4 +46,4 @@ Covers REQ-001, AC-001, REQ-002, AC-002, AC-003, REQ-003, AC-004.
 
 ## Revision note
 
-Revision 2 refreshes only the repository baseline after governance-review and lifecycle-closure changes landed. Scope, REQ/AC, and delivery semantics remain unchanged from revision 1.
+Revision 2 refreshed the repository baseline after governance-review and lifecycle-closure changes landed. Scope, REQ/AC, and delivery semantics remained unchanged from revision 1; the change is Accepted after clean 56/56 route parity and mutation-sensitive contract evidence.
