@@ -8,6 +8,7 @@
   "supersedes": [],
   "applies_to": [
     "README.md",
+    "docs/README.md",
     "docs/project-status.md",
     "docs/commerce-acceptance.md"
   ],
@@ -16,7 +17,7 @@
   "evidence": {
     "REQ-001": {"status": "passed", "proof": "README now exposes a concise current-status section and links to canonical detailed status/acceptance documents."},
     "AC-001": {"status": "passed", "proof": "The status text distinguishes completed architecture/commerce/ECPay source work from deploy-readiness and optional commerce operations without claiming unrecorded production deployment acceptance."},
-    "REQ-002": {"status": "passed", "proof": "docs/project-status.md records the v1 boundary and roadmap, while docs/commerce-acceptance.md separates source-level completion from public deployment/go-live acceptance."},
+    "REQ-002": {"status": "passed", "proof": "docs/README.md indexes the durable documentation; docs/project-status.md records the v1 boundary and roadmap; docs/commerce-acceptance.md separates source-level completion from public deployment/go-live acceptance."},
     "AC-002": {"status": "passed", "proof": "Mermaid diagrams document both the implemented payment authority flow and the v1 release path; optional refund/invoice/logistics/reconciliation work is explicitly non-blocking for starter v1."}
   }
 }
