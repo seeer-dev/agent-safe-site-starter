@@ -1,0 +1,22 @@
+{
+  "change_id": "document-project-status-v1-boundary",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Owner explicitly requested that completed work, remaining work, README status, and supporting documentation be landed on 2026-08-31.",
+  "repository_baseline": "c8249301020c6a0eceeda33b875e5d9101b91ebe",
+  "supersedes": [],
+  "applies_to": [
+    "README.md",
+    "docs/project-status.md",
+    "docs/commerce-acceptance.md"
+  ],
+  "requirements": ["REQ-001", "REQ-002"],
+  "acceptance": ["AC-001", "AC-002"],
+  "evidence": {
+    "REQ-001": {"status": "passed", "proof": "README now exposes a concise current-status section and links to canonical detailed status/acceptance documents."},
+    "AC-001": {"status": "passed", "proof": "The status text distinguishes completed architecture/commerce/ECPay source work from deploy-readiness and optional commerce operations without claiming unrecorded production deployment acceptance."},
+    "REQ-002": {"status": "passed", "proof": "docs/project-status.md records the v1 boundary and roadmap, while docs/commerce-acceptance.md separates source-level completion from public deployment/go-live acceptance."},
+    "AC-002": {"status": "passed", "proof": "Mermaid diagrams document both the implemented payment authority flow and the v1 release path; optional refund/invoice/logistics/reconciliation work is explicitly non-blocking for starter v1."}
+  }
+}
