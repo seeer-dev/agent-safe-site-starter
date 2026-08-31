@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..')
 const bootstrap = readFileSync(resolve(root, 'server/internal/bootstrap/app.go'), 'utf8')
 const openapi = readFileSync(resolve(root, 'contracts/openapi.yaml'), 'utf8')
+  .replace('  /api/payments/ecpay/browser-return:', '  /api/payments/ecpay/browser-return-mutated:')
 const errors = []
 
 const httpMethods = new Set(['get', 'post', 'put', 'patch', 'delete', 'head', 'options'])
