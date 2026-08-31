@@ -57,8 +57,8 @@ layers:
     purpose: authenticated R2 upload authorization, post-upload verification registry, and background object cleanup
   commerce:
     path: server/internal/modules/commerce
-    owns: [products, product_images, orders, order_items, order_events, returns, members, promos, payment_methods, shipping_methods, restock_idempotency]
-    purpose: catalog, orders, fulfillment, returns, promotions, payment/shipping method configuration, and product image association
+    owns: [products, product_images, orders, order_items, order_events, returns, members, promos, payment_methods, shipping_methods, restock_idempotency, ecpay_payment_attempts]
+    purpose: catalog, orders, fulfillment, returns, promotions, payment/shipping method configuration, hosted-payment attempts, and product image association
   sitecontent:
     path: server/internal/modules/sitecontent
     owns: [site_content]
@@ -72,17 +72,18 @@ layers:
 # imports; it does not inspect SQL. One known write crosses a module boundary
 # at the data level without violating the import rule:
 #
-#   commerce writes media_assets.unassociated_since_unix
-#   (server/internal/modules/commerce/store.go:434,440) when product images are
-#   linked or unlinked. media owns that table.
+#   commerce writes media_assets.unassociated_since_unix from
+#   server/internal/modules/commerce/store_catalog.go:markMediaAssociationsTx
+#   when product images are linked or unlinked. media owns that table.
 #
 # Recorded so the map is not read as a stronger guarantee than the gate gives.
-# Resolving it is not authorized by this entry.
+# A future SQL-write ownership check must use this ownership map plus explicit
+# exceptions; it must not infer ownership from stale line numbers.
 known_cross_module_data_writes:
   - writer: commerce
     table: media_assets
     owner: media
-    location: server/internal/modules/commerce/store.go:434,440
+    location: server/internal/modules/commerce/store_catalog.go:markMediaAssociationsTx
     detected_by: none
 
 tools:
