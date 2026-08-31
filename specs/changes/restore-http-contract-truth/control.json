@@ -1,0 +1,39 @@
+{
+  "change_id": "restore-http-contract-truth",
+  "revision": 1,
+  "status": "Ready",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Repository owner authorized converting the 2026-08-31 reviewed contract-drift conclusion into the sole next review-ready proposal, while explicitly excluding response-envelope redesign, generated TypeScript adoption, and runtime behavior changes from this slice.",
+  "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
+  "supersedes": [],
+  "applies_to": [
+    "contracts/openapi.yaml",
+    "contracts/check-runtime-openapi.mjs",
+    "Makefile",
+    "specs/changes/restore-http-contract-truth/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-004": ["independent-review"]
+  },
+  "evidence": {
+    "REQ-001": {"status": "pending", "proof": "", "observed_revision": 1},
+    "REQ-002": {"status": "pending", "proof": "", "observed_revision": 1},
+    "REQ-003": {"status": "pending", "proof": "", "observed_revision": 1},
+    "AC-001": {"status": "pending", "proof": "", "observed_revision": 1},
+    "AC-002": {"status": "pending", "proof": "", "observed_revision": 1},
+    "AC-003": {"status": "pending", "proof": "", "observed_revision": 1},
+    "AC-004": {"status": "pending", "proof": "", "observed_revision": 1}
+  }
+}

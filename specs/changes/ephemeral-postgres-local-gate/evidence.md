@@ -1,5 +1,9 @@
 # Evidence ledger
 
+Change ID: ephemeral-postgres-local-gate
+Revision: 1
+Status: Accepted
+
 | REQ/AC | Status | Proof |
 |---|---|---|
 | REQ-001 | passed | Codex independently ran go run ./server/tools/local-postgres-gate on 2026-08-15. It started loopback PostgreSQL 16 and invoked the existing live gate; see receipts/local-live-run-rev1.md. |

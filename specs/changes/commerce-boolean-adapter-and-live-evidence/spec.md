@@ -2,7 +2,7 @@
 
 Change ID: commerce-boolean-adapter-and-live-evidence
 Revision: 1
-Status: Verifying
+Status: Accepted
 Decision authority: Repository owner/user
 Approval basis: Repository owner approved opening and applying the 2026-08-17 proposal summary derived from the WP1 work package in docs/優化開發執行清單.md.
 Repository baseline: 2605afefba0ad079353bc50b530b945ba5d1f682

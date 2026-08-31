@@ -1,0 +1,61 @@
+{
+  "change_id": "review-followup-status-and-ownership",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Repository owner authorized applying the reviewed architecture-feedback corrections on 2026-08-31, including lifecycle cleanup, current-status clarification, and architecture ownership-map currency without broad runtime refactoring.",
+  "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
+  "supersedes": [],
+  "applies_to": [
+    "README.md",
+    "architecture.yaml",
+    "docs/README.md",
+    "docs/project-status.md",
+    "docs/review-status.md",
+    "specs/changes/review-followup-status-and-ownership/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "status": "passed",
+      "observed_revision": 1,
+      "proof": "README.md and docs/project-status.md now distinguish implemented commerce/payment behavior from HTTP contract truth, make contract restoration a v1 pre-deploy blocker, and keep external stage/deploy acceptance separate."
+    },
+    "REQ-002": {
+      "status": "passed",
+      "observed_revision": 1,
+      "proof": "architecture.yaml now records ecpay_payment_attempts under commerce ownership and points the known commerce-to-media data write at store_catalog.go:markMediaAssociationsTx rather than stale store.go line numbers."
+    },
+    "REQ-003": {
+      "status": "passed",
+      "observed_revision": 1,
+      "proof": "docs/review-status.md records the current interpretation of historical reviews, evidence-complete lifecycle closures versus still-pending changes, and the revised priority order; README.md and docs/README.md route readers to the current status material."
+    },
+    "AC-001": {
+      "status": "passed",
+      "observed_revision": 1,
+      "proof": "The root and canonical status explicitly say source-level commerce can be implemented while runtime/OpenAPI contract truth still needs restoration before v1 deploy-ready acceptance."
+    },
+    "AC-002": {
+      "status": "passed",
+      "observed_revision": 1,
+      "proof": "The ownership map names the current ECPay attempt table and uses a function-level cross-module write location that survives file line movement."
+    },
+    "AC-003": {
+      "status": "passed",
+      "observed_revision": 1,
+      "proof": "The review overlay labels resolved historical findings, preserves external/pending evidence honestly, rejects direct execution of stale Draft plans, and does not introduce a new runtime architecture decision."
+    }
+  }
+}
