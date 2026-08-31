@@ -1,5 +1,9 @@
 # Harden implementation handoffs plan
 
+Change ID: harden-implementation-handoffs
+Revision: 1
+Status: Accepted
+
 ## Repository reality
 
 - `expand-implementation` correctly makes repository work low-inference but intentionally excludes assignment and scheduling.
