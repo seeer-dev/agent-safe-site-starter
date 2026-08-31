@@ -1,7 +1,7 @@
 {
   "change_id": "scoped-worktree-validation",
   "revision": 2,
-  "status": "Accepted",
+  "status": "Verifying",
   "decision_authority": "Repository owner/user",
   "approval_basis": "The repository owner authorized implementation on 2026-08-15 after the isolated linked-worktree model and review/implementation split were summarized. Revision 2 adds complete Git-worktree overlap preflight and the missing walkthrough guidance path before implementation.",
   "repository_baseline": "bc1d17f10d258c337efab975466949c92a5ec956",
