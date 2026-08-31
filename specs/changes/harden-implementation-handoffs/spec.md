@@ -2,7 +2,7 @@
 
 Change ID: harden-implementation-handoffs
 Revision: 1
-Status: Verifying
+Status: Accepted
 Decision authority: Repository owner/user
 Approval basis: User authorized plain apply implementation of harden-implementation-handoffs revision 1 on 2026-08-15.
 Repository baseline: 7e5aa90b92d23c8c316d44ca935be7af8d150a1c
