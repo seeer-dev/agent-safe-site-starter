@@ -2,6 +2,28 @@
 
 A deliberately small starter for sites that an AI agent can understand and modify safely.
 
+## Current status
+
+The architecture/governance foundation and the reference commerce purchase flow are now substantially complete for the intended starter scope.
+
+**Completed for the current v1 boundary:**
+
+- beginner single-site architecture, explicit bootstrap/module boundaries, and fail-closed architecture checks;
+- controlled spec/evidence workflow, frontend contract checks, migration parity, live PostgreSQL tests, concurrency stress, and `go vet` CI;
+- commerce catalog, cart rehydration, server-authoritative quote, shipping/payment configuration, promotions, guest/member checkout, idempotent order creation, stock transaction, order lookup, returns, and per-item restock;
+- ECPay AIO v5 credit-card handoff with server-owned `CheckMacValue`, durable ReturnURL reconciliation, amount/identity verification, callback replay protection, atomic paid transition, and browser-return re-query rather than browser-authoritative payment state.
+
+**Still required before calling the starter deploy-ready:**
+
+1. review the ECPay implementation against the current official `ECPay/ECPay-API-Skill` references;
+2. run the documented sample-commerce acceptance walkthrough from a fresh database;
+3. verify the production-shaped Railway / Cloudflare Pages / PostgreSQL / Supabase / R2 / Resend configuration;
+4. on a public HTTPS deployment, complete one ECPay stage transaction and record callback/payment-state acceptance.
+
+Refunds, electronic invoices, logistics-provider integration, reconciliation jobs, and full commerce operations are **not blockers for starter v1**. They are optional outcome-driven extensions and should not turn this small starter into a full commerce framework by default.
+
+See [`docs/project-status.md`](docs/project-status.md) for the canonical completion matrix and v1 boundary, and [`docs/commerce-acceptance.md`](docs/commerce-acceptance.md) for the exact distinction between source-level completion and deployment/go-live acceptance.
+
 **Default path**
 
 ```text
