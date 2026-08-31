@@ -10,14 +10,15 @@ This file is the current interpretation layer for the historical architecture as
 
 Plain `apply` requires one current review-ready proposal. A `Verifying` change is not itself a review-ready proposal, so a large Verifying set does not automatically make `apply` select the wrong change. The real cost is lifecycle/context debt: stale baselines and old evidence remain visible to later agents and make repository state harder to reason about.
 
-This review closed four evidence-complete changes that had no remaining pending/blocked REQ or AC:
+This review closed three evidence-complete changes that had no remaining pending/blocked REQ or AC:
 
 | Change | Previous state | Current state | Why |
 | --- | --- | --- | --- |
 | `commerce-boolean-adapter-and-live-evidence` | Verifying | Accepted | All declared evidence and required receipts were already passed. |
 | `ephemeral-postgres-local-gate` | Verifying | Accepted | All declared evidence and required receipts were already passed. |
 | `harden-implementation-handoffs` | Verifying | Accepted | All declared evidence and required receipts were already passed. |
-| `scoped-worktree-validation` | Verifying | Accepted | All declared evidence and independent-review receipts were already passed. |
+
+`scoped-worktree-validation` is also evidence-complete, but this review intentionally leaves it `Verifying` in this PR because its historical `applies_to` includes `README.md`. Changing it to Accepted in the same diff as the review's README update would make that historical change an accidental scope owner. Close it in a separate no-overlap lifecycle-only PR after this review lands.
 
 The following must **not** be mass-promoted merely for hygiene:
 
@@ -57,6 +58,8 @@ Verified examples include:
 - The earlier admin review identified 11 registered admin routes missing from OpenAPI.
 - ECPay later added three registered routes (`/api/orders/{id}/payments/ecpay`, `/api/payments/ecpay/return`, `/api/payments/ecpay/browser-return`) that are also outside the current OpenAPI contract, making the known missing-route set at least 14 at this review point.
 
+The repository now has one review-ready proposal for this exact outcome: `specs/changes/restore-http-contract-truth/`. It deliberately stops before response-envelope redesign or generated TypeScript adoption.
+
 The correct sequence is:
 
 ```mermaid
@@ -91,8 +94,8 @@ A later low-cost guard should scan module SQL writes (`INSERT INTO`, `UPDATE`, `
 
 ## Revised priority order
 
-1. **Governance closure** — close evidence-complete lifecycle debt; keep genuinely blocked/pending changes honest.
-2. **HTTP contract truth restoration** — Go routes/methods/status/schema ↔ OpenAPI, including ECPay; strengthen parity checks.
+1. **Governance closure** — close evidence-complete lifecycle debt; keep genuinely blocked/pending changes honest. Finish `scoped-worktree-validation` in its own non-overlapping closure PR.
+2. **HTTP contract truth restoration** — apply `restore-http-contract-truth`: Go routes/methods/status/schema ↔ OpenAPI, including ECPay; strengthen parity checks.
 3. **Deploy readiness** — official ECPay audit, fresh-DB commerce acceptance, provider/env wiring, rate-limit topology decision, one stage transaction.
 4. **Admin contract/locality** — generated OpenAPI types, explicit response access, then split `ResourceListPage.vue` along cohesive seams.
 5. **Data-ownership enforcement** — add SQL-write ownership scanning after the refreshed ownership map proves stable.
