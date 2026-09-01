@@ -15,9 +15,9 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 ## In scope
 
 - Correct the AIO ReturnURL amount field to the official `TradeAmt` callback field.
-- Treat `SimulatePaid=1` as a non-captured simulated notification and never transition the durable order to paid from that notification.
+- Treat `SimulatePaid=1` as a ReturnURL transport test only: verify merchant/trade/amount/signature, acknowledge it, and do not consume the durable callback claim or transition the order.
 - Make the Go CheckMacValue encoder match the current official Go implementation, including apostrophe encoding and official SHA256 vectors.
-- Keep ReturnURL verification timing-safe and server-authoritative, with durable amount/merchant/trade correlation and replay/conflict protection before acknowledging success.
+- Keep ReturnURL verification timing-safe and server-authoritative, with durable amount/merchant/trade correlation and replay/conflict protection before acknowledging real payment callbacks.
 - Enforce the deployment-safe HTTPS callback-origin constraint for the existing configuration boundary.
 - Keep the OpenAPI callback contract and mechanical contract guard aligned with the corrected protocol.
 - Record the official ECPay Skill commit and live ECPay Developers pages used for the audit, and update canonical project/commerce status.
@@ -31,12 +31,12 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 
 ### REQ-001: Callback shape matches official AIO ReturnURL
 
-The server MUST parse and verify the current official AIO ReturnURL form shape, using `TradeAmt` as the returned transaction amount and recognizing the official `SimulatePaid` flag.
+The server MUST parse and verify the current official AIO ReturnURL form shape, using `TradeAmt` as the returned transaction amount and recognizing the official optional `SimulatePaid` flag.
 
 #### AC-001: Official callback amount and simulation semantics
-- GIVEN an official-shaped signed callback containing `TradeAmt`, `RtnCode`, `TradeNo`, and `SimulatePaid`
+- GIVEN an official-shaped signed callback containing `TradeAmt`, `RtnCode`, `TradeNo`, and optionally `SimulatePaid`
 - WHEN the callback is verified and reconciled
-- THEN `TradeAmt` is compared to the durable TWD order amount, `RtnCode=1` with `SimulatePaid=0` may capture the order, and `SimulatePaid=1` never transitions the order to paid
+- THEN `TradeAmt` is compared to the durable TWD order amount, `RtnCode=1` with no simulated flag may capture the order, and `SimulatePaid=1` is acknowledged without consuming the durable callback claim or changing payment/order state
 
 ### REQ-002: CheckMacValue matches current official Go rules
 
@@ -49,12 +49,12 @@ The AIO SHA256 CheckMacValue implementation MUST match the current official ECPa
 
 ### REQ-003: Payment callback authority remains fail-closed and idempotent
 
-Only a correctly signed callback that matches the configured merchant, durable merchant trade number, durable amount, and non-simulated successful payment state may transition an order to paid. Browser returns remain non-authoritative.
+Only a correctly signed callback that matches the configured merchant, durable merchant trade number, durable amount, and non-simulated successful payment state may transition an order to paid. Browser returns remain non-authoritative. Simulated notifications MUST leave the durable claim available for a later real callback of the same MerchantTradeNo.
 
-#### AC-003: Invalid or conflicting callbacks cannot capture
+#### AC-003: Invalid, conflicting, or simulated callbacks cannot consume real-payment authority
 - GIVEN a bad signature, wrong amount, wrong merchant identity, duplicate conflicting callback, or simulated callback
 - WHEN the ReturnURL path handles it
-- THEN the durable paid transition does not occur; successful `1|OK` acknowledgment remains reserved for a valid reconciled callback path
+- THEN invalid/conflicting callbacks do not capture, simulated callbacks do not mutate the payment attempt or order, and a later valid real callback can still claim and capture the same durable payment attempt exactly once
 
 ### REQ-004: Go-live constraints are reflected in code and documentation
 
