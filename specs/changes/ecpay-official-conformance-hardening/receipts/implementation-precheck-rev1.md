@@ -2,6 +2,8 @@
 
 This receipt intentionally starts before formal acceptance.
 
+Draft PR: `#15`
+
 The branch now contains the protocol corrections identified by the official-source audit:
 
 - ReturnURL amount uses `TradeAmt`.
