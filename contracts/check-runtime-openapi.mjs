@@ -83,6 +83,22 @@ function operationBlock(path, method) {
   return lines.slice(methodIndex, end).join('\n')
 }
 
+function componentSchemaBlock(name) {
+  const lines = openapi.split('\n')
+  const schemaLine = `    ${name}:`
+  const schemaIndex = lines.findIndex((line) => line === schemaLine)
+  if (schemaIndex < 0) return ''
+
+  let end = lines.length
+  for (let i = schemaIndex + 1; i < lines.length; i++) {
+    if (/^    [A-Za-z0-9_]+:\s*$/.test(lines[i])) {
+      end = i
+      break
+    }
+  }
+  return lines.slice(schemaIndex, end).join('\n')
+}
+
 function requireOperationContains(path, method, needles) {
   const block = operationBlock(path, method)
   if (!block) {
@@ -92,6 +108,19 @@ function requireOperationContains(path, method, needles) {
   for (const needle of needles) {
     if (!block.includes(needle)) {
       errors.push(`${method.toUpperCase()} ${path} contract is missing ${JSON.stringify(needle)}`)
+    }
+  }
+}
+
+function requireComponentContains(name, needles) {
+  const block = componentSchemaBlock(name)
+  if (!block) {
+    errors.push(`cannot inspect missing OpenAPI component ${name}`)
+    return
+  }
+  for (const needle of needles) {
+    if (!block.includes(needle)) {
+      errors.push(`OpenAPI component ${name} is missing ${JSON.stringify(needle)}`)
     }
   }
 }
@@ -164,6 +193,11 @@ requireOperationContains('/api/payments/ecpay/browser-return', 'post', [
   'application/x-www-form-urlencoded',
   "'303':",
   'Location:',
+])
+requireComponentContains('ECPayCallbackForm', [
+  'required: [CheckMacValue, MerchantID, MerchantTradeNo, TradeAmt, RtnCode, TradeNo]',
+  'TradeAmt: {type: string}',
+  "SimulatePaid: {type: string, enum: ['0', '1']}",
 ])
 
 if (errors.length > 0) {
