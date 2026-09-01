@@ -18,7 +18,7 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 - Treat `SimulatePaid=1` as a ReturnURL transport test only: verify merchant/trade/amount/signature, acknowledge it, and do not consume the durable callback claim or transition the order.
 - Make the Go CheckMacValue encoder match the current official Go implementation, including apostrophe encoding and official SHA256 vectors.
 - Keep ReturnURL verification timing-safe and server-authoritative, with durable amount/merchant/trade correlation and replay/conflict protection before acknowledging real payment callbacks.
-- Enforce the deployment-safe HTTPS callback-origin constraint for the existing configuration boundary.
+- Enforce the deployment-safe HTTPS/DNS callback-origin constraints for the existing configuration boundary: no explicit port, no direct IP host, and IDNs supplied in punycode form.
 - Keep the OpenAPI callback contract and mechanical contract guard aligned with the corrected protocol.
 - Record the official ECPay Skill commit and live ECPay Developers pages used for the audit, and update canonical project/commerce status.
 
@@ -58,12 +58,12 @@ Only a correctly signed callback that matches the configured merchant, durable m
 
 ### REQ-004: Go-live constraints are reflected in code and documentation
 
-The starter MUST keep ECPay secrets server-only, use the finite official stage/production AIO endpoints, require public HTTPS origins compatible with the official callback transport constraints, and document remaining deployment-only acceptance.
+The starter MUST keep ECPay secrets server-only, use the finite official stage/production AIO endpoints, require public HTTPS DNS origins compatible with the official callback transport constraints, and document remaining deployment-only acceptance.
 
-#### AC-004: Configuration rejects unsupported callback origin ports
-- GIVEN an ECPay configuration with HTTPS but a non-443 explicit port
+#### AC-004: Configuration rejects unsupported callback origins
+- GIVEN an ECPay configuration whose public origin uses an explicit port, direct IP host, non-HTTPS scheme, or unencoded Unicode hostname
 - WHEN configuration is constructed
-- THEN it fails closed rather than producing a ReturnURL that official AIO callback delivery does not support
+- THEN it fails closed rather than producing a ReturnURL/OrderResultURL that violates the documented ECPay deployment constraints
 
 #### AC-005: Canonical status distinguishes conformance from stage acceptance
 - GIVEN source-level official conformance is complete
