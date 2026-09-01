@@ -1711,15 +1711,16 @@ components:
 
     ECPayCallbackForm:
       type: object
-      required: [CheckMacValue, MerchantID, MerchantTradeNo, TotalAmount, RtnCode, TradeNo]
+      required: [CheckMacValue, MerchantID, MerchantTradeNo, TradeAmt, RtnCode, TradeNo]
       additionalProperties: {type: string}
       properties:
         CheckMacValue: {type: string}
         MerchantID: {type: string}
         MerchantTradeNo: {type: string}
-        TotalAmount: {type: string}
+        TradeAmt: {type: string}
         RtnCode: {type: string}
         TradeNo: {type: string}
+        SimulatePaid: {type: string, enum: ['0', '1']}
 
     MeResponse:
       type: object
