@@ -28,7 +28,7 @@ The pinned official master commit was itself updated on 2026-09-01 to restore mi
 | Secret ownership | Merchant credentials and HashKey/HashIV stay on the server. | Conformant; public launch fields never contain HashKey/HashIV. |
 | Request amount | Create-order request uses `TotalAmount`. | Conformant; launch form still sends the durable order total as `TotalAmount`. |
 | ReturnURL amount | Payment-result callback returns `TradeAmt`. | **Fixed**; previous code incorrectly required callback `TotalAmount`. |
-| Simulated payment | `SimulatePaid=1` is not a real paid transaction and must not trigger fulfillment. | **Fixed**; simulated success is durably classified `simulated` and never captures the order. |
+| Simulated payment | `SimulatePaid=1` is only a ReturnURL transport test and must not change payment state or trigger fulfillment. | **Fixed**; after signature/merchant/trade/amount verification it returns `1|OK` without consuming the durable callback claim or mutating the order, so a later real callback can still capture normally. |
 | CheckMacValue sorting | Sort parameter names case-insensitively and exclude `CheckMacValue` itself. | Conformant. |
 | CheckMacValue wrapping | `HashKey=...&<params>&HashIV=...`. | Conformant. |
 | URL encoding | Form-style encoding, lower-case, .NET compatibility replacements, `~ -> %7e`, and Go apostrophe `' -> %27`. | **Fixed**; apostrophe encoding was previously missing. |
@@ -36,8 +36,8 @@ The pinned official master commit was itself updated on 2026-09-01 to restore mi
 | Signature compare | Avoid ordinary timing-sensitive equality. | Conformant; `hmac.Equal` is retained as a constant-time comparison primitive. |
 | Merchant correlation | Verify callback merchant identity and merchant trade identity. | Conformant. |
 | Durable amount correlation | Provider-returned amount must equal the durable order attempt amount before capture. | Conformant, now using official `TradeAmt`. |
-| Callback replay | Duplicate successful notification must not create duplicate financial/order effects. | Conformant; callback claim is durable and conflict-sensitive. |
-| ReturnURL acknowledgement | Valid reconciled callback returns exact plain-text `1|OK`. | Conformant; invalid/unreconciled callbacks fail closed instead of receiving a false success acknowledgement. |
+| Callback replay | Duplicate real payment notification must not create duplicate financial/order effects. | Conformant; real callbacks use a durable one-effect claim and conflicting claims fail closed. Simulated notifications intentionally do not consume that claim. |
+| ReturnURL acknowledgement | Valid reconciled callback returns exact plain-text `1|OK`. | Conformant; a validated simulation is also acknowledged because its purpose is testing ReturnURL reachability, while invalid/unreconciled input fails closed. |
 | Browser return | Browser redirect is presentation/navigation, not payment authority. | Conformant; storefront re-queries durable server state. |
 | Callback transport | Public callback must use supported HTTP/HTTPS ports; starter requires HTTPS, therefore port 443. | **Hardened**; explicit non-443 HTTPS origins are rejected. |
 | ItemName | Official limit is 400 characters and current guidance recommends keeping it within 200 to avoid provider-side truncation/CMV surprises. | **Hardened**; helper caps at 200 runes. Current product flow uses a short `Order <id>` value. |
@@ -55,19 +55,20 @@ flowchart TD
     G --> H[Parse TradeAmt]
     H --> I{TradeAmt == durable amount?}
     I -->|No| J[Fail closed]
-    I -->|Yes| K{RtnCode == 1?}
-    K -->|No| L[Durable failed callback]
-    K -->|Yes| M{SimulatePaid == 1?}
-    M -->|Yes| N[Durable simulated callback; not paid]
-    M -->|No| O[Atomic callback claim + paid transition]
-    L --> P[1|OK after valid reconciliation]
-    N --> P
+    I -->|Yes| K{SimulatePaid == 1?}
+    K -->|Yes| L[Return 1|OK only; no durable mutation]
+    K -->|No| M{RtnCode == 1?}
+    M -->|No| N[Durable failed callback claim]
+    M -->|Yes| O[Atomic callback claim + paid transition]
+    N --> P[1|OK after valid reconciliation]
     O --> P
     E --> Q[Browser OrderResultURL]
     Q --> R[Redirect storefront]
     R --> S[Re-query durable order]
     S --> T[UI reflects server payment_status]
 ```
+
+A simulated notification does not consume the one-time provider callback fingerprint. That is intentional: the merchant-backend simulation feature tests ReturnURL delivery only, so a later real payment notification for the same `MerchantTradeNo` must still be able to acquire the durable claim.
 
 ## Official vectors locked in tests
 
