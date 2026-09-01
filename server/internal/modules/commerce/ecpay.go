@@ -95,6 +95,9 @@ func normalizedHTTPSOrigin(raw string) (string, error) {
 	if err != nil || !strings.EqualFold(u.Scheme, "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
 		return "", ErrECPayInvalidConfig
 	}
+	if port := u.Port(); port != "" && port != "443" {
+		return "", ErrECPayInvalidConfig
+	}
 	return "https://" + u.Host, nil
 }
 
@@ -109,14 +112,18 @@ type ECPayCallbackResult struct {
 	MerchantID      string
 	RtnCode         string
 	TradeNo         string
+	SimulatePaid    string
 }
 
 func buildECPayLaunchForm(cfg ECPayConfig, merchantTradeNo string, amount int, itemName string, tradeDate time.Time) (ECPayLaunchForm, error) {
 	if merchantTradeNo == "" || amount <= 0 {
 		return ECPayLaunchForm{}, ErrECPayInvalidConfig
 	}
-	if len([]rune(itemName)) > 400 {
-		itemName = string([]rune(itemName)[:400])
+	// ECPay documents 400 characters as the parameter ceiling but recommends
+	// keeping ItemName within 200 characters to avoid provider-side UTF-8
+	// truncation changing the CheckMacValue input.
+	if len([]rune(itemName)) > 200 {
+		itemName = string([]rune(itemName)[:200])
 	}
 	fields := url.Values{
 		"MerchantID":        {cfg.MerchantID},
@@ -140,7 +147,7 @@ func buildECPayLaunchForm(cfg ECPayConfig, merchantTradeNo string, amount int, i
 }
 
 func verifyECPayCallback(cfg ECPayConfig, form url.Values) (ECPayCallbackResult, error) {
-	required := []string{"CheckMacValue", "MerchantID", "MerchantTradeNo", "TotalAmount", "RtnCode", "TradeNo"}
+	required := []string{"CheckMacValue", "MerchantID", "MerchantTradeNo", "TradeAmt", "RtnCode", "TradeNo"}
 	if len(form) == 0 {
 		return ECPayCallbackResult{}, ErrECPayInvalidCallback
 	}
@@ -168,8 +175,12 @@ func verifyECPayCallback(cfg ECPayConfig, form url.Values) (ECPayCallbackResult,
 	if !hmac.Equal([]byte(cfg.MerchantID), []byte(form.Get("MerchantID"))) {
 		return ECPayCallbackResult{}, ErrECPayInvalidCallback
 	}
-	amount, err := strconv.Atoi(form.Get("TotalAmount"))
+	amount, err := strconv.Atoi(form.Get("TradeAmt"))
 	if err != nil || amount <= 0 {
+		return ECPayCallbackResult{}, ErrECPayInvalidCallback
+	}
+	simulatePaid := form.Get("SimulatePaid")
+	if simulatePaid != "" && simulatePaid != "0" && simulatePaid != "1" {
 		return ECPayCallbackResult{}, ErrECPayInvalidCallback
 	}
 	return ECPayCallbackResult{
@@ -178,6 +189,7 @@ func verifyECPayCallback(cfg ECPayConfig, form url.Values) (ECPayCallbackResult,
 		MerchantID:      form.Get("MerchantID"),
 		RtnCode:         form.Get("RtnCode"),
 		TradeNo:         form.Get("TradeNo"),
+		SimulatePaid:    simulatePaid,
 	}, nil
 }
 
@@ -227,6 +239,7 @@ func ecpayCheckMacValue(fields url.Values, hashKey, hashIV string) string {
 	b.WriteString(hashIV)
 	encoded := strings.ToLower(url.QueryEscape(b.String()))
 	encoded = strings.ReplaceAll(encoded, "~", "%7e")
+	encoded = strings.ReplaceAll(encoded, "'", "%27")
 	encoded = strings.ReplaceAll(encoded, "%2d", "-")
 	encoded = strings.ReplaceAll(encoded, "%5f", "_")
 	encoded = strings.ReplaceAll(encoded, "%2e", ".")
