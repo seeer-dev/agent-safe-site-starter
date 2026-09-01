@@ -10,6 +10,7 @@ Repository baseline: `0071aebecf8b6939308e7965fb5f0a07797d8579`
 - `server/internal/modules/commerce/ecpay.go`
 - `server/internal/modules/commerce/ecpay_payment.go`
 - `server/internal/modules/commerce/ecpay_test.go`
+- `server/internal/modules/commerce/ecpay_official_conformance_test.go`
 - `contracts/openapi.yaml`
 - `contracts/check-runtime-openapi.mjs`
 - `README.md`
@@ -29,21 +30,21 @@ Covers REQ-001, AC-001, REQ-002, AC-002, REQ-003, AC-003, REQ-004, AC-004, AC-00
 ## Slice 2 — Fix protocol mismatches
 
 - Parse callback amount from `TradeAmt` rather than request-side `TotalAmount`.
-- Recognize `SimulatePaid` and prevent simulated callbacks from capturing durable payment state.
+- Recognize optional `SimulatePaid`; verify and acknowledge a simulation without consuming the durable provider callback claim, so a later real callback can still capture.
 - Add the missing apostrophe encoding rule to CheckMacValue.
-- Reject explicit non-443 HTTPS origins for ECPay callback configuration.
-- Keep existing merchant/amount/trade correlation and replay/conflict protection.
+- Reject ECPay public origins that specify a port, use a direct IP, use a non-HTTPS scheme, or provide an unencoded Unicode hostname.
+- Keep existing merchant/amount/trade correlation and replay/conflict protection for real callbacks.
 
 ## Slice 3 — Lock with official vectors and contract truth
 
 - Add official SHA256 CheckMacValue vector tests for baseline, apostrophe, tilde, spaces, and callback fields.
 - Convert callback tests to the official `TradeAmt` shape.
-- Add simulated-payment and callback-port tests.
+- Add simulation→real-callback, origin, optional-SimulatePaid, and invalid-SimulatePaid tests.
 - Update `ECPayCallbackForm` in OpenAPI and mechanically guard the corrected shape.
 
 ## Slice 4 — Acceptance and status
 
 - Run the repository contract gate and full CI chain.
-- Record an independent-review receipt with the official-source snapshot and observed vector/behavior evidence.
+- Record an independent-review receipt with the pinned official-source snapshot and observed vector/behavior evidence.
 - Mark the change Accepted only after every REQ/AC is evidenced.
 - Update README/project/commerce status to distinguish source-level official conformance from the still-pending public stage transaction.
