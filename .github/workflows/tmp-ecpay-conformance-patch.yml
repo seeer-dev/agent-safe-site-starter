@@ -1,0 +1,41 @@
+name: temporary ECPay conformance patch
+
+on:
+  push:
+    branches:
+      - audit/ecpay-official-conformance
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: audit/ecpay-official-conformance
+          fetch-depth: 0
+      - name: Patch ECPay callback component
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('contracts/openapi.yaml')
+          text = path.read_text()
+          old = """    ECPayCallbackForm:\n      type: object\n      required: [CheckMacValue, MerchantID, MerchantTradeNo, TotalAmount, RtnCode, TradeNo]\n      additionalProperties: {type: string}\n      properties:\n        CheckMacValue: {type: string}\n        MerchantID: {type: string}\n        MerchantTradeNo: {type: string}\n        TotalAmount: {type: string}\n        RtnCode: {type: string}\n        TradeNo: {type: string}\n"""
+          new = """    ECPayCallbackForm:\n      type: object\n      required: [CheckMacValue, MerchantID, MerchantTradeNo, TradeAmt, RtnCode, TradeNo]\n      additionalProperties: {type: string}\n      properties:\n        CheckMacValue: {type: string}\n        MerchantID: {type: string}\n        MerchantTradeNo: {type: string}\n        TradeAmt: {type: string}\n        RtnCode: {type: string}\n        TradeNo: {type: string}\n        SimulatePaid: {type: string, enum: ['0', '1']}\n"""
+          if old not in text:
+              raise SystemExit('expected ECPayCallbackForm block not found exactly')
+          path.write_text(text.replace(old, new, 1))
+          PY
+          git diff --check
+          git diff -- contracts/openapi.yaml
+      - name: Commit patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add contracts/openapi.yaml
+          git commit -m "fix: align ECPay OpenAPI callback fields"
+          git push origin HEAD:audit/ecpay-official-conformance
