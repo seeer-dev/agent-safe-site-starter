@@ -296,7 +296,7 @@ func TestReceiveECPayCallbackCapturesOnlyVerifiedSuccess(t *testing.T) {
 	}
 }
 
-func TestReceiveECPayCallbackDoesNotCaptureSimulatedPayment(t *testing.T) {
+func TestReceiveECPayCallbackDoesNotClaimSimulatedPayment(t *testing.T) {
 	cfg := testECPayConfig(t)
 	store := &ecpayFakeStore{attempt: ECPayPaymentAttempt{OrderID: "ORD-1", MerchantTradeNo: "S1234567890123456789", Amount: 999, Currency: "TWD"}}
 	service := NewService(store).WithECPay(cfg)
@@ -313,8 +313,45 @@ func TestReceiveECPayCallbackDoesNotCaptureSimulatedPayment(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReceiveECPayCallback: %v", err)
 	}
-	if ack != "1|OK" || store.claimStatus != "simulated" || store.captured {
-		t.Fatalf("ack=%q status=%q captured=%v", ack, store.claimStatus, store.captured)
+	if ack != "1|OK" || store.claimCalls != 0 || store.captured {
+		t.Fatalf("ack=%q claimCalls=%d captured=%v", ack, store.claimCalls, store.captured)
+	}
+}
+
+func TestRealCallbackCanCaptureAfterSimulatedNotification(t *testing.T) {
+	cfg := testECPayConfig(t)
+	store := &ecpayFakeStore{attempt: ECPayPaymentAttempt{OrderID: "ORD-1", MerchantTradeNo: "S1234567890123456789", Amount: 999, Currency: "TWD"}}
+	service := NewService(store).WithECPay(cfg)
+	simulated := url.Values{
+		"MerchantID":      {cfg.MerchantID},
+		"MerchantTradeNo": {store.attempt.MerchantTradeNo},
+		"TradeAmt":        {"999"},
+		"RtnCode":         {"1"},
+		"TradeNo":         {"provider-simulated"},
+		"SimulatePaid":    {"1"},
+	}
+	simulated.Set("CheckMacValue", ecpayCheckMacValue(simulated, cfg.HashKey, cfg.HashIV))
+	if _, err := service.ReceiveECPayCallback(context.Background(), simulated); err != nil {
+		t.Fatalf("simulated callback: %v", err)
+	}
+	if store.claimCalls != 0 {
+		t.Fatalf("simulated callback consumed claim: %d", store.claimCalls)
+	}
+
+	real := url.Values{
+		"MerchantID":      {cfg.MerchantID},
+		"MerchantTradeNo": {store.attempt.MerchantTradeNo},
+		"TradeAmt":        {"999"},
+		"RtnCode":         {"1"},
+		"TradeNo":         {"provider-real"},
+	}
+	real.Set("CheckMacValue", ecpayCheckMacValue(real, cfg.HashKey, cfg.HashIV))
+	ack, err := service.ReceiveECPayCallback(context.Background(), real)
+	if err != nil {
+		t.Fatalf("real callback: %v", err)
+	}
+	if ack != "1|OK" || store.claimCalls != 1 || store.claimStatus != "captured" || !store.captured {
+		t.Fatalf("ack=%q claimCalls=%d status=%q captured=%v", ack, store.claimCalls, store.claimStatus, store.captured)
 	}
 }
 
