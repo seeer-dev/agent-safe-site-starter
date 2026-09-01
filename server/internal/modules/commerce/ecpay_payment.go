@@ -91,8 +91,11 @@ func (s Service) ReceiveECPayCallback(ctx context.Context, form url.Values) (str
 		return "", ErrECPayAmountMismatch
 	}
 	status := "failed"
-	captured := result.RtnCode == "1"
-	if captured {
+	captured := result.RtnCode == "1" && result.SimulatePaid != "1"
+	switch {
+	case result.SimulatePaid == "1":
+		status = "simulated"
+	case captured:
 		status = "captured"
 	}
 	_, err = s.store.ClaimECPayCallback(ctx, result.MerchantTradeNo, ecpayCallbackFingerprint(form), result.TradeNo, result.RtnCode, status, captured, time.Now().Unix())
