@@ -10,6 +10,7 @@
     "server/internal/modules/commerce/ecpay.go",
     "server/internal/modules/commerce/ecpay_payment.go",
     "server/internal/modules/commerce/ecpay_test.go",
+    "server/internal/modules/commerce/ecpay_official_conformance_test.go",
     "contracts/openapi.yaml",
     "contracts/check-runtime-openapi.mjs",
     "README.md",
