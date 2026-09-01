@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"sort"
 	"strconv"
@@ -95,8 +96,20 @@ func normalizedHTTPSOrigin(raw string) (string, error) {
 	if err != nil || !strings.EqualFold(u.Scheme, "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
 		return "", ErrECPayInvalidConfig
 	}
-	if port := u.Port(); port != "" && port != "443" {
+	// ECPay tells merchants not to specify a callback port and requires a
+	// publicly reachable DNS name. This starter is HTTPS-only, so the implicit
+	// transport port is 443. Unicode domains must be supplied in punycode form.
+	if u.Port() != "" {
 		return "", ErrECPayInvalidConfig
+	}
+	hostname := u.Hostname()
+	if hostname == "" || net.ParseIP(hostname) != nil {
+		return "", ErrECPayInvalidConfig
+	}
+	for _, r := range hostname {
+		if r > 127 {
+			return "", ErrECPayInvalidConfig
+		}
 	}
 	return "https://" + u.Host, nil
 }
