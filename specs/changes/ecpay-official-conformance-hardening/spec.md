@@ -16,8 +16,9 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 
 - Correct the AIO ReturnURL amount field to the official `TradeAmt` callback field.
 - Treat `SimulatePaid=1` as a ReturnURL transport test only: verify merchant/trade/amount/signature, acknowledge it, and do not consume the durable callback claim or transition the order.
+- Treat signed non-success `RtnCode` notifications as non-financial observations: acknowledge them after correlation but do not consume the one-time success claim, so a later real success can still capture.
 - Make the Go CheckMacValue encoder match the current official Go implementation, including apostrophe encoding and official SHA256 vectors.
-- Keep ReturnURL verification timing-safe and server-authoritative, with durable amount/merchant/trade correlation and replay/conflict protection before acknowledging real payment callbacks.
+- Keep ReturnURL verification timing-safe and server-authoritative, with durable amount/merchant/trade correlation and replay/conflict protection before acknowledging real successful payment callbacks.
 - Enforce the deployment-safe HTTPS/DNS callback-origin constraints for the existing configuration boundary: no explicit port, no direct IP host, and IDNs supplied in punycode form.
 - Keep the OpenAPI callback contract and mechanical contract guard aligned with the corrected protocol.
 - Record the official ECPay Skill commit and live ECPay Developers pages used for the audit, and update canonical project/commerce status.
@@ -25,6 +26,7 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 ## Out of scope
 
 - ECPay refund/cancel APIs, QueryTradeInfo/reconciliation jobs, invoices, logistics, ATM/CVS/BARCODE, recurring payments, Apple Pay, ECPG, or additional providers.
+- Automatic reconciliation of uncertain provider states such as `10300066`; without a reconciliation/query slice they remain unpaid and must not trigger fulfillment.
 - Reworking the durable payment-attempt model or adding failed-payment retry/superseding attempts.
 - Moving payment state authority into the browser.
 - A real externally hosted ECPay stage transaction; that remains deployment acceptance after source-level conformance.
@@ -33,10 +35,10 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 
 The server MUST parse and verify the current official AIO ReturnURL form shape, using `TradeAmt` as the returned transaction amount and recognizing the official optional `SimulatePaid` flag.
 
-#### AC-001: Official callback amount and simulation semantics
+#### AC-001: Official callback amount and non-success semantics
 - GIVEN an official-shaped signed callback containing `TradeAmt`, `RtnCode`, `TradeNo`, and optionally `SimulatePaid`
 - WHEN the callback is verified and reconciled
-- THEN `TradeAmt` is compared to the durable TWD order amount, `RtnCode=1` with no simulated flag may capture the order, and `SimulatePaid=1` is acknowledged without consuming the durable callback claim or changing payment/order state
+- THEN `TradeAmt` is compared to the durable TWD order amount, only non-simulated `RtnCode=1` may capture the order, and simulated or non-success notifications are acknowledged without consuming the durable success claim or changing payment/order state
 
 ### REQ-002: CheckMacValue matches current official Go rules
 
@@ -49,12 +51,12 @@ The AIO SHA256 CheckMacValue implementation MUST match the current official ECPa
 
 ### REQ-003: Payment callback authority remains fail-closed and idempotent
 
-Only a correctly signed callback that matches the configured merchant, durable merchant trade number, durable amount, and non-simulated successful payment state may transition an order to paid. Browser returns remain non-authoritative. Simulated notifications MUST leave the durable claim available for a later real callback of the same MerchantTradeNo.
+Only a correctly signed callback that matches the configured merchant, durable merchant trade number, durable amount, and non-simulated successful payment state may transition an order to paid. Browser returns remain non-authoritative. Simulated and non-success notifications MUST leave the durable success claim available for a later real callback of the same MerchantTradeNo.
 
-#### AC-003: Invalid, conflicting, or simulated callbacks cannot consume real-payment authority
-- GIVEN a bad signature, wrong amount, wrong merchant identity, duplicate conflicting callback, or simulated callback
+#### AC-003: Invalid, conflicting, simulated, or non-success callbacks cannot consume real-payment authority
+- GIVEN a bad signature, wrong amount, wrong merchant identity, duplicate conflicting success callback, simulated callback, or signed non-success callback including `10300066`
 - WHEN the ReturnURL path handles it
-- THEN invalid/conflicting callbacks do not capture, simulated callbacks do not mutate the payment attempt or order, and a later valid real callback can still claim and capture the same durable payment attempt exactly once
+- THEN invalid/conflicting callbacks do not capture, simulated/non-success callbacks do not mutate the payment attempt or order, and a later valid real success can still claim and capture the same durable payment attempt exactly once
 
 ### REQ-004: Go-live constraints are reflected in code and documentation
 
