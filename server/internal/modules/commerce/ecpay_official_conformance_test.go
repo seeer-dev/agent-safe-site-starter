@@ -1,6 +1,7 @@
 package commerce
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"testing"
@@ -68,5 +69,47 @@ func TestECPayOfficialCallbackRejectsUnknownSimulatePaidValue(t *testing.T) {
 	form.Set("CheckMacValue", ecpayCheckMacValue(form, cfg.HashKey, cfg.HashIV))
 	if _, err := verifyECPayCallback(cfg, form); !errors.Is(err, ErrECPayInvalidCallback) {
 		t.Fatalf("error = %v, want ErrECPayInvalidCallback", err)
+	}
+}
+
+func TestECPayOfficialNonSuccessDoesNotConsumeLaterSuccessClaim(t *testing.T) {
+	cfg := testECPayConfig(t)
+	store := &ecpayFakeStore{attempt: ECPayPaymentAttempt{
+		OrderID:         "ORD-1",
+		MerchantTradeNo: "S1234567890123456789",
+		Amount:          999,
+		Currency:        "TWD",
+	}}
+	service := NewService(store).WithECPay(cfg)
+	pending := url.Values{
+		"MerchantID":      {cfg.MerchantID},
+		"MerchantTradeNo": {store.attempt.MerchantTradeNo},
+		"TradeAmt":        {"999"},
+		"RtnCode":         {"10300066"},
+		"TradeNo":         {"provider-pending"},
+	}
+	pending.Set("CheckMacValue", ecpayCheckMacValue(pending, cfg.HashKey, cfg.HashIV))
+	ack, err := service.ReceiveECPayCallback(context.Background(), pending)
+	if err != nil {
+		t.Fatalf("pending callback: %v", err)
+	}
+	if ack != "1|OK" || store.claimCalls != 0 || store.captured {
+		t.Fatalf("pending ack=%q claimCalls=%d captured=%v", ack, store.claimCalls, store.captured)
+	}
+
+	real := url.Values{
+		"MerchantID":      {cfg.MerchantID},
+		"MerchantTradeNo": {store.attempt.MerchantTradeNo},
+		"TradeAmt":        {"999"},
+		"RtnCode":         {"1"},
+		"TradeNo":         {"provider-real"},
+	}
+	real.Set("CheckMacValue", ecpayCheckMacValue(real, cfg.HashKey, cfg.HashIV))
+	ack, err = service.ReceiveECPayCallback(context.Background(), real)
+	if err != nil {
+		t.Fatalf("real callback after pending: %v", err)
+	}
+	if ack != "1|OK" || store.claimCalls != 1 || store.claimStatus != "captured" || !store.captured {
+		t.Fatalf("real ack=%q claimCalls=%d status=%q captured=%v", ack, store.claimCalls, store.claimStatus, store.captured)
 	}
 }
