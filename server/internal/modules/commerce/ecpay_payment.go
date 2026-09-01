@@ -90,12 +90,16 @@ func (s Service) ReceiveECPayCallback(ctx context.Context, form url.Values) (str
 	if result.Amount != attempt.Amount || attempt.Currency != "TWD" {
 		return "", ErrECPayAmountMismatch
 	}
+	// ECPay's SimulatePaid notification exists only to exercise ReturnURL.
+	// Acknowledging it must not consume the durable callback claim, otherwise a
+	// later real payment for the same MerchantTradeNo would conflict with the
+	// simulated callback fingerprint.
+	if result.SimulatePaid == "1" {
+		return "1|OK", nil
+	}
 	status := "failed"
-	captured := result.RtnCode == "1" && result.SimulatePaid != "1"
-	switch {
-	case result.SimulatePaid == "1":
-		status = "simulated"
-	case captured:
+	captured := result.RtnCode == "1"
+	if captured {
 		status = "captured"
 	}
 	_, err = s.store.ClaimECPayCallback(ctx, result.MerchantTradeNo, ecpayCallbackFingerprint(form), result.TradeNo, result.RtnCode, status, captured, time.Now().Unix())
