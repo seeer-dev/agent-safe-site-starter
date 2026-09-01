@@ -90,19 +90,15 @@ func (s Service) ReceiveECPayCallback(ctx context.Context, form url.Values) (str
 	if result.Amount != attempt.Amount || attempt.Currency != "TWD" {
 		return "", ErrECPayAmountMismatch
 	}
-	// ECPay's SimulatePaid notification exists only to exercise ReturnURL.
-	// Acknowledging it must not consume the durable callback claim, otherwise a
-	// later real payment for the same MerchantTradeNo would conflict with the
-	// simulated callback fingerprint.
-	if result.SimulatePaid == "1" {
+	// Simulated and non-success notifications prove provider reachability/result
+	// shape but are not financial authority. Neither consumes the one-time
+	// durable callback claim, so a later real RtnCode=1 callback for the same
+	// MerchantTradeNo can still capture exactly once. This is important for
+	// provider states such as 10300066 (payment result pending confirmation).
+	if result.SimulatePaid == "1" || result.RtnCode != "1" {
 		return "1|OK", nil
 	}
-	status := "failed"
-	captured := result.RtnCode == "1"
-	if captured {
-		status = "captured"
-	}
-	_, err = s.store.ClaimECPayCallback(ctx, result.MerchantTradeNo, ecpayCallbackFingerprint(form), result.TradeNo, result.RtnCode, status, captured, time.Now().Unix())
+	_, err = s.store.ClaimECPayCallback(ctx, result.MerchantTradeNo, ecpayCallbackFingerprint(form), result.TradeNo, result.RtnCode, "captured", true, time.Now().Unix())
 	if err != nil {
 		return "", err
 	}
