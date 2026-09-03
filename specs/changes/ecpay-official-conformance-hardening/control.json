@@ -1,0 +1,96 @@
+{
+  "change_id": "ecpay-official-conformance-hardening",
+  "revision": 2,
+  "status": "Accepted",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Repository owner instructed continuing the queued v1 release-readiness sequence after HTTP contract restoration. This change audits and minimally hardens the existing ECPay AIO credit flow against the current official ECPay API Skill and current official guidance without adding new payment products or commerce frameworks.",
+  "repository_baseline": "0071aebecf8b6939308e7965fb5f0a07797d8579",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/modules/commerce/ecpay.go",
+    "server/internal/modules/commerce/ecpay_payment.go",
+    "server/internal/modules/commerce/ecpay_test.go",
+    "server/internal/modules/commerce/ecpay_official_conformance_test.go",
+    "contracts/openapi.yaml",
+    "contracts/check-runtime-openapi.mjs",
+    "README.md",
+    "docs/project-status.md",
+    "docs/commerce-acceptance.md",
+    "docs/ecpay-official-conformance.md",
+    "specs/changes/ecpay-official-conformance-hardening/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-002": ["independent-review"],
+    "AC-004": ["independent-review"]
+  },
+  "evidence": {
+    "REQ-001": {
+      "status": "passed",
+      "proof": "Revision-2 official-source audit pins the AIO ReturnURL shape and the branch parser now requires TradeAmt, validates optional SimulatePaid, and correlates the returned amount with the durable TWD attempt before financial authority is considered.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/source-audit-rev2.md"}]
+    },
+    "AC-001": {
+      "status": "passed",
+      "proof": "Revision-2 independent protocol replay observed signed simulation and signed non-success callbacks acknowledged with zero success claims, followed by a later real callback for the same MerchantTradeNo acquiring exactly one captured claim.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/isolated-protocol-replay-rev2.md"}]
+    },
+    "REQ-002": {
+      "status": "passed",
+      "proof": "The Go CheckMacValue implementation includes the official apostrophe and tilde corrections plus the seven compatibility replacements, case-insensitive sorting, SHA256, and uppercase output; all five pinned official AIO vectors matched exactly in revision-2 replay.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/isolated-protocol-replay-rev2.md"}]
+    },
+    "AC-002": {
+      "status": "passed",
+      "proof": "Independent revision-2 replay matched the pinned official baseline, apostrophe, tilde, spaces, and callback SHA256 digests exactly and also observed post-signature callback tampering rejected.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/isolated-protocol-replay-rev2.md"}]
+    },
+    "REQ-003": {
+      "status": "passed",
+      "proof": "Revision-2 authority replay rejected wrong amount, tampered signature, wrong MerchantID, and invalid SimulatePaid; simulation and pending states consumed no success claim, while the later valid real success captured once. The durable conflicting-success CAS boundary is unchanged from the previously Accepted ECPay payment-flow implementation.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/isolated-protocol-replay-rev2.md"}]
+    },
+    "AC-003": {
+      "status": "passed",
+      "proof": "Independent revision-2 falsification covered wrong TradeAmt, signature tamper, wrong MerchantID, simulated success, signed pending result, invalid SimulatePaid, and later real success; only the valid real-success path reached the one-effect durable claim boundary.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/isolated-protocol-replay-rev2.md"}]
+    },
+    "REQ-004": {
+      "status": "passed",
+      "proof": "Revision-2 official-source audit keeps credentials server-only, finite official AIO endpoints, exact provider acknowledgement semantics, and HTTPS callback transport on standard port 443 while retaining deployment-only stage acceptance as a separate gate.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/source-audit-rev2.md"}]
+    },
+    "AC-004": {
+      "status": "passed",
+      "proof": "Independent revision-2 replay accepted implicit HTTPS 443, explicit HTTPS port 443, and punycode DNS while rejecting non-standard HTTPS port 8443, direct IP, raw Unicode hostname, and non-HTTPS origins.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/isolated-protocol-replay-rev2.md"}]
+    },
+    "AC-005": {
+      "status": "passed",
+      "proof": "README, project status, commerce acceptance, and the dedicated ECPay audit now mark pinned source-level official conformance complete while explicitly leaving one public HTTPS ECPay stage transaction as deployment and go-live acceptance; the missing PR Actions run is separately recorded rather than reported as green.",
+      "observed_revision": 2,
+      "receipts": [{"kind": "independent-review", "path": "receipts/github-actions-trigger-limitation-rev2.md"}]
+    }
+  }
+}

@@ -1,22 +1,22 @@
 # Project status and v1 boundary
 
-Last reviewed against `main@e7af2a704405ba172108d68b1b834e9602fb1d85` (2026-08-31).
+Last reviewed: 2026-09-03, against the `ecpay-official-conformance-hardening` revision-2 repository state based on `main@0071aebecf8b6939308e7965fb5f0a07797d8579`.
 
-This document is the canonical high-level status for the starter. It distinguishes runtime/source completion, contract truth, deployment acceptance, and optional commerce operations so the project does not grow into a full commerce framework by accident.
+This document is the canonical high-level status for the starter. It separates source/runtime completion, contract truth, provider conformance, deployment acceptance, and optional commerce operations so the project does not grow into a full commerce framework by accident.
 
 ## Current position
 
 | Area | Status | Meaning |
 | --- | --- | --- |
 | Starter architecture | Complete for v1 | Beginner single-site boundaries, explicit composition, fail-closed architecture checks, controlled changes, and CI gates are in place. |
-| AI/spec governance | Complete for v1 foundation | `architecture.yaml`, `AGENTS.md`, `speccheck`, `archcheck`, evidence rules, PR verification, and the evidence-complete lifecycle cleanup are operational. Genuinely blocked/pending evidence remains open rather than being falsely promoted. |
+| AI/spec governance | Complete for v1 foundation | `architecture.yaml`, `AGENTS.md`, `speccheck`, `archcheck`, evidence rules, PR verification, and evidence-complete lifecycle cleanup are operational. Genuinely blocked/pending evidence remains open rather than being falsely promoted. |
 | Commerce sample | Runtime core flow complete | Product → cart → quote → checkout → durable order → payment → order lookup is implemented. |
-| ECPay AIO credit | Source-level complete | Server-owned signing, durable ReturnURL reconciliation, replay protection, and browser-return non-authority are implemented and CI verified. |
-| HTTP/OpenAPI contract truth | Complete for current runtime surface | OpenAPI 0.3.0 represents all 56 registered Go operations. Symmetric route/method parity plus guarded observable status/schema checks run in `make verify-contracts`; omission/status mutations were independently proven red. |
-| Deployment readiness | Partial | Provider wiring exists, but a real public deployment and smoke acceptance are not yet recorded. |
+| ECPay AIO credit | Source-level official conformance complete | Existing AIO credit integration has been audited against pinned official `ECPay/ECPay-API-Skill@ae964f75…`; callback `TradeAmt`, `SimulatePaid`, Go CMV apostrophe encoding, and HTTPS callback-port handling are aligned and independently replayed. Public provider reachability is still deployment acceptance. |
+| HTTP/OpenAPI contract truth | Complete for current runtime surface | OpenAPI 0.3.0 represents all 56 registered Go operations. Symmetric route/method parity plus guarded observable status/schema checks run in `make verify-contracts`. |
+| Deployment readiness | Partial | Provider wiring exists, but a production-shaped public deployment, fresh-DB walkthrough, rate-limit topology decision, and one public ECPay stage transaction are not yet accepted. |
 | Full commerce operations | Intentionally incomplete | Refunds, invoices, logistics, reconciliation jobs, and production operations remain optional follow-up work. |
 
-See [`review-status.md`](review-status.md) for the current interpretation of historical backend/admin reviews and lifecycle cleanup.
+See [`review-status.md`](review-status.md) for historical review interpretation, [`commerce-acceptance.md`](commerce-acceptance.md) for the commerce/deployment boundary, and [`ecpay-official-conformance.md`](ecpay-official-conformance.md) for the pinned provider audit.
 
 ## What is complete
 
@@ -32,8 +32,8 @@ See [`review-status.md`](review-status.md) for the current interpretation of his
 - Controlled specifications under `specs/changes/<change-id>/` with `speccheck` enforcement.
 - Runtime/OpenAPI route and method parity for all 56 registered Go operations through `contracts/check-runtime-openapi.mjs`.
 - Guarded observable contract checks for high-risk status/schema boundaries, with mutation evidence proving route omission and admin-product success-status drift fail the gate.
-- Existing admin resource and public-theme OpenAPI contract checks remain part of the same `make verify-contracts` entry point.
-- Repository tests, live PostgreSQL integration tests, concurrency stress tests, and `go vet` in CI.
+- Existing admin resource and public-theme OpenAPI contract checks remain part of `make verify-contracts`.
+- Repository tests, live PostgreSQL integration tests, concurrency stress tests, and `go vet` are part of normal CI.
 - Commerce cohesion refactor completed across models, service behavior, persistence, order flow, and tests.
 - Evidence-complete lifecycle debt closed for `commerce-boolean-adapter-and-live-evidence`, `ephemeral-postgres-local-gate`, `harden-implementation-handoffs`, and `scoped-worktree-validation`.
 
@@ -55,7 +55,7 @@ See [`review-status.md`](review-status.md) for the current interpretation of his
 
 ### ECPay AIO credit
 
-The sample now reaches a real hosted-payment boundary rather than stopping at a mock checkout.
+The sample reaches a hosted-payment boundary rather than stopping at a mock checkout.
 
 ```mermaid
 flowchart TD
@@ -64,41 +64,44 @@ flowchart TD
     C --> D[Create durable order]
     D --> E[Order: unpaid]
     E --> F[Server prepares ECPay AIO form]
-    F --> G[Server CheckMacValue]
+    F --> G[TotalAmount + CheckMacValue]
     G --> H[Browser POST to ECPay]
     H --> I[ECPay payment page]
     I --> J[Server-to-server ReturnURL]
     I --> K[Browser return]
-    J --> L[Verify CheckMacValue / MerchantID / trade identity / amount]
-    L --> M[Durable callback claim + replay guard]
-    M --> N[payment_status = paid + order event]
-    N --> O[Return 1|OK]
-    K --> P[Storefront restores same-tab order credential]
-    P --> Q[Re-query server order]
-    Q --> R{payment_status == paid?}
-    R -->|yes| S[Clear cart and confirm]
-    R -->|not yet| T[Retry briefly / show confirming state]
+    J --> L[Verify CMV / MerchantID / trade identity / TradeAmt]
+    L --> M{Simulation or non-success?}
+    M -->|yes| N[ACK 1|OK; no success claim/state mutation]
+    M -->|no, real RtnCode=1| O[Durable one-effect claim]
+    O --> P[payment_status = paid + order event]
+    P --> Q[Return exact 1|OK]
+    K --> R[Storefront restores same-tab order credential]
+    R --> S[Re-query server order]
+    S --> T{payment_status == paid?}
+    T -->|yes| U[Clear cart and confirm]
+    T -->|not yet| V[Retry briefly / show confirming state]
 ```
 
-Implemented safety properties:
+Current safety properties:
 
 - HashKey/HashIV remain server-only.
 - AIO stage/production endpoint selection is finite and validated.
 - Known public ECPay test credentials are rejected in production mode.
 - Browser navigation cannot mark an order paid.
-- `ReturnURL` verifies `CheckMacValue`, `MerchantID`, merchant trade identity, and durable amount.
-- Identical callbacks are one-effect; conflicting claimed callbacks fail closed.
-- Callback claim, paid transition, order version update, and payment-status event are committed atomically.
-- SQLite and PostgreSQL both persist the ECPay payment attempt contract.
-- ECPay-specific signing/tamper/amount/browser-authority tests are included.
+- Create-order request uses durable `TotalAmount`; provider callback reconciliation uses official `TradeAmt`.
+- `ReturnURL` verifies CheckMacValue, MerchantID, merchant trade identity, and durable amount before financial authority is considered.
+- `SimulatePaid=1` and signed non-success/pending callbacks do not consume the durable success claim.
+- A later valid real success can still capture exactly once; conflicting claimed success callbacks remain fail-closed through the existing durable claim/CAS boundary.
+- Callback claim, paid transition, order version update, and payment-status event remain atomic.
+- Browser return is navigation only and re-queries durable server state.
+- Go CheckMacValue matches pinned official baseline/apostrophe/tilde/space/callback SHA256 vectors.
+- HTTPS callback origins accept implicit 443 or explicit `:443` and reject non-standard HTTPS ports; starter policy also rejects direct IP and unencoded Unicode hosts.
 
-PR #8 and its post-merge `main` CI passed the full repository verification chain for the implemented runtime behavior.
+The original ECPay runtime flow was merged and full-CI verified under PR #8. The later official-conformance hardening is supported by pinned official-source review and revision-2 independent protocol replay. During the 2026-09-01 to 2026-09-03 review window GitHub did not produce pull-request Actions runs for PR #15/#16, so this document does not claim those PR runs were green; merge-triggered `main` CI remains the repository regression check for that hardening.
 
 ## HTTP contract truth restoration
 
-`restore-http-contract-truth` revision 2 is Accepted and merged. `contracts/openapi.yaml` now describes the current registered Go HTTP surface rather than a desired future shape.
-
-The completed contract chain is:
+`restore-http-contract-truth` revision 2 is Accepted and merged. `contracts/openapi.yaml` describes the current registered Go HTTP surface rather than a desired future shape.
 
 ```mermaid
 flowchart LR
@@ -109,29 +112,34 @@ flowchart LR
     E --> F[Public theme contract checks]
 ```
 
-Acceptance included two CI mutations:
-
-- removing the ECPay browser-return operation produced explicit missing-runtime / extra-OpenAPI diagnostics;
-- changing admin product create `201` to `200` produced an explicit missing-`201` diagnostic;
-- restoring both returned the contract gate to green with no mutation residue.
-
 This restoration deliberately did **not** normalize all response envelopes or adopt generated TypeScript types. Resource-specific envelopes remain acceptable when consumers use explicit contracts. Generated admin types and `ResourceListPage.vue` decomposition are post-contract locality improvements, not v1 deploy blockers.
+
+## Official ECPay conformance audit
+
+The source-level provider audit is complete against pinned official commit `ae964f75b69ec90e1c205b136364ab6587fc328c`.
+
+Verified/fixed findings:
+
+- ReturnURL amount is `TradeAmt`, not request-side `TotalAmount`.
+- Go CMV includes apostrophe `' -> %27` in addition to the existing ECPay URL-encoding rules.
+- `SimulatePaid=1` cannot mark an order paid.
+- Signed non-success/pending callbacks do not consume the one-time real-success claim.
+- implicit 443 and explicit `:443` are valid HTTPS origins; non-443 HTTPS ports fail closed.
+- `ItemName` uses the current recommended 200-character operating boundary.
+- OpenAPI callback schema and its mechanical guard use `TradeAmt` plus optional `SimulatePaid`.
+
+See [`ecpay-official-conformance.md`](ecpay-official-conformance.md) and `specs/changes/ecpay-official-conformance-hardening/receipts/` for the pinned source and replay evidence.
 
 ## What remains before calling v1 deploy-ready
 
 These are release-readiness tasks, not missing architecture foundations.
 
-1. **Official ECPay conformance audit**
-   - Review the current AIO implementation against the official `ECPay/ECPay-API-Skill` references.
-   - Confirm current CheckMacValue encoding, required fields, ReturnURL behavior, response status/body, and go-live constraints.
-   - Treat this as protocol conformance review, not as a new payment architecture project.
-
-2. **Sample commerce acceptance review**
+1. **Sample commerce acceptance review**
    - Fresh database and deterministic sample data.
    - Browse product → add cart → reload/rehydrate → quote → guest/member order → payment handoff → order lookup → admin lookup → return/restock.
-   - Runtime paths that require external providers may be recorded as deploy acceptance when no public environment exists yet.
+   - External provider reachability remains deploy acceptance when no public environment exists yet.
 
-3. **Deploy readiness**
+2. **Deploy readiness**
    - Railway Go API + PostgreSQL.
    - Cloudflare Pages site build/publish.
    - Supabase Auth production configuration.
@@ -140,15 +148,11 @@ These are release-readiness tasks, not missing architecture foundations.
    - Migration/pre-deploy behavior and smoke tests.
    - Decide public rate-limit enforcement from the real deployment topology and trusted client-IP source; do not assume an in-memory single-process limiter is globally correct.
 
-4. **One ECPay stage transaction before production**
+3. **One ECPay stage transaction before production**
    - Required as go-live/deployment acceptance, not as a source-code completion gate.
-   - Verify hosted checkout, external ReturnURL reachability, `1|OK`, durable `paid`, and browser re-query on the deployed environment.
-
-See [`commerce-acceptance.md`](commerce-acceptance.md) for the commerce/deployment boundary and [`review-status.md`](review-status.md) for review findings that are historical versus current.
+   - Verify hosted checkout, external ReturnURL reachability, exact `1|OK`, durable `paid`, and browser re-query on the deployed environment.
 
 ## Explicitly open but not automatic v1 blockers
-
-These controlled changes remain honest about missing evidence rather than being mass-accepted for cleanliness:
 
 - `postgres-lock-semantics-and-evidence` — remaining independent/CI evidence should be reconciled when that verification is replayed.
 - `verify-contract-checks` — this older lifecycle still has pending evidence and should be reconciled independently; it does not negate the newer Accepted `restore-http-contract-truth` parity gate.
@@ -158,8 +162,6 @@ These controlled changes remain honest about missing evidence rather than being 
 Old Drafts such as `commerce-module-file-split` and `public-endpoint-rate-limit` must be re-proposed from the current baseline before implementation; their old plans are not current authority.
 
 ## Intentionally not required for starter v1
-
-The following are useful commerce extensions, but they are not blockers for publishing a small beginner-facing starter with a working reference purchase flow:
 
 - ECPay refund/cancel integration.
 - Refund authorization/AAL2 and refund idempotency.
@@ -176,13 +178,13 @@ Adding these should be driven by a concrete product outcome. They should not be 
 
 ```mermaid
 flowchart LR
-    A[Current main] --> B[Official ECPay conformance audit]
-    B --> C[Sample commerce acceptance]
-    C --> D[Deploy readiness]
+    A[Current source baseline] --> B[Fresh-DB commerce acceptance]
+    B --> C[Deploy readiness]
+    C --> D[Public ECPay stage transaction]
     D --> E{v1 release blockers?}
     E -->|No| F[Publish starter v1]
     E -->|Yes| G[Fix only blocking gaps]
-    G --> D
+    G --> C
     F --> H[Optional post-v1 capabilities]
     H --> I[Generated admin types / locality]
     H --> J[SQL write ownership gate]
