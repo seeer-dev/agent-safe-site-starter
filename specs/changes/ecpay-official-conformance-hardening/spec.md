@@ -1,7 +1,7 @@
 # ECPay Official Conformance Hardening
 
 Change ID: ecpay-official-conformance-hardening
-Revision: 1
+Revision: 2
 Status: Verifying
 Decision authority: Repository owner
 Approval basis: Repository owner instructed continuing the queued v1 release-readiness sequence after HTTP contract restoration. This change audits and minimally hardens the existing ECPay AIO credit flow against the current official ECPay API Skill and live ECPay Developers references without adding new payment products or commerce frameworks.
@@ -19,9 +19,9 @@ Make the existing starter-owned ECPay AIO credit flow conform to the current off
 - Treat signed non-success `RtnCode` notifications as non-financial observations: acknowledge them after correlation but do not consume the one-time success claim, so a later real success can still capture.
 - Make the Go CheckMacValue encoder match the current official Go implementation, including apostrophe encoding and official SHA256 vectors.
 - Keep ReturnURL verification timing-safe and server-authoritative, with durable amount/merchant/trade correlation and replay/conflict protection before acknowledging real successful payment callbacks.
-- Enforce the deployment-safe HTTPS/DNS callback-origin constraints for the existing configuration boundary: no explicit port, no direct IP host, and IDNs supplied in punycode form.
+- Enforce the deployment-safe HTTPS/DNS callback-origin constraints for the existing configuration boundary: standard HTTPS port 443 only (implicit or explicit), no direct IP host, and IDNs supplied in punycode form.
 - Keep the OpenAPI callback contract and mechanical contract guard aligned with the corrected protocol.
-- Record the official ECPay Skill commit and live ECPay Developers pages used for the audit, and update canonical project/commerce status.
+- Record the official ECPay Skill commit and current official guidance used for the audit, and update canonical project/commerce status.
 
 ## Out of scope
 
@@ -63,11 +63,17 @@ Only a correctly signed callback that matches the configured merchant, durable m
 The starter MUST keep ECPay secrets server-only, use the finite official stage/production AIO endpoints, require public HTTPS DNS origins compatible with the official callback transport constraints, and document remaining deployment-only acceptance.
 
 #### AC-004: Configuration rejects unsupported callback origins
-- GIVEN an ECPay configuration whose public origin uses an explicit port, direct IP host, non-HTTPS scheme, or unencoded Unicode hostname
+- GIVEN an ECPay configuration whose public origin uses a non-443 HTTPS port, direct IP host, non-HTTPS scheme, or unencoded Unicode hostname
 - WHEN configuration is constructed
-- THEN it fails closed rather than producing a ReturnURL/OrderResultURL that violates the documented ECPay deployment constraints
+- THEN it fails closed; an omitted HTTPS port or explicit `:443` remains valid because both use the supported standard HTTPS transport
 
 #### AC-005: Canonical status distinguishes conformance from stage acceptance
 - GIVEN source-level official conformance is complete
 - WHEN README/project/commerce status is read
 - THEN official conformance is marked complete against the audited ECPay Skill snapshot while a public HTTPS stage transaction remains explicitly pending deploy/go-live acceptance
+
+## Amendments
+
+| Revision | REQ/AC | Old meaning | New meaning | Reason | Approval basis | Invalidated evidence |
+| --- | --- | --- | --- | --- | --- | --- |
+| 2 | REQ-004 / AC-004 | Revision 1 rejected every explicit callback port, including `:443`. | HTTPS callback origins may omit the port or explicitly use `:443`; non-443 HTTPS ports remain invalid. | Official troubleshooting/go-live guidance requires HTTPS callbacks on port 443 but does not require the textual URL to omit an explicit standard port. Revision-1 hardening was unnecessarily stricter than the provider constraint. | Owner authorized continuing the official conformance hardening; this amendment narrows implementation to the verified official rule rather than expanding scope. | Revision-1 REQ-004 / AC-004 origin evidence is superseded by revision-2 source audit and protocol replay. All strict evidence is re-observed at revision 2. |
