@@ -13,7 +13,6 @@ func TestECPayOfficialConfigRejectsUnsupportedPublicOrigins(t *testing.T) {
 		origin string
 	}{
 		{name: "explicit nonstandard port", origin: "https://api.example.com:8443"},
-		{name: "explicit standard port", origin: "https://api.example.com:443"},
 		{name: "direct IP", origin: "https://203.0.113.10"},
 		{name: "unicode hostname", origin: "https://中文.tw"},
 	}
@@ -27,13 +26,26 @@ func TestECPayOfficialConfigRejectsUnsupportedPublicOrigins(t *testing.T) {
 	}
 }
 
-func TestECPayOfficialConfigAcceptsPunycodeHTTPSOriginWithoutExplicitPort(t *testing.T) {
-	cfg, err := NewECPayConfig("stage", "https://xn--fiq228c.tw", "https://shop.example.com", "merchant", "key", "iv")
-	if err != nil {
-		t.Fatalf("NewECPayConfig: %v", err)
+func TestECPayOfficialConfigAcceptsStandardHTTPSOrigins(t *testing.T) {
+	tests := []struct {
+		name       string
+		origin     string
+		returnBase string
+	}{
+		{name: "implicit 443", origin: "https://api.example.com", returnBase: "https://api.example.com"},
+		{name: "explicit 443", origin: "https://api.example.com:443", returnBase: "https://api.example.com:443"},
+		{name: "punycode", origin: "https://xn--fiq228c.tw", returnBase: "https://xn--fiq228c.tw"},
 	}
-	if cfg.ReturnURL != "https://xn--fiq228c.tw"+ecpayReturnPath {
-		t.Fatalf("ReturnURL = %q", cfg.ReturnURL)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg, err := NewECPayConfig("stage", tt.origin, "https://shop.example.com", "merchant", "key", "iv")
+			if err != nil {
+				t.Fatalf("NewECPayConfig: %v", err)
+			}
+			if cfg.ReturnURL != tt.returnBase+ecpayReturnPath {
+				t.Fatalf("ReturnURL = %q", cfg.ReturnURL)
+			}
+		})
 	}
 }
 
