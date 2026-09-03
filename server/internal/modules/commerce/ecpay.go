@@ -96,10 +96,11 @@ func normalizedHTTPSOrigin(raw string) (string, error) {
 	if err != nil || !strings.EqualFold(u.Scheme, "https") || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
 		return "", ErrECPayInvalidConfig
 	}
-	// ECPay tells merchants not to specify a callback port and requires a
-	// publicly reachable DNS name. This starter is HTTPS-only, so the implicit
-	// transport port is 443. Unicode domains must be supplied in punycode form.
-	if u.Port() != "" {
+	// ECPay requires publicly reachable callbacks on the standard web ports.
+	// This starter is HTTPS-only, so an omitted port or explicit :443 is valid;
+	// other explicit HTTPS ports fail closed. Unicode domains must be supplied
+	// in punycode form and direct IP callbacks are intentionally rejected.
+	if port := u.Port(); port != "" && port != "443" {
 		return "", ErrECPayInvalidConfig
 	}
 	hostname := u.Hostname()
