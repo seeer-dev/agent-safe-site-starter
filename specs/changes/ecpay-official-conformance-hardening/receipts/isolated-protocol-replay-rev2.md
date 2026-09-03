@@ -75,7 +75,8 @@ The replay exercised the current parser/authority rules:
 3. later signed real `RtnCode=1`, `SimulatePaid=0` for the same MerchantTradeNo -> exactly one captured claim;
 4. signed callback with wrong `TradeAmt` -> amount mismatch before claim;
 5. callback signed first and then `TradeAmt` tampered -> invalid signature/callback;
-6. signed unknown `SimulatePaid=2` -> invalid callback.
+6. signed unknown `SimulatePaid=2` -> invalid callback;
+7. correctly signed callback carrying the wrong MerchantID -> invalid callback.
 
 Overall replay result:
 
@@ -83,6 +84,8 @@ Overall replay result:
 PASS
 ok   ecpayreplay
 ```
+
+The durable conflicting-replay/CAS implementation itself is not modified by this change (`store_ecpay.go` is outside the diff). Its existing one-effect/conflict semantics remain covered by the previously Accepted ECPay payment-flow change; this revision changes only the protocol facts that reach that claim boundary.
 
 ## Contract review
 
