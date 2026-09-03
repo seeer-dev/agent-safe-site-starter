@@ -2,7 +2,7 @@
 
 Change ID: ecpay-official-conformance-hardening
 Revision: 2
-Status: Verifying
+Status: Accepted
 Decision authority: Repository owner
 Approval basis: Repository owner instructed continuing the queued v1 release-readiness sequence after HTTP contract restoration. This change audits and minimally hardens the existing ECPay AIO credit flow against the current official ECPay API Skill and live ECPay Developers references without adding new payment products or commerce frameworks.
 Repository baseline: 0071aebecf8b6939308e7965fb5f0a07797d8579
