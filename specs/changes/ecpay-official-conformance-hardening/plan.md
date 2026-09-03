@@ -2,7 +2,7 @@
 
 Change ID: ecpay-official-conformance-hardening
 Revision: 2
-Status: Verifying
+Status: Accepted
 Repository baseline: `0071aebecf8b6939308e7965fb5f0a07797d8579`
 
 ## Scope lock
