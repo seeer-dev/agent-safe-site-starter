@@ -85,7 +85,7 @@ func TestFreshDBCommerceSeedReachesDurableGuestOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListPublicShippingMethods: %v", err)
 	}
-	if len(shipping) != 1 || shipping[0].Method != "home_delivery" {
+	if len(shipping) != 1 || shipping[0].ID != "home_delivery" {
 		t.Fatalf("public shipping = %#v", shipping)
 	}
 
