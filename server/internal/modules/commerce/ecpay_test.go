@@ -201,11 +201,12 @@ func TestMerchantTradeNoIsStableAndProviderSafe(t *testing.T) {
 
 type ecpayFakeStore struct {
 	Store
-	order       Order
-	attempt     ECPayPaymentAttempt
-	claimCalls  int
-	claimStatus string
-	captured    bool
+	order              Order
+	attempt            ECPayPaymentAttempt
+	paymentEnvironment string
+	claimCalls         int
+	claimStatus        string
+	captured           bool
 }
 
 func (f *ecpayFakeStore) GetOrderByAccessToken(context.Context, string, string) (Order, error) {
@@ -213,7 +214,11 @@ func (f *ecpayFakeStore) GetOrderByAccessToken(context.Context, string, string) 
 }
 
 func (f *ecpayFakeStore) ListPaymentMethods(context.Context) ([]PaymentMethod, error) {
-	return []PaymentMethod{{ID: "pm-ecpay", Method: "ecpay", Enabled: true, ReadinessStatus: "ready"}}, nil
+	environment := f.paymentEnvironment
+	if environment == "" {
+		environment = "sandbox"
+	}
+	return []PaymentMethod{{ID: "pm-ecpay", Method: "ecpay", Environment: environment, Enabled: true, ReadinessStatus: "ready"}}, nil
 }
 
 func (f *ecpayFakeStore) EnsureECPayAttempt(_ context.Context, attempt ECPayPaymentAttempt) (ECPayPaymentAttempt, error) {
@@ -250,6 +255,21 @@ func TestPrepareECPayPaymentUsesDurableOrderAmount(t *testing.T) {
 	}
 	if store.attempt.Amount != 999 || store.attempt.OrderID != "ORD-1" {
 		t.Fatalf("attempt = %#v", store.attempt)
+	}
+}
+
+func TestPrepareECPayPaymentRejectsRuntimeAdminEnvironmentMismatch(t *testing.T) {
+	cfg := testECPayConfig(t)
+	store := &ecpayFakeStore{
+		order:              Order{ID: "ORD-1", Total: 999, PaymentStatus: "unpaid", PaymentMethod: "pm-ecpay"},
+		paymentEnvironment: "production",
+	}
+	service := NewService(store).WithECPay(cfg)
+	if _, err := service.PrepareECPayPayment(context.Background(), "ORD-1", "secret"); !errors.Is(err, ErrECPayWrongPaymentMethod) {
+		t.Fatalf("error = %v, want ErrECPayWrongPaymentMethod", err)
+	}
+	if store.attempt.OrderID != "" {
+		t.Fatalf("mismatched environment created payment attempt: %#v", store.attempt)
 	}
 }
 
