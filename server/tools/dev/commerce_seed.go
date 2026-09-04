@@ -123,13 +123,25 @@ func seededECPayPaymentMethod(cfg config.Config) (commerce.PaymentMethod, error)
 		return method, nil
 	}
 
-	switch strings.ToLower(strings.TrimSpace(cfg.ECPayEnvironment)) {
+	runtimeCfg, err := commerce.NewECPayConfig(
+		cfg.ECPayEnvironment,
+		cfg.PublicAPIBase,
+		cfg.PublicSiteURL,
+		cfg.ECPayMerchantID,
+		cfg.ECPayHashKey,
+		cfg.ECPayHashIV,
+	)
+	if err != nil {
+		return commerce.PaymentMethod{}, fmt.Errorf("seed ECPay payment method: runtime config invalid: %w", err)
+	}
+
+	switch strings.ToLower(strings.TrimSpace(runtimeCfg.Environment)) {
 	case "stage":
 		method.Environment = "sandbox"
 	case "production":
 		method.Environment = "production"
 	default:
-		return commerce.PaymentMethod{}, fmt.Errorf("seed ECPay payment method: unsupported runtime environment %q", cfg.ECPayEnvironment)
+		return commerce.PaymentMethod{}, fmt.Errorf("seed ECPay payment method: unsupported runtime environment %q", runtimeCfg.Environment)
 	}
 	method.ReadinessStatus = "ready"
 	method.Enabled = true
