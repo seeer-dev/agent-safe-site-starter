@@ -176,10 +176,12 @@ func TestFreshDBStageECPaySeedIsReadyAndPublicWithMatchingRuntime(t *testing.T) 
 	ctx := context.Background()
 	db, dialect := openFreshSeedDB(t)
 	cfg := config.Config{
-		ECPayEnvironment: "stage",
-		ECPayMerchantID:  "3002607",
-		ECPayHashKey:     "pwFHCqoQZGmho4w6",
-		ECPayHashIV:      "EkRm7iFT261dpevs",
+		PublicAPIBase:      "https://api.example.com",
+		PublicSiteURL:      "https://shop.example.com",
+		ECPayEnvironment:   "stage",
+		ECPayMerchantID:    "3002607",
+		ECPayHashKey:       "pwFHCqoQZGmho4w6",
+		ECPayHashIV:        "EkRm7iFT261dpevs",
 	}
 	if err := seedCommerce(ctx, db, dialect, cfg); err != nil {
 		t.Fatalf("seedCommerce: %v", err)
@@ -199,9 +201,9 @@ func TestFreshDBStageECPaySeedIsReadyAndPublicWithMatchingRuntime(t *testing.T) 
 	}
 
 	ecpayCfg, err := commerce.NewECPayConfig(
-		"stage",
-		"https://api.example.com",
-		"https://shop.example.com",
+		cfg.ECPayEnvironment,
+		cfg.PublicAPIBase,
+		cfg.PublicSiteURL,
 		cfg.ECPayMerchantID,
 		cfg.ECPayHashKey,
 		cfg.ECPayHashIV,
