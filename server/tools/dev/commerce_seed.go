@@ -89,7 +89,7 @@ func seedCommerce(ctx context.Context, db *sql.DB, dialect database.Dialect, cfg
 	return nil
 }
 
-func seedPaymentMethod(ctx context.Context, store *commerce.SQLStore, method commerce.PaymentMethod) error {
+func seedPaymentMethod(ctx context.Context, store commerce.SQLStore, method commerce.PaymentMethod) error {
 	id, err := randomID()
 	if err != nil {
 		return fmt.Errorf("seed payment method %s id: %w", method.Method, err)
