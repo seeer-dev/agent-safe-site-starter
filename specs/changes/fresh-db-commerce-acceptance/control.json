@@ -1,0 +1,41 @@
+{
+  "change_id": "fresh-db-commerce-acceptance",
+  "revision": 1,
+  "status": "Applying",
+  "decision_authority": "Repository owner",
+  "approval_basis": "Repository owner instructed continuing the v1 release-readiness sequence after ECPay official conformance. This slice closes the local fresh-database commerce gap without expanding into deployment infrastructure or additional payment products.",
+  "repository_baseline": "fc37f411d7906380163a3c37b4b01379148ae0df",
+  "supersedes": [],
+  "applies_to": [
+    "server/tools/dev/main.go",
+    "server/tools/dev/main_test.go",
+    "server/internal/modules/commerce/payment_methods.go",
+    "server/internal/modules/commerce/payment_methods_test.go",
+    "README.md",
+    "docs/project-status.md",
+    "docs/commerce-acceptance.md",
+    "specs/changes/fresh-db-commerce-acceptance/**"
+  ],
+  "requirements": ["REQ-001", "REQ-002", "REQ-003", "REQ-004"],
+  "acceptance": ["AC-001", "AC-002", "AC-003", "AC-004", "AC-005", "AC-006"],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": ["runtime"],
+    "AC-002": ["runtime"],
+    "AC-003": ["runtime"],
+    "AC-004": ["runtime"],
+    "AC-005": ["runtime"]
+  },
+  "evidence": {
+    "REQ-001": {"status": "pending", "proof": "Implementation pending.", "observed_revision": 1},
+    "AC-001": {"status": "pending", "proof": "Fresh SQLite seed/quote/order walkthrough pending.", "observed_revision": 1},
+    "REQ-002": {"status": "pending", "proof": "Runtime availability guard pending.", "observed_revision": 1},
+    "AC-002": {"status": "pending", "proof": "Missing-runtime ECPay falsification pending.", "observed_revision": 1},
+    "AC-003": {"status": "pending", "proof": "Environment-mismatch falsification pending.", "observed_revision": 1},
+    "AC-004": {"status": "pending", "proof": "Matching-runtime ECPay acceptance pending.", "observed_revision": 1},
+    "REQ-003": {"status": "pending", "proof": "Config-derived dev seed readiness pending.", "observed_revision": 1},
+    "AC-005": {"status": "pending", "proof": "Fresh seed behavior with and without ECPay config pending.", "observed_revision": 1},
+    "REQ-004": {"status": "pending", "proof": "Canonical status update pending.", "observed_revision": 1},
+    "AC-006": {"status": "pending", "proof": "Status boundary update pending.", "observed_revision": 1}
+  }
+}
