@@ -8,7 +8,8 @@ Repository baseline: `fc37f411d7906380163a3c37b4b01379148ae0df`
 ## Scope lock
 
 - `server/tools/dev/main.go`
-- `server/tools/dev/main_test.go`
+- `server/tools/dev/commerce_seed.go`
+- `server/tools/dev/commerce_seed_test.go`
 - `server/internal/modules/commerce/payment_methods.go`
 - `server/internal/modules/commerce/payment_methods_test.go`
 - `README.md`
@@ -20,7 +21,7 @@ Covers REQ-001, AC-001, REQ-002, AC-002, AC-003, AC-004, REQ-003, AC-005, REQ-00
 
 ## Slice 1 — Make sample seed checkout-capable
 
-- Extract the existing commerce seed block in `server/tools/dev/main.go` into a private helper used by the same dev entry point.
+- Move the existing commerce seed block in `server/tools/dev/main.go` into the private `commerce_seed.go` helper used by the same dev entry point.
 - Preserve the existing six products and current non-ECPay payment samples.
 - Add at least one enabled shipping method when no shipping methods exist.
 - Ensure an ECPay admin row exists; derive sandbox/production, readiness, and enabled state from the complete runtime ECPay config.
