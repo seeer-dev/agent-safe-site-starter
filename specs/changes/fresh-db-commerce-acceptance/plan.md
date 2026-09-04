@@ -11,6 +11,7 @@ Repository baseline: `fc37f411d7906380163a3c37b4b01379148ae0df`
 - `server/tools/dev/commerce_seed.go`
 - `server/tools/dev/commerce_seed_test.go`
 - `server/tools/dev/commerce_seed_config_test.go`
+- `server/tools/dev/commerce_seed_ecpay_handoff_test.go`
 - `server/internal/modules/commerce/payment_methods.go`
 - `server/internal/modules/commerce/payment_methods_test.go`
 - `README.md`
@@ -43,6 +44,7 @@ Covers REQ-001, AC-001, REQ-002, AC-002, AC-003, AC-004, REQ-003, AC-005, REQ-00
 - Quote a seeded product and create a guest order; assert server-owned totals, unpaid payment state, stock change, and one-time access token.
 - Run seed with no ECPay runtime and assert pending/disabled ECPay row plus public exclusion.
 - Run a separate fresh DB with valid stage ECPay runtime and assert ready/enabled sandbox ECPay row plus public inclusion.
+- From that fresh stage database, quote with ECPay, create the durable guest order, and prepare the hosted AIO form; assert stage endpoint, authoritative amount, callback URLs, Credit mode, and CheckMacValue without contacting ECPay.
 - Falsify configured-but-invalid ECPay runtime (local HTTP origins and production public test credentials) so it cannot be seeded ready.
 - Unit-test database-ready ECPay rows against missing/mismatched/matching runtime configs.
 
