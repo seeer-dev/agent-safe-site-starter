@@ -14,6 +14,8 @@ Repository baseline: `fc37f411d7906380163a3c37b4b01379148ae0df`
 - `server/tools/dev/commerce_seed_ecpay_handoff_test.go`
 - `server/internal/modules/commerce/payment_methods.go`
 - `server/internal/modules/commerce/payment_methods_test.go`
+- `server/internal/modules/commerce/ecpay_payment.go`
+- `server/internal/modules/commerce/ecpay_test.go`
 - `README.md`
 - `docs/project-status.md`
 - `docs/commerce-acceptance.md`
@@ -34,7 +36,7 @@ Covers REQ-001, AC-001, REQ-002, AC-002, AC-003, AC-004, REQ-003, AC-005, REQ-00
 - Add a narrow service helper for runtime availability of a configured payment row.
 - Non-ECPay rows continue to use the current enabled/readiness behavior.
 - ECPay additionally requires `s.ecpay != nil` and environment correspondence (`sandbox`↔`stage`, `production`↔`production`).
-- Reuse the same helper in public discovery and checkout validation so the two entry points cannot drift.
+- Reuse the same helper in public discovery, checkout validation, and hosted-payment preparation so the three entry points cannot drift.
 
 ## Slice 3 — Fresh SQLite acceptance tests
 
@@ -46,6 +48,7 @@ Covers REQ-001, AC-001, REQ-002, AC-002, AC-003, AC-004, REQ-003, AC-005, REQ-00
 - Run a separate fresh DB with valid stage ECPay runtime and assert ready/enabled sandbox ECPay row plus public inclusion.
 - From that fresh stage database, quote with ECPay, create the durable guest order, and prepare the hosted AIO form; assert stage endpoint, authoritative amount, callback URLs, Credit mode, and CheckMacValue without contacting ECPay.
 - Falsify configured-but-invalid ECPay runtime (local HTTP origins and production public test credentials) so it cannot be seeded ready.
+- Falsify stage-runtime / production-admin mismatch directly at `PrepareECPayPayment`; no provider attempt may be created.
 - Unit-test database-ready ECPay rows against missing/mismatched/matching runtime configs.
 
 ## Slice 4 — Status and acceptance
