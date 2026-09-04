@@ -85,7 +85,7 @@ func TestFreshDBCommerceSeedReachesDurableGuestOrder(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListPublicShippingMethods: %v", err)
 	}
-	if len(shipping) != 1 || shipping[0].ID != "home_delivery" {
+	if len(shipping) != 1 || shipping[0].Method != "home_delivery" {
 		t.Fatalf("public shipping = %#v", shipping)
 	}
 
@@ -176,12 +176,12 @@ func TestFreshDBStageECPaySeedIsReadyAndPublicWithMatchingRuntime(t *testing.T) 
 	ctx := context.Background()
 	db, dialect := openFreshSeedDB(t)
 	cfg := config.Config{
-		PublicAPIBase:      "https://api.example.com",
-		PublicSiteURL:      "https://shop.example.com",
-		ECPayEnvironment:   "stage",
-		ECPayMerchantID:    "3002607",
-		ECPayHashKey:       "pwFHCqoQZGmho4w6",
-		ECPayHashIV:        "EkRm7iFT261dpevs",
+		PublicAPIBase:    "https://api.example.com",
+		PublicSiteURL:    "https://shop.example.com",
+		ECPayEnvironment: "stage",
+		ECPayMerchantID:  "3002607",
+		ECPayHashKey:     "pwFHCqoQZGmho4w6",
+		ECPayHashIV:      "EkRm7iFT261dpevs",
 	}
 	if err := seedCommerce(ctx, db, dialect, cfg); err != nil {
 		t.Fatalf("seedCommerce: %v", err)
