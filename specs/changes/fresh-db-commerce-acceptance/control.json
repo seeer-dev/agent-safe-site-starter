@@ -10,6 +10,7 @@
     "server/tools/dev/main.go",
     "server/tools/dev/commerce_seed.go",
     "server/tools/dev/commerce_seed_test.go",
+    "server/tools/dev/commerce_seed_config_test.go",
     "server/internal/modules/commerce/payment_methods.go",
     "server/internal/modules/commerce/payment_methods_test.go",
     "README.md",
@@ -35,7 +36,7 @@
     "AC-003": {"status": "pending", "proof": "Environment-mismatch falsification test added; execution pending.", "observed_revision": 1},
     "AC-004": {"status": "pending", "proof": "Matching-runtime ECPay acceptance test added; execution pending.", "observed_revision": 1},
     "REQ-003": {"status": "pending", "proof": "Config-derived dev seed readiness implemented; verification pending.", "observed_revision": 1},
-    "AC-005": {"status": "pending", "proof": "Fresh seed behavior with and without ECPay config tests added; execution pending.", "observed_revision": 1},
+    "AC-005": {"status": "pending", "proof": "Fresh seed behavior with absent, invalid, and valid ECPay runtime config tests added; execution pending.", "observed_revision": 1},
     "REQ-004": {"status": "pending", "proof": "Canonical status update pending.", "observed_revision": 1},
     "AC-006": {"status": "pending", "proof": "Status boundary update pending.", "observed_revision": 1}
   }
