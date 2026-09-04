@@ -46,7 +46,7 @@ func (s Service) PrepareECPayPayment(ctx context.Context, orderID, accessToken s
 	}
 	valid := false
 	for _, method := range methods {
-		if (method.ID == order.PaymentMethod || method.Method == order.PaymentMethod) && method.Enabled && method.ReadinessStatus == "ready" && strings.EqualFold(method.Method, "ecpay") {
+		if (method.ID == order.PaymentMethod || method.Method == order.PaymentMethod) && strings.EqualFold(method.Method, "ecpay") && s.paymentMethodRuntimeAvailable(method) {
 			valid = true
 			break
 		}

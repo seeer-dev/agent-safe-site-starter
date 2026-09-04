@@ -19,7 +19,6 @@ import (
 	"github.com/example/ai-site-starter/server/internal/bootstrap"
 	"github.com/example/ai-site-starter/server/internal/config"
 	"github.com/example/ai-site-starter/server/internal/migrate"
-	"github.com/example/ai-site-starter/server/internal/modules/commerce"
 	"github.com/example/ai-site-starter/server/internal/modules/content"
 	"github.com/example/ai-site-starter/server/internal/modules/sitecontent"
 	"github.com/example/ai-site-starter/server/internal/modules/staff"
@@ -94,54 +93,8 @@ func main() {
 	}
 
 	// ----- Commerce seed ----------------------------------------------------
-	commerceStore := commerce.NewSQLStore(db, dialect)
-	commerceService := commerce.NewService(commerceStore)
-	existingProducts, err := commerceService.ListProducts(ctx, commerce.ProductFilter{})
-	if err != nil {
+	if err := seedCommerce(ctx, db, dialect, cfg); err != nil {
 		log.Fatal(err)
-	}
-	if len(existingProducts) == 0 {
-		products := []commerce.ProductInput{
-			{SKU: "SKU-APP-01", Name: "素面亞麻襯衫", Slug: "linen-shirt", Description: "透氣亞麻襯衫，適合台灣夏季。", Category: "apparel", Status: "active", Material: "亞麻", Origin: "台灣", Price: 1680, OriginalPrice: 1980, Stock: 24, Tag: "經典"},
-			{SKU: "SKU-HOME-02", Name: "陶製小碟", Slug: "ceramic-dish", Description: "手作陶碟，每一件獨一無二。", Category: "home", Status: "active", Material: "陶", Origin: "鶯歌", Price: 420, Stock: 2, Tag: ""},
-			{SKU: "SKU-ACC-03", Name: "植鞣皮名片夾", Slug: "leather-card-holder", Description: "植鞣牛皮名片夾，使用越久越有味道。", Category: "accessories", Status: "active", Material: "牛皮", Origin: "台南", Price: 980, Stock: 0, Tag: "手工"},
-			{SKU: "SKU-STA-04", Name: "線裝筆記本", Slug: "thread-bound-notebook", Description: "傳統線裝筆記本，書寫流暢。", Category: "stationery", Status: "active", Material: "紙", Origin: "台灣", Price: 260, Stock: 88, Tag: ""},
-			{SKU: "SKU-APP-05", Name: "寬版工作褲", Slug: "wide-work-pants", Description: "寬版剪裁工作褲，舒適耐穿。", Category: "apparel", Status: "draft", Material: "棉", Origin: "台灣", Price: 2280, Stock: 11, Tag: "新品"},
-			{SKU: "SKU-HOME-06", Name: "手抄紙燈罩", Slug: "paper-lampshade", Description: "埔里手抄紙燈罩，溫暖柔光。", Category: "home", Status: "active", Material: "紙", Origin: "埔里", Price: 1540, Stock: 5, Tag: ""},
-		}
-		for _, p := range products {
-			if _, err := commerceService.CreateProduct(ctx, devPrincipal, p); err != nil {
-				log.Fatalf("seed product %s: %v", p.SKU, err)
-			}
-		}
-		log.Printf("seed: %d commerce products", len(products))
-	}
-
-	// Payment methods: there is no create service method, so seed via the
-	// store directly using PaymentMethod structs with generated IDs.
-	existingPMs, err := commerceStore.ListPaymentMethods(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(existingPMs) == 0 {
-		paymentMethods := []commerce.PaymentMethod{
-			{Method: "atm", ProviderLabel: "銀行ATM轉帳", Environment: "production", ReadinessStatus: "ready", Enabled: true},
-			{Method: "cod", ProviderLabel: "貨到付款", Environment: "production", ReadinessStatus: "ready", Enabled: true},
-			{Method: "credit_card", ProviderLabel: "信用卡（尚未啟用）", Environment: "sandbox", ReadinessStatus: "pending_setup", Enabled: false},
-		}
-		now := time.Now().Unix()
-		for i := range paymentMethods {
-			id, err := randomID()
-			if err != nil {
-				log.Fatalf("seed payment method: %v", err)
-			}
-			paymentMethods[i].ID = id
-			paymentMethods[i].UpdatedUnix = now
-			if err := commerceStore.UpsertPaymentMethod(ctx, paymentMethods[i]); err != nil {
-				log.Fatalf("seed payment method %s: %v", paymentMethods[i].Method, err)
-			}
-		}
-		log.Printf("seed: %d payment methods", len(paymentMethods))
 	}
 
 	// ----- Site content seed ------------------------------------------------
