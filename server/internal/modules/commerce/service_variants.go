@@ -54,7 +54,11 @@ func buildVariants(productID, productSKU string, inputs []ProductVariantInput, n
 }
 
 // resolveVariant looks up a purchasable variant by its SKU. Used at
-// checkout when an order item SKU does not match a base product.
+// checkout when an order item SKU does not match a base product. The
+// parent product must be in a customer-visible status — a draft parent's
+// variants are not for sale, matching findProductBySKU's published-only
+// lookup. ErrNotFound (not a status error) avoids leaking that the
+// variant exists.
 func (s Service) resolveVariant(ctx context.Context, sku string) (ProductVariant, Product, error) {
 	v, err := s.store.GetVariantBySKU(ctx, sku)
 	if err != nil {
@@ -63,6 +67,9 @@ func (s Service) resolveVariant(ctx context.Context, sku string) (ProductVariant
 	p, err := s.store.GetProduct(ctx, v.ProductID)
 	if err != nil {
 		return ProductVariant{}, Product{}, err
+	}
+	if !publicProductStatuses[p.Status] {
+		return ProductVariant{}, Product{}, ErrNotFound
 	}
 	return v, p, nil
 }

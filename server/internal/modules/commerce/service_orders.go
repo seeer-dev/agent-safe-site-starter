@@ -95,13 +95,18 @@ func (s Service) ListOrdersForMember(ctx context.Context, memberID string) ([]Or
 // maskCustomerPII redacts sensitive fields from an order before returning
 // it to a customer-facing endpoint. Phone is partially masked, email is
 // partially masked, and shipping address is masked to keep only the
-// city/district prefix. The access token is always cleared.
+// city/district prefix. The access token is always cleared. Timeline
+// notes are staff-authored operational remarks (e.g. fraud-review holds)
+// and are stripped — customers see status and timestamp only.
 func maskCustomerPII(o Order) Order {
 	o.Phone = maskPhone(o.Phone)
 	o.Email = maskEmail(o.Email)
 	o.ShippingAddress = maskShippingAddress(o.ShippingAddress)
 	o.AccessToken = ""     // never expose the plaintext access token
 	o.AccessTokenHash = "" // never expose the hash either
+	for i := range o.Timeline {
+		o.Timeline[i].Note = ""
+	}
 	return o
 }
 

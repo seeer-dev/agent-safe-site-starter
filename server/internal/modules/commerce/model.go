@@ -1,6 +1,7 @@
 package commerce
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 )
@@ -130,6 +131,44 @@ type ProductInput struct {
 	IsFeatured      bool                `json:"is_featured"`
 	ProductImages   []ProductImageInput `json:"product_images"`
 	Variants        []ProductVariantInput `json:"variants"`
+
+	// present records which top-level keys the JSON body actually
+	// contained. On update, an absent scalar means "keep the existing
+	// value" — a partial PUT must not silently zero price, stock, or
+	// flags. Programmatic callers that build the struct directly leave
+	// present nil, which has() treats as all-present (full-replacement
+	// semantics preserved for tests and tools).
+	present map[string]bool
+}
+
+// UnmarshalJSON decodes the payload with unknown-field rejection and
+// records which top-level keys were supplied. An explicit JSON null
+// counts as absent for scalar preservation purposes.
+func (in *ProductInput) UnmarshalJSON(data []byte) error {
+	type plain ProductInput
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode((*plain)(in)); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	in.present = make(map[string]bool, len(raw))
+	for k, v := range raw {
+		if string(v) != "null" {
+			in.present[k] = true
+		}
+	}
+	return nil
+}
+
+// has reports whether the caller supplied the named JSON field. A nil
+// presence map (struct built in code, not decoded from a body) means
+// every field counts as present.
+func (in ProductInput) has(field string) bool {
+	return in.present == nil || in.present[field]
 }
 
 // ProductFilter narrows product listings by status and/or category.

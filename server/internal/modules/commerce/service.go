@@ -117,6 +117,15 @@ var (
 	ErrReturnNotReceived = errors.New("order return status must be received before restock")
 )
 
+// publicProductStatuses mirrors the customer-visible set used by
+// ListPublishedProducts / GetProductBySlug. Anything outside this set
+// (draft) must not be purchasable through any path — including variants.
+var publicProductStatuses = map[string]bool{
+	"active":       true,
+	"low_stock":    true,
+	"out_of_stock": true,
+}
+
 // validProductStatuses is the closed set of product status values. draft and
 // active are operator-set; low_stock and out_of_stock are auto-derived.
 var validProductStatuses = map[string]bool{
@@ -394,8 +403,28 @@ func (s Service) UpdateProduct(ctx context.Context, principal auth.Principal, id
 			return Product{}, err
 		}
 	}
-	if in.Price < 0 || in.OriginalPrice < 0 || in.Stock < 0 {
+	// Merge semantics: fields absent from the JSON body preserve the
+	// existing value — a partial update must not silently zero price,
+	// stock, flags, or text (ProductInput.has). Fields present but empty
+	// apply their zero value explicitly.
+	price, originalPrice, stock := existing.Price, existing.OriginalPrice, existing.Stock
+	if in.has("price") {
+		price = in.Price
+	}
+	if in.has("original_price") {
+		originalPrice = in.OriginalPrice
+	}
+	if in.has("stock") {
+		stock = in.Stock
+	}
+	if price < 0 || originalPrice < 0 || stock < 0 {
 		return Product{}, fmt.Errorf("%w: price, original_price, and stock must be non-negative", ErrInvalidProductInput)
+	}
+	strField := func(key, value, existingValue string) string {
+		if in.has(key) {
+			return value
+		}
+		return existingValue
 	}
 	// ProductInput no longer has Image/Images fields. httpx.DecodeJSON
 	// uses DisallowUnknownFields, so any payload containing image or
@@ -410,21 +439,25 @@ func (s Service) UpdateProduct(ctx context.Context, principal auth.Principal, id
 		return Product{}, fmt.Errorf("%w: invalid product status %q", ErrInvalidProductInput, status)
 	}
 	if status != "draft" {
-		status = deriveProductStatus(status, in.Stock)
+		status = deriveProductStatus(status, stock)
 	}
 	category := defaultString(strings.TrimSpace(in.Category), existing.Category)
 	if err := validateCategory(category); err != nil {
 		return Product{}, err
 	}
 	productName := defaultString(strings.TrimSpace(in.Name), existing.Name)
+	isFeatured := existing.IsFeatured
+	if in.has("is_featured") {
+		isFeatured = in.IsFeatured
+	}
 	now := time.Now().Unix()
 	p := Product{
 		ID:              id,
 		SKU:             defaultString(strings.TrimSpace(in.SKU), existing.SKU),
 		Name:            productName,
 		Slug:            defaultString(strings.TrimSpace(in.Slug), existing.Slug),
-		Description:     in.Description,
-		LongDescription: in.LongDescription,
+		Description:     strField("description", in.Description, existing.Description),
+		LongDescription: strField("long_description", in.LongDescription, existing.LongDescription),
 		// Legacy flat image columns are always written empty — no
 		// legacy backfill. Public URLs are derived from product_images
 		// at response time via enrichProductWithImages.
@@ -432,15 +465,15 @@ func (s Service) UpdateProduct(ctx context.Context, principal auth.Principal, id
 		Images:        "[]",
 		Category:      category,
 		Status:        status,
-		Material:      in.Material,
-		Origin:        in.Origin,
-		Price:         in.Price,
-		OriginalPrice: in.OriginalPrice,
-		Stock:         in.Stock,
-		Tag:           in.Tag,
+		Material:      strField("material", in.Material, existing.Material),
+		Origin:        strField("origin", in.Origin, existing.Origin),
+		Price:         price,
+		OriginalPrice: originalPrice,
+		Stock:         stock,
+		Tag:           strField("tag", in.Tag, existing.Tag),
 		Rating:        existing.Rating,
 		ReviewsCount:  existing.ReviewsCount,
-		IsFeatured:    in.IsFeatured,
+		IsFeatured:    isFeatured,
 		SoldCount:     existing.SoldCount,
 		UpdatedUnix:   now,
 	}
