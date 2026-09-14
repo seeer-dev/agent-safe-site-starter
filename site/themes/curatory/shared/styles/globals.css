@@ -232,6 +232,16 @@
   box-shadow: 0 12px 32px -12px color-mix(in oklab, var(--ink, oklch(0.22 0.015 55)) 25%, transparent);
 }
 
+/* 無邊框商品卡：抬升與陰影只落在圖片容器，陰影貼著可見矩形走 */
+.lift-media {
+  transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.group:hover .lift-media,
+.group:focus-within .lift-media {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px -14px color-mix(in oklab, var(--ink, oklch(0.22 0.015 55)) 30%, transparent);
+}
+
 /* 文字漸層底線 */
 .link-underline {
   position: relative;

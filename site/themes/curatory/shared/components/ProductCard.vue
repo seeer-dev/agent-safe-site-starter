@@ -55,7 +55,7 @@ function handleQuickAdd(e: MouseEvent) {
 <template>
   <article
     v-reveal="{ delay: Math.min((index ?? 0) * 0.06, 0.36) }"
-    :class="cn('group lift cursor-pointer rounded-xl')"
+    :class="cn('group cursor-pointer')"
     role="link"
     tabindex="0"
     :aria-label="`查看商品 ${product.name}`"
@@ -63,7 +63,7 @@ function handleQuickAdd(e: MouseEvent) {
     @keydown.enter="openProduct"
   >
     <!-- 圖面 -->
-    <div class="relative overflow-hidden rounded-xl bg-muted/40">
+    <div class="lift-media relative overflow-hidden rounded-xl bg-muted/40">
       <FadeImage
         :src="image"
         :alt="product.name"

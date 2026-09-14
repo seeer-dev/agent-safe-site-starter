@@ -298,3 +298,14 @@ Browser verification (puppeteer, cache-busted):
 - Live closure: PATCH product status active->draft via admin API made
   `/api/products?featured=1` drop 5->4 and the featured rail re-rendered
   4 cards on reload — no re-render needed. Product restored to active.
+
+## Card hover refinement (2026-09-14)
+
+User feedback: the `.lift` shadow wrapped the whole product card
+including the invisible text region — looked like a floating slab on
+borderless product cards. Added `.lift-media` (same easing, shadow
+scoped to the image container, triggered via `.group:hover`) and moved
+ProductCard.vue + the static `product-card` partial to it. `.lift`
+stays unchanged for real cards that have borders/backgrounds (news
+cards). Verified: hover shadow now hugs the image's rounded rectangle,
+text stays grounded.

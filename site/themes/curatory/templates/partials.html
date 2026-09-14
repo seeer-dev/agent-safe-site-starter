@@ -136,9 +136,9 @@
 
 {{/* ─── 靜態商品卡（no-JS 基線；data-add-to-cart 由 bootstrap 全域掛鉤接管） ─── */}}
 {{define "product-card"}}
-<article class="group lift rounded-xl">
+<article class="group">
   <a href="/products/{{.Slug}}/" class="block" aria-label="查看商品 {{.Name}}">
-    <div class="relative overflow-hidden rounded-xl bg-muted/40">
+    <div class="lift-media relative overflow-hidden rounded-xl bg-muted/40">
       {{if .Image}}
       <img src="{{.Image}}" alt="{{.Name}}" loading="lazy" class="aspect-[4/5] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]">
       {{else}}
