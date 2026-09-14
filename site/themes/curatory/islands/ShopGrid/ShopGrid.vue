@@ -150,7 +150,7 @@ onUnmounted(() => {
     </div>
 
     <!-- 控制列（sticky） -->
-    <div class="sticky top-14 z-30 mt-6 border-y bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:top-16">
+    <div class="sticky top-16 z-30 mt-6 border-y bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div class="mx-auto flex w-full max-w-7xl flex-col gap-3 px-4 py-3 sm:px-6 lg:flex-row lg:items-center lg:px-8">
         <!-- 分類 chips：真實頁面導航（簾幕轉場） -->
         <div class="flex flex-1 gap-2 overflow-x-auto py-0.5 no-scrollbar">

@@ -309,3 +309,14 @@ ProductCard.vue + the static `product-card` partial to it. `.lift`
 stays unchanged for real cards that have borders/backgrounds (news
 cards). Verified: hover shadow now hugs the image's rounded rectangle,
 text stays grounded.
+
+## Sticky chrome fix (2026-09-14)
+
+Header never actually stuck: the island mount div wraps the header, so
+its sticky containing block was only 65px tall — it scrolled away with
+the page. Fixed by giving the chrome mount points
+(AnnouncementBar/SiteHeader) `display: contents` so sticky resolves
+against the page. Shop/category control bars normalized to `top-16`
+(the `top-14` mobile offset tucked 8px under the h-16 header).
+Verified at scrollY=700: header pinned top:0 h:65, controls pinned
+top:64 beneath it.

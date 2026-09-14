@@ -232,6 +232,13 @@
   box-shadow: 0 12px 32px -12px color-mix(in oklab, var(--ink, oklch(0.22 0.015 55)) 25%, transparent);
 }
 
+/* 島掛載點透明化：sticky 元素被單層 div 包住時 containing block 只有自身高度，
+   會完全失效。contents 讓 header/跑馬燈直接成為 body 的版面子節點。 */
+[data-vue-island="AnnouncementBar"],
+[data-vue-island="SiteHeader"] {
+  display: contents;
+}
+
 /* 無邊框商品卡：抬升與陰影只落在圖片容器，陰影貼著可見矩形走 */
 .lift-media {
   transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.45s cubic-bezier(0.22, 1, 0.36, 1);
