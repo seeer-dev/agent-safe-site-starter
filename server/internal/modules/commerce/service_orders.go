@@ -201,9 +201,10 @@ func (s Service) UpdateOrderStatusWithNote(ctx context.Context, principal auth.P
 	if err != nil {
 		return Order{}, err
 	}
-	// Best-effort lifecycle notification after the transition commits. A
-	// mail failure never rolls back the status change; every attempt is
+	// Best-effort lifecycle notification after the transition commits,
+	// dispatched off the request path (see service_checkout.go). A mail
+	// failure never rolls back the status change; every attempt is
 	// recorded in notification_logs.
-	s.notifyOrderEvent(ctx, updated, notificationCodeForStatus(newStatus))
+	go s.notifyOrderEvent(context.WithoutCancel(ctx), updated, notificationCodeForStatus(newStatus))
 	return updated, nil
 }

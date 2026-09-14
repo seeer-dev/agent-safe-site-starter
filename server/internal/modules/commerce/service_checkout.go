@@ -601,10 +601,13 @@ func (s Service) createOrder(ctx context.Context, in OrderInput, memberID string
 	}
 	o.Version = 1 // matches the DEFAULT 1 written by the store insert
 	hydrated := hydrateOrder(o)
-	// Best-effort order_placed notification after the commit. A mail
-	// failure never rolls back the order; every attempt is recorded in
-	// notification_logs.
-	s.notifyOrderEvent(ctx, hydrated, "order_placed")
+	// Best-effort order_placed notification after the commit, dispatched
+	// off the request path: a slow mail provider must not delay the
+	// checkout response. WithoutCancel keeps request-scoped values
+	// (trace/observability) while detaching from client disconnect. A
+	// mail failure never rolls back the order; every attempt is recorded
+	// in notification_logs.
+	go s.notifyOrderEvent(context.WithoutCancel(ctx), hydrated, "order_placed")
 	return hydrated, nil
 }
 

@@ -162,6 +162,7 @@ export interface OpsDef {
   publish?: string;
   approve?: string;
   restock?: string;
+  retry?: string;
 }
 
 export interface ResourceApiDef {
@@ -175,6 +176,7 @@ export interface ResourceApiDef {
   publish?: string; // POST path with {id} for publish action
   approve?: string; // POST path with {id} for approve action
   restock?: string; // POST path with {id} for per-item restock action
+  retry?: string; // POST path with {id} for re-delivery/retry action
 }
 
 export interface ResourceDef {

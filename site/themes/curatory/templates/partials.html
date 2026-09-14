@@ -14,6 +14,18 @@
 <title>{{if eq .Title .SiteName}}{{.SiteName}}{{else}}{{.Title}} · {{.SiteName}}{{end}}</title>
 {{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
 {{if .PublicSiteURL}}<link rel="canonical" href="{{.PublicSiteURL}}{{.PagePath}}">{{end}}
+{{/* Open Graph + Twitter card — 分享連結預覽 */}}
+<meta property="og:site_name" content="{{.SiteName}}">
+<meta property="og:type" content="{{with .OGType}}{{.}}{{else}}website{{end}}">
+<meta property="og:title" content="{{if eq .Title .SiteName}}{{.SiteName}}{{else}}{{.Title}} · {{.SiteName}}{{end}}">
+{{if .Description}}<meta property="og:description" content="{{.Description}}">{{end}}
+{{if .PublicSiteURL}}<meta property="og:url" content="{{.PublicSiteURL}}{{.PagePath}}">{{end}}
+{{if .OGImage}}<meta property="og:image" content="{{.OGImage}}">
+<meta property="og:image:alt" content="{{.Title}}">{{end}}
+<meta name="twitter:card" content="{{if .OGImage}}summary_large_image{{else}}summary{{end}}">
+<meta name="twitter:title" content="{{if eq .Title .SiteName}}{{.SiteName}}{{else}}{{.Title}} · {{.SiteName}}{{end}}">
+{{if .Description}}<meta name="twitter:description" content="{{.Description}}">{{end}}
+{{if .OGImage}}<meta name="twitter:image" content="{{.OGImage}}">{{end}}
 <link rel="stylesheet" href="/assets/islands/islands-{{.IslandsCSSHash}}.css">
 {{/* 預繪初始化（深色模式 + 轉場揭幕偵測）。CSP script-src 'self' 禁止 inline，
      故以外部檔同步載入。 */}}

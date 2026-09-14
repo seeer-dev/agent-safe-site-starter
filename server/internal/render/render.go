@@ -254,6 +254,8 @@ type chromeFields struct {
 	Title          string
 	Description    string
 	PagePath       string
+	OGType         string // og:type — "website" default, "product" on product pages
+	OGImage        string // absolute URL for og:image / twitter:image
 	FooterContent  []SiteContentData
 	CategoryList   []CategoryData
 	Settings       map[string]any
@@ -281,6 +283,7 @@ type productPageData struct {
 	chromeFields
 	Product ProductData
 	Related []ProductData
+	JSONLD  template.JS
 }
 
 type categoryPageData struct {
@@ -459,6 +462,9 @@ func (r Renderer) RenderSite(in Input) error {
 		if err := r.renderPagesTo(stagingDir, in); err != nil {
 			return fmt.Errorf("render static pages: %w", err)
 		}
+		if err := r.renderSEOFiles(stagingDir, in); err != nil {
+			return fmt.Errorf("render seo files: %w", err)
+		}
 		return nil
 	})
 }
@@ -466,19 +472,41 @@ func (r Renderer) RenderSite(in Input) error {
 // chrome returns a chromeFields populated with the shared values for
 // this render pass (identity, meta, footer, nav, settings, theme flags).
 func (r Renderer) chrome(in Input, islandsCSSHash, title, description, pagePath string) chromeFields {
+	base := strings.TrimRight(r.cfg.PublicSiteURL, "/")
 	return chromeFields{
 		SiteName:       r.cfg.SiteName,
-		PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
+		PublicSiteURL:  base,
 		APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
 		Title:          title,
 		Description:    description,
 		PagePath:       pagePath,
+		OGType:         "website",
+		OGImage:        absoluteURL(base, defaultOGImage),
 		FooterContent:  in.ContentBlocks,
 		CategoryList:   in.CategoryList,
 		Settings:       in.Settings,
 		DarkMode:       r.cfg.DarkMode,
 		IslandsCSSHash: islandsCSSHash,
 	}
+}
+
+// defaultOGImage is the site-wide sharing image. The curatory hero photo
+// doubles as the brand card when a page has no image of its own.
+const defaultOGImage = "/assets/images/hero.jpg"
+
+// absoluteURL resolves a (possibly relative) asset path against the
+// configured public site origin. Already-absolute URLs pass through.
+func absoluteURL(base, u string) string {
+	if u == "" || base == "" {
+		return u
+	}
+	if strings.HasPrefix(u, "http://") || strings.HasPrefix(u, "https://") {
+		return u
+	}
+	if strings.HasPrefix(u, "/") {
+		return base + u
+	}
+	return base + "/" + u
 }
 
 // renderToStaging creates a staging directory, runs the render fn, and
@@ -637,10 +665,16 @@ func (r Renderer) renderProductsTo(outputDir string, in Input) error {
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
+		ch := r.chrome(in, islandsCSSHash, p.Name, p.Description, "/products/"+p.Slug+"/")
+		ch.OGType = "product"
+		if p.Image != "" {
+			ch.OGImage = absoluteURL(ch.PublicSiteURL, p.Image)
+		}
 		if err := writeTemplate(filepath.Join(dir, "index.html"), tpl, productPageData{
-			chromeFields: r.chrome(in, islandsCSSHash, p.Name, p.Description, "/products/"+p.Slug+"/"),
+			chromeFields: ch,
 			Product:      p,
 			Related:      relatedProducts(p, in.ProductsByCategory),
+			JSONLD:       productJSONLD(ch, p),
 		}); err != nil {
 			return err
 		}
@@ -666,6 +700,51 @@ func relatedProducts(p ProductData, byCategory map[string][]ProductData) []Produ
 		}
 	}
 	return related
+}
+
+// productJSONLD builds the schema.org Product block embedded in the
+// product page. Marshal failures collapse to an empty value — the
+// template guards on it and the page renders without structured data
+// rather than failing the whole render.
+func productJSONLD(ch chromeFields, p ProductData) template.JS {
+	images := make([]string, 0, len(p.Images)+1)
+	if p.Image != "" {
+		images = append(images, absoluteURL(ch.PublicSiteURL, p.Image))
+	}
+	for _, img := range p.Images {
+		if img != p.Image {
+			images = append(images, absoluteURL(ch.PublicSiteURL, img))
+		}
+	}
+	availability := "https://schema.org/InStock"
+	if p.Stock <= 0 {
+		availability = "https://schema.org/OutOfStock"
+	}
+	ld := map[string]any{
+		"@context":    "https://schema.org",
+		"@type":       "Product",
+		"name":        p.Name,
+		"description": p.Description,
+		"brand":       map[string]any{"@type": "Brand", "name": ch.SiteName},
+		"offers": map[string]any{
+			"@type":         "Offer",
+			"priceCurrency": "TWD",
+			"price":         p.Price,
+			"availability":  availability,
+		},
+	}
+	if len(images) > 0 {
+		ld["image"] = images
+	}
+	if ch.PublicSiteURL != "" {
+		ld["url"] = ch.PublicSiteURL + "/products/" + p.Slug + "/"
+		ld["offers"].(map[string]any)["url"] = ld["url"]
+	}
+	raw, err := json.Marshal(ld)
+	if err != nil {
+		return ""
+	}
+	return template.JS(raw)
 }
 
 // RenderCategories renders a category listing page for each category key.
@@ -750,13 +829,16 @@ func (r Renderer) renderSiteContentTo(outputDir string, in Input) error {
 // and published store settings. StaticPage.Data is merged on top of
 // these keys (page-specific values win).
 func (r Renderer) chromeData(in Input) map[string]any {
+	base := strings.TrimRight(r.cfg.PublicSiteURL, "/")
 	return map[string]any{
 		"SiteName":       r.cfg.SiteName,
-		"PublicSiteURL":  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
+		"PublicSiteURL":  base,
 		"APIBase":        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
 		"Title":          r.cfg.SiteName,
 		"Description":    homeDescription(in.Settings),
 		"PagePath":       "/",
+		"OGType":         "website",
+		"OGImage":        absoluteURL(base, defaultOGImage),
 		"FooterContent":  in.ContentBlocks,
 		"DarkMode":       r.cfg.DarkMode,
 		"IslandsCSSHash": r.islandsCSSHash(),

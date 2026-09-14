@@ -1172,6 +1172,21 @@ func (h Handler) ListNotificationLogs(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"logs": logs})
 }
 
+// RetryNotificationLog re-sends a recorded notification attempt. The
+// retry lands as a new notification_logs row (original preserved).
+func (h Handler) RetryNotificationLog(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	if err := h.service.RetryNotificationLog(r.Context(), principal, r.PathValue("id")); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ----- Admin: dashboard stats -------------------------------------------------
 
 func (h Handler) GetAdminStats(w http.ResponseWriter, r *http.Request) {

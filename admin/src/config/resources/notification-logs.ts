@@ -6,11 +6,14 @@ export const notificationLogsResource: ResourceDef = {
   label: '通知日誌',
   desc: '通知發送與略過紀錄（唯讀）',
   pageSize: 30,
+  updateCap: 'twcommerce.admin',
   ops: {
     list: 'adminNotificationLogsList',
+    retry: 'adminNotificationLogRetry',
   },
   api: {
     list: '/admin/notification-logs',
+    retry: '/admin/notification-logs/{id}/retry',
   },
   rowMap: (raw: Record<string, any>) => ({
     ...raw,
@@ -27,6 +30,7 @@ export const notificationLogsResource: ResourceDef = {
   ],
   rowActions: [
     { k: 'detail', l: '明細', variant: 'sec', form: true },
+    { k: 'retry', l: '重試', op: 'adminNotificationLogRetry', cap: 'twcommerce.admin', showWhen: 'status=failed|skipped', confirm: '以此日誌記錄的收件人/主旨/內容重新寄送？重試會新增一筆日誌，原紀錄保留。', variant: 'sec' },
   ],
   filters: [
     { k: 'code', l: '事件', w: 'select', opts: [['', '全部'], ['order_placed', '訂單成立'], ['order_paid', '已付款'], ['order_shipped', '已出貨'], ['order_completed', '已完成'], ['order_cancelled', '已取消']] },

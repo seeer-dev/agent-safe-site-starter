@@ -219,6 +219,57 @@ func (s Service) ListNotificationLogs(ctx context.Context, principal auth.Princi
 	return s.store.ListNotificationLogs(ctx, filter)
 }
 
+// RetryNotificationLog re-delivers a recorded notification using the
+// stored recipient/subject/body. The original row is preserved; the
+// retry attempt lands as a NEW log row so the admin trail shows every
+// try. Returns the send error (after recording it) so the admin UI can
+// surface the failure.
+func (s Service) RetryNotificationLog(ctx context.Context, principal auth.Principal, id string) error {
+	if !auth.Can(principal, "twcommerce.admin") {
+		return ErrForbidden
+	}
+	orig, err := s.store.GetNotificationLog(ctx, id)
+	if err != nil {
+		return err
+	}
+	now := time.Now().Unix()
+	attempt := NotificationLog{
+		Code:        orig.Code,
+		OrderID:     orig.OrderID,
+		Recipient:   orig.Recipient,
+		Subject:     orig.Subject,
+		Body:        orig.Body,
+		Provider:    "mail",
+		Status:      "skipped",
+		CreatedUnix: now,
+	}
+	attempt.ID, err = randomID()
+	if err != nil {
+		return err
+	}
+	if orig.Recipient == "" || orig.Subject == "" {
+		attempt.Error = "missing recipient or rendered content"
+		return s.store.InsertNotificationLog(ctx, attempt)
+	}
+	if s.notifier == nil {
+		attempt.Error = "no sender configured"
+		return s.store.InsertNotificationLog(ctx, attempt)
+	}
+	sendErr := s.notifier.Send(ctx, mailplatform.Message{
+		To:      []string{orig.Recipient},
+		Subject: orig.Subject,
+		Text:    orig.Body,
+	})
+	if sendErr != nil {
+		attempt.Status = "failed"
+		attempt.Error = sendErr.Error()
+		_ = s.store.InsertNotificationLog(ctx, attempt)
+		return sendErr
+	}
+	attempt.Status = "sent"
+	return s.store.InsertNotificationLog(ctx, attempt)
+}
+
 // AdminStats is the dashboard summary for the admin home view.
 type AdminStats struct {
 	Products        int `json:"products"`

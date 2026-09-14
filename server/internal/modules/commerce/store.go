@@ -127,6 +127,7 @@ type Store interface {
 	UpsertNotificationTemplate(ctx context.Context, t NotificationTemplate) error
 	DeleteNotificationTemplate(ctx context.Context, id string) error
 	InsertNotificationLog(ctx context.Context, l NotificationLog) error
+	GetNotificationLog(ctx context.Context, id string) (NotificationLog, error)
 	ListNotificationLogs(ctx context.Context, filter NotificationLogFilter) ([]NotificationLog, error)
 
 	// Promos

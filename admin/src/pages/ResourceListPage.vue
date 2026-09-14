@@ -645,6 +645,7 @@ function resolveActionEndpoint(a: RowAction | BulkAction): { method: 'PATCH' | '
   if (a.op === r.ops.publish && r.api.publish) return { method: 'POST', path: r.api.publish }
   if (a.op === r.ops.approve && r.api.approve) return { method: 'POST', path: r.api.approve }
   if (a.op === r.ops.restock && r.api.restock) return { method: 'POST', path: r.api.restock }
+  if (a.op === r.ops.retry && r.api.retry) return { method: 'POST', path: r.api.retry }
   if (a.op === r.ops.del && r.api.delete) return { method: 'DELETE', path: r.api.delete }
   if (a.op === r.ops.update && r.api.update) return { method: 'PUT', path: r.api.update }
   if (a.op === r.ops.create && r.api.create) return { method: 'POST', path: r.api.create }

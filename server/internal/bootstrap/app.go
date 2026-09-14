@@ -227,6 +227,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("PUT /api/admin/notification-templates/{id}", commerceHandler.UpdateNotificationTemplate)
 	mux.HandleFunc("DELETE /api/admin/notification-templates/{id}", commerceHandler.DeleteNotificationTemplate)
 	mux.HandleFunc("GET /api/admin/notification-logs", commerceHandler.ListNotificationLogs)
+	mux.HandleFunc("POST /api/admin/notification-logs/{id}/retry", commerceHandler.RetryNotificationLog)
 
 	// Admin content endpoints — announcement/article management
 	mux.HandleFunc("GET /api/admin/articles", contentHandler.ListAll)

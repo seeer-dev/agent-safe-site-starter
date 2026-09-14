@@ -2,6 +2,9 @@
 <html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
 <head>
 {{template "doc-head" .}}
+{{if .JSONLD}}{{/* 商品結構化資料（schema.org Product）。ld+json 是資料區塊，
+    瀏覽器不執行；CSP script-src 管的是執行而非 DOM 存在性，爬蟲可讀。 */}}
+<script type="application/ld+json">{{.JSONLD}}</script>{{end}}
 </head>
 <body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
 {{template "chrome-top" .}}

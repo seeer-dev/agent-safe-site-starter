@@ -89,6 +89,21 @@ func (s SQLStore) InsertNotificationLog(ctx context.Context, l NotificationLog) 
 	return nil
 }
 
+func (s SQLStore) GetNotificationLog(ctx context.Context, id string) (NotificationLog, error) {
+	query := database.Bind(s.dialect, `SELECT id, code, order_id, recipient, subject, body, status, provider, error, created_unix
+		FROM notification_logs WHERE id = ? LIMIT 1`)
+	var l NotificationLog
+	err := s.db.QueryRowContext(ctx, query, id).Scan(
+		&l.ID, &l.Code, &l.OrderID, &l.Recipient, &l.Subject, &l.Body, &l.Status, &l.Provider, &l.Error, &l.CreatedUnix)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return NotificationLog{}, ErrNotFound
+		}
+		return NotificationLog{}, err
+	}
+	return l, nil
+}
+
 func (s SQLStore) ListNotificationLogs(ctx context.Context, filter NotificationLogFilter) ([]NotificationLog, error) {
 	query := `SELECT id, code, order_id, recipient, subject, body, status, provider, error, created_unix FROM notification_logs`
 	var args []any
