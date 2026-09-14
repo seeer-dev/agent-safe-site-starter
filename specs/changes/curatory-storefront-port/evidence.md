@@ -332,3 +332,14 @@ top:64 beneath it.
   the free-shipping bar + subtotal + 前往結帳/查看購物車 footer pins to
   the drawer bottom. Verified: footer bottom == viewport height, toast
   container at top:16 centered.
+
+## Smart transition triggering (2026-09-14)
+
+Ported the reference's `shouldPlayMask` that was missing from the MPA
+port: same-view parameter changes (shop<->category, sort/search links,
+track lookups, cart/checkout/order internal links) now navigate
+instantly without the full-page curtain. Cross-view navigations and
+product->product still play cover->reveal. View classification mirrors
+reference Route names; /categories/* maps to the shop view (cat param).
+Verified: /shop/ -> /categories/tableware/ navigated instantly with no
+flag/reveal; product card click still triggered curtain-cover + flag.

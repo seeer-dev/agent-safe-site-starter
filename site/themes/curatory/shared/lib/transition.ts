@@ -10,9 +10,47 @@
 
 const FLAG = 'curatory-transition'
 
+// ── 智慧觸發（對齊 reference page-transition.tsx shouldPlayMask）──
+// 同視圖的參數變化（shop 換分類/排序、track 查單、cart→cart 等）
+// 直接導航不播全幕簾幕，避免打斷操作節奏；跨視圖與 product→product
+// （內容全變）仍播轉場。
+
+type ViewName =
+  | 'home' | 'shop' | 'product' | 'news' | 'newsDetail'
+  | 'about' | 'cart' | 'checkout' | 'order' | 'track' | 'other'
+
+function viewOf(pathname: string): ViewName {
+  const p = pathname.replace(/\/+$/, '') || '/'
+  if (p === '/') return 'home'
+  // 分類頁在 reference 是 shop 視圖的 cat 參數 → 同視圖
+  if (p === '/shop' || p.startsWith('/categories/')) return 'shop'
+  if (p.startsWith('/products/')) return 'product'
+  if (p === '/news') return 'news'
+  if (p.startsWith('/news/')) return 'newsDetail'
+  if (p === '/about') return 'about'
+  if (p === '/cart') return 'cart'
+  if (p === '/checkout') return 'checkout'
+  if (p.startsWith('/order')) return 'order'
+  if (p === '/track') return 'track'
+  return 'other'
+}
+
+const PARAM_ONLY_VIEWS = new Set<ViewName>(['shop', 'news', 'cart', 'track', 'checkout', 'order'])
+
+function shouldPlayMask(from: ViewName, to: ViewName): boolean {
+  if (from !== to) return true
+  if (from === 'product') return true
+  return !PARAM_ONLY_VIEWS.has(from)
+}
+
 /** 本站內部導航（帶簾幕轉場）。path 例：'/shop/'、'/products/xxx/' */
 export function navigate(path: string) {
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const sameView = !shouldPlayMask(
+    viewOf(window.location.pathname),
+    viewOf(new URL(path, window.location.href).pathname),
+  )
+  if (reduced || sameView) {
     window.location.href = path
     return
   }
