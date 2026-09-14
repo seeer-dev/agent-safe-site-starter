@@ -10,7 +10,7 @@ import (
 // ----- Payment methods ------------------------------------------------------
 
 func (s SQLStore) ListPaymentMethods(ctx context.Context) ([]PaymentMethod, error) {
-	query := database.Bind(s.dialect, `SELECT id, method, provider_label, environment, readiness_status, enabled, updated_unix FROM payment_methods ORDER BY updated_unix DESC`)
+	query := database.Bind(s.dialect, `SELECT id, method, provider_label, environment, readiness_status, enabled, fee, updated_unix FROM payment_methods ORDER BY updated_unix DESC`)
 	rows, err := s.db.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
@@ -19,7 +19,7 @@ func (s SQLStore) ListPaymentMethods(ctx context.Context) ([]PaymentMethod, erro
 	var out []PaymentMethod
 	for rows.Next() {
 		var pm PaymentMethod
-		if err := rows.Scan(&pm.ID, &pm.Method, &pm.ProviderLabel, &pm.Environment, &pm.ReadinessStatus, &pm.Enabled, &pm.UpdatedUnix); err != nil {
+		if err := rows.Scan(&pm.ID, &pm.Method, &pm.ProviderLabel, &pm.Environment, &pm.ReadinessStatus, &pm.Enabled, &pm.Fee, &pm.UpdatedUnix); err != nil {
 			return nil, err
 		}
 		out = append(out, pm)
@@ -29,17 +29,18 @@ func (s SQLStore) ListPaymentMethods(ctx context.Context) ([]PaymentMethod, erro
 
 func (s SQLStore) UpsertPaymentMethod(ctx context.Context, pm PaymentMethod) error {
 	query := database.Bind(s.dialect, `INSERT INTO payment_methods
-		(id, method, provider_label, environment, readiness_status, enabled, updated_unix)
-		VALUES (?, ?, ?, ?, ?, ?, ?)
+		(id, method, provider_label, environment, readiness_status, enabled, fee, updated_unix)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			method = excluded.method,
 			provider_label = excluded.provider_label,
 			environment = excluded.environment,
 			readiness_status = excluded.readiness_status,
 			enabled = excluded.enabled,
+			fee = excluded.fee,
 			updated_unix = excluded.updated_unix`)
 	_, err := s.db.ExecContext(ctx, query,
-		pm.ID, pm.Method, pm.ProviderLabel, pm.Environment, pm.ReadinessStatus, pm.Enabled, pm.UpdatedUnix)
+		pm.ID, pm.Method, pm.ProviderLabel, pm.Environment, pm.ReadinessStatus, pm.Enabled, pm.Fee, pm.UpdatedUnix)
 	if err != nil {
 		return fmt.Errorf("upsert payment method: %w", err)
 	}

@@ -3,6 +3,7 @@ package sitecontent
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -60,6 +61,12 @@ type Store interface {
 	// row. Returns ErrNotFound if the row does not exist, ErrConflict
 	// if the row exists but is no longer a draft (was published).
 	DeleteDraftIfStillDraft(ctx context.Context, id string) error
+	// Store-settings methods operate on the governed single-row
+	// store_settings record (draft_json -> published_json isolation).
+	GetStoreSettings(ctx context.Context) (StoreSettings, error)
+	GetPublishedStoreSettings(ctx context.Context) (json.RawMessage, error)
+	UpdateStoreSettingsDraft(ctx context.Context, in StoreSettingsInput) (StoreSettings, error)
+	PublishStoreSettings(ctx context.Context, expectedVersion int) (StoreSettings, error)
 }
 
 type SQLStore struct {

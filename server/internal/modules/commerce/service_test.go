@@ -818,7 +818,7 @@ func TestListPublishedProductsIncludesLowAndOutOfStock(t *testing.T) {
 	seedProduct(t, store, Product{ID: "p-out", SKU: "SKU-O", Name: "Out", Slug: "out", Status: "out_of_stock", Stock: 0, Price: 100, Category: "apparel"})
 	seedProduct(t, store, Product{ID: "p-draft", SKU: "SKU-D", Name: "Draft", Slug: "draft", Status: "draft", Stock: 10, Price: 100, Category: "apparel"})
 
-	products, err := svc.ListPublishedProducts(context.Background())
+	products, err := svc.ListPublishedProducts(context.Background(), ProductFilter{})
 	if err != nil {
 		t.Fatalf("ListPublishedProducts: %v", err)
 	}

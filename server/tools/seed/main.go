@@ -32,7 +32,7 @@ func main() {
 		return
 	}
 	service := content.NewService(store)
-	_, err = service.Publish(ctx, auth.Principal{UserID: "seed", Role: "admin"}, content.UpsertInput{
+	_, err = service.Publish(ctx, auth.Principal{UserID: "seed", Role: "admin", Capabilities: []string{"content.publish"}}, content.UpsertInput{
 		Slug:      "hello-starter",
 		Title:     "Hello from the starter",
 		Excerpt:   "This article came from SQLite and was rendered into static HTML.",

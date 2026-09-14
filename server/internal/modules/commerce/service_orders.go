@@ -174,6 +174,16 @@ func (s Service) UpdateOrderStatusWithNote(ctx context.Context, principal auth.P
 			return Order{}, err
 		}
 	}
+	// soldOut credits sold_count when the order reaches a fulfilled state
+	// (delivered or completed). Both transitions are terminal-forward so
+	// an order is counted exactly once.
+	var soldOut []OrderItem
+	if newStatus == "delivered" || newStatus == "completed" {
+		soldOut, err = unmarshalItems(existing.ItemsJSON)
+		if err != nil {
+			return Order{}, err
+		}
+	}
 
 	note = strings.TrimSpace(note)
 	timeline, err := appendTimeline(existing.TimelineJSON, newStatus, note, now)
@@ -184,8 +194,16 @@ func (s Service) UpdateOrderStatusWithNote(ctx context.Context, principal auth.P
 	if err != nil {
 		return Order{}, err
 	}
-	if err := s.store.TransitionOrderStatus(ctx, id, expectedVersion, newStatus, timeline, now, restock, event); err != nil {
+	if err := s.store.TransitionOrderStatus(ctx, id, expectedVersion, newStatus, timeline, now, restock, soldOut, event); err != nil {
 		return Order{}, err
 	}
-	return s.GetOrder(ctx, id)
+	updated, err := s.GetOrder(ctx, id)
+	if err != nil {
+		return Order{}, err
+	}
+	// Best-effort lifecycle notification after the transition commits. A
+	// mail failure never rolls back the status change; every attempt is
+	// recorded in notification_logs.
+	s.notifyOrderEvent(ctx, updated, notificationCodeForStatus(newStatus))
+	return updated, nil
 }

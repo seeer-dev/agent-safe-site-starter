@@ -14,6 +14,13 @@ type fakeStore struct {
 func newFakeStore() *fakeStore { return &fakeStore{bySlug: map[string]Article{}} }
 
 func (f *fakeStore) ListPublished(context.Context) ([]Article, error) { return nil, nil }
+func (f *fakeStore) ListAll(context.Context) ([]Article, error) {
+	out := make([]Article, 0, len(f.bySlug))
+	for _, a := range f.bySlug {
+		out = append(out, a)
+	}
+	return out, nil
+}
 func (f *fakeStore) GetBySlug(_ context.Context, slug string) (Article, error) {
 	a, ok := f.bySlug[slug]
 	if !ok {

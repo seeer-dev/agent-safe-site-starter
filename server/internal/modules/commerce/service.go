@@ -132,7 +132,8 @@ var orderTransitions = map[string]map[string]bool{
 	"pending":    {"processing": true, "cancelled": true},
 	"processing": {"shipped": true, "cancelled": true},
 	"shipped":    {"delivered": true},
-	"delivered":  {},
+	"delivered":  {"completed": true},
+	"completed":  {},
 	"cancelled":  {},
 }
 
@@ -161,9 +162,10 @@ var returnTransitions = map[string]map[string]bool{
 // from context; callers pass it explicitly so capability checks stay visible.
 type Service struct {
 	store         Store
-	mediaVerifier MediaVerifier // nil if not wired — product image association is rejected
-	publicBaseURL string        // R2 public base URL for deriving image URLs
-	ecpay         *ECPayConfig  // nil when ECPay is not configured
+	mediaVerifier MediaVerifier      // nil if not wired — product image association is rejected
+	publicBaseURL string             // R2 public base URL for deriving image URLs
+	ecpay         *ECPayConfig       // nil when ECPay is not configured
+	notifier      NotificationSender // nil when not wired — notifications logged as skipped
 }
 
 // NewService constructs a Service backed by the given Store.
@@ -198,8 +200,8 @@ func (s Service) ListProducts(ctx context.Context, filter ProductFilter) ([]Prod
 	return s.enrichProductsListWithImages(ctx, products, false)
 }
 
-func (s Service) ListPublishedProducts(ctx context.Context) ([]Product, error) {
-	products, err := s.store.ListPublishedProducts(ctx)
+func (s Service) ListPublishedProducts(ctx context.Context, filter ProductFilter) ([]Product, error) {
+	products, err := s.store.ListPublishedProducts(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -350,6 +352,7 @@ func (s Service) CreateProduct(ctx context.Context, principal auth.Principal, in
 		OriginalPrice:   in.OriginalPrice,
 		Stock:           in.Stock,
 		Tag:             in.Tag,
+		IsFeatured:      in.IsFeatured,
 		UpdatedUnix:     now,
 	}
 	// Set IDs and timestamps on product images.
@@ -362,10 +365,18 @@ func (s Service) CreateProduct(ctx context.Context, principal auth.Principal, in
 		productImages[i].ProductID = id
 		productImages[i].CreatedUnix = now
 	}
+	variants, err := buildVariants(id, p.SKU, in.Variants, now)
+	if err != nil {
+		return Product{}, err
+	}
 	if err := s.store.UpsertProductWithImages(ctx, p, productImages); err != nil {
 		return Product{}, err
 	}
+	if err := s.store.ReplaceProductVariants(ctx, id, variants); err != nil {
+		return Product{}, err
+	}
 	p.ProductImages = productImages
+	p.Variants = variants
 	return p, nil
 }
 
@@ -429,6 +440,8 @@ func (s Service) UpdateProduct(ctx context.Context, principal auth.Principal, id
 		Tag:           in.Tag,
 		Rating:        existing.Rating,
 		ReviewsCount:  existing.ReviewsCount,
+		IsFeatured:    in.IsFeatured,
+		SoldCount:     existing.SoldCount,
 		UpdatedUnix:   now,
 	}
 
@@ -479,6 +492,25 @@ func (s Service) UpdateProduct(ctx context.Context, principal auth.Principal, id
 		}
 	}
 	p.ProductImages = productImages
+
+	// Handle variants replacement. Nil in.Variants preserves existing
+	// rows (field updates without touching options); non-nil replaces.
+	if in.Variants != nil {
+		variants, err := buildVariants(id, p.SKU, in.Variants, now)
+		if err != nil {
+			return Product{}, err
+		}
+		if err := s.store.ReplaceProductVariants(ctx, id, variants); err != nil {
+			return Product{}, err
+		}
+		p.Variants = variants
+	} else {
+		variants, err := s.store.ListProductVariants(ctx, id)
+		if err != nil {
+			return Product{}, fmt.Errorf("load product variants: %w", err)
+		}
+		p.Variants = variants
+	}
 	return p, nil
 }
 
@@ -621,6 +653,14 @@ func (s Service) enrichProductWithImages(ctx context.Context, p Product, deriveU
 		return p, fmt.Errorf("load product images: %w", err)
 	}
 	p.ProductImages = imgs
+	variants, err := s.store.ListProductVariants(ctx, p.ID)
+	if err != nil {
+		return p, fmt.Errorf("load product variants: %w", err)
+	}
+	if variants == nil {
+		variants = []ProductVariant{}
+	}
+	p.Variants = variants
 	// Always clear legacy flat columns. No legacy backfill — only
 	// verified product_images are authority for public URLs.
 	p.Image = ""
@@ -788,7 +828,7 @@ func (s Service) UpdateMemberStatus(ctx context.Context, principal auth.Principa
 func (s Service) findProductBySKU(ctx context.Context, sku string) (Product, error) {
 	// The schema keys products by id and slug; sku is unique but has no
 	// dedicated lookup. List and filter in-memory for the starter profile.
-	products, err := s.store.ListPublishedProducts(ctx)
+	products, err := s.store.ListPublishedProducts(ctx, ProductFilter{})
 	if err != nil {
 		return Product{}, err
 	}
@@ -1022,6 +1062,15 @@ func computeRequestFingerprint(in OrderInput, memberID string) string {
 		ShippingMethod  string    `json:"shipping_method"`
 		PaymentMethod   string    `json:"payment_method"`
 		PromoCode       string    `json:"promo_code"`
+		RecipientName   string    `json:"recipient_name"`
+		RecipientPhone  string    `json:"recipient_phone"`
+		City            string    `json:"city"`
+		District        string    `json:"district"`
+		CVSStoreName    string    `json:"cvs_store_name"`
+		CVSStoreAddress string    `json:"cvs_store_address"`
+		InvoiceType     string    `json:"invoice_type"`
+		InvoiceTaxID    string    `json:"invoice_tax_id"`
+		BuyerNote       string    `json:"buyer_note"`
 		MemberID        string    `json:"member_id"`
 		Items           []itemKey `json:"items"`
 	}
@@ -1034,6 +1083,15 @@ func computeRequestFingerprint(in OrderInput, memberID string) string {
 		ShippingMethod:  strings.TrimSpace(in.ShippingMethod),
 		PaymentMethod:   strings.TrimSpace(in.PaymentMethod),
 		PromoCode:       strings.TrimSpace(in.PromoCode),
+		RecipientName:   strings.TrimSpace(in.RecipientName),
+		RecipientPhone:  strings.TrimSpace(in.RecipientPhone),
+		City:            strings.TrimSpace(in.City),
+		District:        strings.TrimSpace(in.District),
+		CVSStoreName:    strings.TrimSpace(in.CVSStoreName),
+		CVSStoreAddress: strings.TrimSpace(in.CVSStoreAddress),
+		InvoiceType:     strings.TrimSpace(in.InvoiceType),
+		InvoiceTaxID:    strings.TrimSpace(in.InvoiceTaxID),
+		BuyerNote:       strings.TrimSpace(in.BuyerNote),
 		MemberID:        memberID,
 		Items:           items,
 	}
@@ -1107,5 +1165,14 @@ func samePayloadLegacy(existing Order, in OrderInput, memberID string) bool {
 		existing.ShippingAddress == strings.TrimSpace(in.ShippingAddress) &&
 		existing.ShippingMethod == strings.TrimSpace(in.ShippingMethod) &&
 		existing.PaymentMethod == strings.TrimSpace(in.PaymentMethod) &&
+		existing.RecipientName == strings.TrimSpace(in.RecipientName) &&
+		existing.RecipientPhone == strings.TrimSpace(in.RecipientPhone) &&
+		existing.City == strings.TrimSpace(in.City) &&
+		existing.District == strings.TrimSpace(in.District) &&
+		existing.CVSStoreName == strings.TrimSpace(in.CVSStoreName) &&
+		existing.CVSStoreAddress == strings.TrimSpace(in.CVSStoreAddress) &&
+		existing.InvoiceType == strings.TrimSpace(in.InvoiceType) &&
+		existing.InvoiceTaxID == strings.TrimSpace(in.InvoiceTaxID) &&
+		existing.BuyerNote == strings.TrimSpace(in.BuyerNote) &&
 		existing.MemberID == memberID
 }

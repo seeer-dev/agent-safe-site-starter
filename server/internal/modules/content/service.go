@@ -30,6 +30,15 @@ func (s Service) ListPublished(ctx context.Context) ([]Article, error) {
 	return s.store.ListPublished(ctx)
 }
 
+// ListAll returns every article regardless of publish state. Used by
+// admin announcement management; the public surface uses ListPublished.
+func (s Service) ListAll(ctx context.Context, principal auth.Principal) ([]Article, error) {
+	if !auth.Can(principal, "content.publish") {
+		return nil, ErrForbidden
+	}
+	return s.store.ListAll(ctx)
+}
+
 func (s Service) GetBySlug(ctx context.Context, slug string) (Article, error) {
 	return s.store.GetBySlug(ctx, slug)
 }
@@ -67,7 +76,12 @@ func (s Service) Publish(ctx context.Context, principal auth.Principal, in Upser
 		Excerpt:     strings.TrimSpace(in.Excerpt),
 		BodyHTML:    in.BodyHTML,
 		Published:   in.Published,
+		Pinned:      in.Pinned,
+		PublishedAt: in.PublishedAt,
 		UpdatedUnix: time.Now().Unix(),
+	}
+	if a.Published && a.PublishedAt == 0 {
+		a.PublishedAt = a.UpdatedUnix
 	}
 	if err := s.store.Upsert(ctx, a); err != nil {
 		return Article{}, err

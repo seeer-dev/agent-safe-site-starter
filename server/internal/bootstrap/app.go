@@ -92,7 +92,8 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	commerceStore := commerce.NewSQLStore(db, dialect)
 	commerceService := commerce.NewService(commerceStore).
 		WithMediaVerifier(mediaVerifierAdapter{registry: mediaRegistry}).
-		WithPublicBaseURL(cfg.R2PublicBaseURL)
+		WithPublicBaseURL(cfg.R2PublicBaseURL).
+		WithNotifier(mailer)
 	if cfg.ECPayEnabled() {
 		ecpayConfig, err := commerce.NewECPayConfig(cfg.ECPayEnvironment, cfg.PublicAPIBase, cfg.PublicSiteURL, cfg.ECPayMerchantID, cfg.ECPayHashKey, cfg.ECPayHashIV)
 		if err != nil {
@@ -141,9 +142,18 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	// Admin content endpoints
 	mux.HandleFunc("POST /api/admin/articles", contentHandler.Publish)
 
+	// Storefront bootstrap: one round trip for settings, categories,
+	// site-content blocks, and customer-usable payment/shipping methods.
+	storefrontHandler := newStorefrontHandler(commerceService, sitecontent.NewService(siteContentStore))
+	mux.HandleFunc("GET /api/storefront/bootstrap", storefrontHandler.Get)
+
 	// Public commerce endpoints (no auth)
 	mux.HandleFunc("GET /api/products", commerceHandler.ListPublishedProducts)
 	mux.HandleFunc("GET /api/products/{slug}", commerceHandler.GetProductBySlug)
+	mux.HandleFunc("GET /api/categories", commerceHandler.ListPublicCategories)
+	mux.HandleFunc("GET /api/products/{slug}/comments", commerceHandler.ListProductComments)
+	mux.HandleFunc("POST /api/products/{slug}/comments", commerceHandler.SubmitProductComment)
+	mux.HandleFunc("POST /api/coupons/validate", commerceHandler.ValidateCoupon)
 	mux.HandleFunc("GET /api/shipping-methods", commerceHandler.ListPublicShippingMethods)
 	mux.HandleFunc("GET /api/payment-methods", commerceHandler.ListPublicPaymentMethods)
 	mux.HandleFunc("POST /api/quote", commerceHandler.Quote)
@@ -158,6 +168,9 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 
 	// Public site content endpoint (no auth)
 	mux.HandleFunc("GET /api/site-content/published", siteContentHandler.ListPublished)
+
+	// Admin commerce endpoints — dashboard stats
+	mux.HandleFunc("GET /api/admin/stats", commerceHandler.GetAdminStats)
 
 	// Admin commerce endpoints — products
 	mux.HandleFunc("GET /api/admin/products", commerceHandler.ListProducts)
@@ -194,6 +207,31 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("GET /api/admin/shipping-methods", commerceHandler.ListShippingMethods)
 	mux.HandleFunc("POST /api/admin/shipping-methods", commerceHandler.CreateShippingMethod)
 	mux.HandleFunc("PUT /api/admin/shipping-methods/{id}", commerceHandler.UpdateShippingMethod)
+
+	// Admin commerce endpoints — categories
+	mux.HandleFunc("GET /api/admin/categories", commerceHandler.ListCategories)
+	mux.HandleFunc("POST /api/admin/categories", commerceHandler.CreateCategory)
+	mux.HandleFunc("PUT /api/admin/categories/{id}", commerceHandler.UpdateCategory)
+	mux.HandleFunc("DELETE /api/admin/categories/{id}", commerceHandler.DeleteCategory)
+
+	// Admin commerce endpoints — comment moderation
+	mux.HandleFunc("GET /api/admin/comments", commerceHandler.ListComments)
+	mux.HandleFunc("PATCH /api/admin/comments/{id}", commerceHandler.ModerateComment)
+
+	// Admin commerce endpoints — notification templates and delivery logs
+	mux.HandleFunc("GET /api/admin/notification-templates", commerceHandler.ListNotificationTemplates)
+	mux.HandleFunc("POST /api/admin/notification-templates", commerceHandler.CreateNotificationTemplate)
+	mux.HandleFunc("PUT /api/admin/notification-templates/{id}", commerceHandler.UpdateNotificationTemplate)
+	mux.HandleFunc("DELETE /api/admin/notification-templates/{id}", commerceHandler.DeleteNotificationTemplate)
+	mux.HandleFunc("GET /api/admin/notification-logs", commerceHandler.ListNotificationLogs)
+
+	// Admin content endpoints — announcement/article management
+	mux.HandleFunc("GET /api/admin/articles", contentHandler.ListAll)
+
+	// Admin store settings — governed single-row draft/publish record
+	mux.HandleFunc("GET /api/admin/store-settings", siteContentHandler.GetStoreSettings)
+	mux.HandleFunc("PUT /api/admin/store-settings", siteContentHandler.UpdateStoreSettingsDraft)
+	mux.HandleFunc("POST /api/admin/store-settings/publish", siteContentHandler.PublishStoreSettings)
 
 	// Admin site content endpoints. Create/update only save draft. Approve
 	// records an approval for the current draft version (content.approve).

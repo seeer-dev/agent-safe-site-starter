@@ -110,7 +110,14 @@ func toAdminProductListResponse(products []Product) []adminProductResponse {
 // ----- Public endpoints (no auth) -------------------------------------------
 
 func (h Handler) ListPublishedProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := h.service.ListPublishedProducts(r.Context())
+	q := r.URL.Query()
+	filter := ProductFilter{
+		Category: q.Get("category"),
+		Featured: q.Get("featured") == "1" || q.Get("featured") == "true",
+		Query:    q.Get("q"),
+		Sort:     q.Get("sort"),
+	}
+	products, err := h.service.ListPublishedProducts(r.Context(), filter)
 	if err != nil {
 		if errors.Is(err, ErrMediaURLUnavailable) {
 			httpx.Error(w, http.StatusServiceUnavailable, "media public URL is not configured")
@@ -837,6 +844,307 @@ func (h Handler) UpdateShippingMethod(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, m)
+}
+
+// ----- Public: categories, comments, coupons --------------------------------
+
+// ListPublicCategories returns active categories for storefront
+// navigation and filters.
+func (h Handler) ListPublicCategories(w http.ResponseWriter, r *http.Request) {
+	categories, err := h.service.ListActiveCategories(r.Context())
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "failed to list categories")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"categories": categories})
+}
+
+// ListProductComments returns approved comments for the product
+// identified by slug. A missing product is 404.
+func (h Handler) ListProductComments(w http.ResponseWriter, r *http.Request) {
+	product, err := h.service.GetProductBySlug(r.Context(), r.PathValue("slug"))
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.Error(w, http.StatusNotFound, "product not found")
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "failed to load product")
+		return
+	}
+	comments, err := h.service.ListApprovedComments(r.Context(), product.ID)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "failed to list comments")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"comments": comments})
+}
+
+// SubmitProductComment accepts a visitor review for the product
+// identified by slug. The comment is stored as pending and only becomes
+// public after staff moderation.
+func (h Handler) SubmitProductComment(w http.ResponseWriter, r *http.Request) {
+	product, err := h.service.GetProductBySlug(r.Context(), r.PathValue("slug"))
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.Error(w, http.StatusNotFound, "product not found")
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "failed to load product")
+		return
+	}
+	var in CommentInput
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	comment, err := h.service.SubmitComment(r.Context(), product.ID, in)
+	if err != nil {
+		if errors.Is(err, ErrInvalidCommentInput) {
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "failed to submit comment")
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, map[string]any{"comment": comment})
+}
+
+// ValidateCoupon is the public coupon pre-check. The cart page calls it
+// to preview the discount before checkout; the authoritative discount is
+// still recomputed inside the order transaction.
+func (h Handler) ValidateCoupon(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Code     string `json:"code"`
+		Subtotal int    `json:"subtotal"`
+	}
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	promo, err := h.service.ValidateCoupon(r.Context(), body.Code, body.Subtotal)
+	if err != nil {
+		if errors.Is(err, ErrInvalidPromoCode) {
+			httpx.Error(w, http.StatusBadRequest, err.Error())
+			return
+		}
+		if errors.Is(err, ErrPromoValidationUnavailable) {
+			httpx.Error(w, http.StatusServiceUnavailable, ErrPromoValidationUnavailable.Error())
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "failed to validate coupon")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"coupon": promo})
+}
+
+// ----- Admin: categories ------------------------------------------------------
+
+func (h Handler) ListCategories(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	if !auth.Can(principal, "twcommerce.read") && !auth.Can(principal, "twcommerce.admin") {
+		httpx.Error(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	categories, err := h.service.ListCategories(r.Context())
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "failed to list categories")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"categories": categories})
+}
+
+func (h Handler) CreateCategory(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var in CategoryInput
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	category, err := h.service.CreateCategory(r.Context(), principal, in)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, category)
+}
+
+func (h Handler) UpdateCategory(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var in CategoryInput
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	category, err := h.service.UpdateCategory(r.Context(), principal, r.PathValue("id"), in)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, category)
+}
+
+func (h Handler) DeleteCategory(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	if err := h.service.DeleteCategory(r.Context(), principal, r.PathValue("id")); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]string{"id": r.PathValue("id")})
+}
+
+// ----- Admin: comments --------------------------------------------------------
+
+func (h Handler) ListComments(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	comments, err := h.service.ListComments(r.Context(), principal, r.URL.Query().Get("status"))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"comments": comments})
+}
+
+func (h Handler) ModerateComment(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var body struct {
+		Status string `json:"status"`
+		Reply  string `json:"reply"`
+	}
+	if err := httpx.DecodeJSON(r, &body); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	comment, err := h.service.ModerateComment(r.Context(), principal, r.PathValue("id"), body.Status, body.Reply)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, comment)
+}
+
+// ----- Admin: notification templates & logs -----------------------------------
+
+func (h Handler) ListNotificationTemplates(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	templates, err := h.service.ListNotificationTemplates(r.Context(), principal)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"templates": templates})
+}
+
+func (h Handler) CreateNotificationTemplate(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var in NotificationTemplateInput
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	tpl, err := h.service.UpsertNotificationTemplate(r.Context(), principal, "", in)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, tpl)
+}
+
+func (h Handler) UpdateNotificationTemplate(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var in NotificationTemplateInput
+	if err := httpx.DecodeJSON(r, &in); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	tpl, err := h.service.UpsertNotificationTemplate(r.Context(), principal, r.PathValue("id"), in)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, tpl)
+}
+
+func (h Handler) DeleteNotificationTemplate(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	if err := h.service.DeleteNotificationTemplate(r.Context(), principal, r.PathValue("id")); err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]string{"id": r.PathValue("id")})
+}
+
+func (h Handler) ListNotificationLogs(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	logs, err := h.service.ListNotificationLogs(r.Context(), principal, NotificationLogFilter{
+		OrderID: r.URL.Query().Get("order_id"),
+		Code:    r.URL.Query().Get("code"),
+		Status:  r.URL.Query().Get("status"),
+	})
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"logs": logs})
+}
+
+// ----- Admin: dashboard stats -------------------------------------------------
+
+func (h Handler) GetAdminStats(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	stats, err := h.service.GetAdminStats(r.Context(), principal)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, stats)
 }
 
 // ----- error mapping --------------------------------------------------------

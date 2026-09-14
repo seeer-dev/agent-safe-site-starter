@@ -202,3 +202,84 @@ func (h Handler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"items": items})
 }
+
+// ----- Store settings (governed single row) --------------------------------
+
+// GetStoreSettings returns the draft + published settings for the admin
+// settings screen. Requires authentication; the service enforces
+// content.update.
+func (h Handler) GetStoreSettings(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	settings, err := h.service.GetStoreSettings(r.Context(), principal)
+	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			httpx.Error(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "failed to load store settings")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, settings)
+}
+
+// UpdateStoreSettingsDraft saves the draft copy. Requires content.update.
+// The live published copy is untouched until PublishStoreSettings runs.
+func (h Handler) UpdateStoreSettingsDraft(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var input StoreSettingsInput
+	if err := httpx.DecodeJSON(r, &input); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	settings, err := h.service.UpdateStoreSettingsDraft(r.Context(), principal, input)
+	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			httpx.Error(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		if errors.Is(err, ErrStaleVersion) {
+			httpx.Error(w, http.StatusConflict, "stale version")
+			return
+		}
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	httpx.JSON(w, http.StatusOK, settings)
+}
+
+// PublishStoreSettings promotes the draft to the live published copy.
+// Requires content.publish, consistent with site-content rows.
+func (h Handler) PublishStoreSettings(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	var input PublishInput
+	if err := httpx.DecodeJSON(r, &input); err != nil {
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	settings, err := h.service.PublishStoreSettings(r.Context(), principal, input)
+	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			httpx.Error(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		if errors.Is(err, ErrStaleVersion) {
+			httpx.Error(w, http.StatusConflict, "stale version")
+			return
+		}
+		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	httpx.JSON(w, http.StatusOK, settings)
+}

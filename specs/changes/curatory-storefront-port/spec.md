@@ -2,9 +2,9 @@
 
 Change ID: curatory-storefront-port
 Revision: 2
-Status: Draft
+Status: Applying
 Decision authority: Repository owner/user
-Approval basis: Owner direction 2026-09-14: storefront ports the 質選所 (CURATORY) design and dynamic effects into the Go template + Vue islands architecture; the existing starter Vue admin SPA remains the backoffice. Pending review of this proposal.
+Approval basis: Owner direction 2026-09-14: storefront ports the 質選所 (CURATORY) design and dynamic effects into the Go template + Vue islands architecture; the existing starter Vue admin SPA remains the backoffice. Owner approved revision 2 via plain 'apply' on 2026-09-14, additionally granting latitude to redesign admin UX for intuitiveness (functional completeness is the bar).
 Repository baseline: 10f805e18e394e7065854dfbceb327114e0d4564
 Supersedes: none
 
@@ -41,7 +41,7 @@ Out of scope:
 - Coupons extend the existing `promos` model (`percent|fixed|freeshipping`, `min_subtotal`, `usage_limit`, `used_count`) instead of a second promotion table.
 - The storefront bootstrap endpoint is a composite owned by the `bootstrap` layer calling module services — module isolation is preserved (modules never import each other).
 - Order lifecycle notifications (placed/paid/shipped/completed/cancelled) render from `notification_templates` and send through the existing mailer seam; every attempt writes a `notification_logs` row so the admin notifications view reflects real deliveries.
-- The admin port keeps the starter SPA's visual language and resource architecture; it ports the reference backoffice's functionality, information architecture, and workflows — not its component skins.
+- The admin port keeps the starter SPA's technology and resource architecture; it ports the reference backoffice's functionality, information architecture, and workflows — not its component skins. The owner grants latitude to redesign admin UX for intuitiveness; functional completeness is the bar, not visual parity with either the reference or the current admin.
 - Browser code never queries any database directly; all storefront data flows through the Go API or the renderer.
 
 ## Requirements

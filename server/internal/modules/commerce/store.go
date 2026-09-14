@@ -22,7 +22,7 @@ var ErrIdempotencyConflict = errors.New("commerce: idempotency key reused with d
 type Store interface {
 	// Products
 	ListProducts(ctx context.Context, filter ProductFilter) ([]Product, error)
-	ListPublishedProducts(ctx context.Context) ([]Product, error)
+	ListPublishedProducts(ctx context.Context, filter ProductFilter) ([]Product, error)
 	GetProduct(ctx context.Context, id string) (Product, error)
 	GetProductBySlug(ctx context.Context, slug string) (Product, error)
 	UpsertProduct(ctx context.Context, p Product) error
@@ -60,7 +60,7 @@ type Store interface {
 	// via a fresh connection (PostgreSQL transactions abort after any error).
 	// The caller verifies the payload matches.
 	CreateOrderTxWithIdempotency(ctx context.Context, o Order, items []OrderItem) (existingOrder Order, conflict bool, err error)
-	TransitionOrderStatus(ctx context.Context, id string, expectedVersion int, newStatus, timelineJSON string, updatedUnix int64, restock []OrderItem, event OrderEvent) error
+	TransitionOrderStatus(ctx context.Context, id string, expectedVersion int, newStatus, timelineJSON string, updatedUnix int64, restock []OrderItem, soldOut []OrderItem, event OrderEvent) error
 	TransitionOrderReturnStatus(ctx context.Context, id string, expectedVersion int, newStatus string, updatedUnix int64, event OrderEvent) error
 	// GetOrderItems loads the per-item ledger rows for an order. Returns
 	// returned_quantity and restocked_quantity alongside the snapshot columns.
@@ -99,11 +99,48 @@ type Store interface {
 	GetECPayAttemptByMerchantTradeNo(ctx context.Context, merchantTradeNo string) (ECPayPaymentAttempt, error)
 	ClaimECPayCallback(ctx context.Context, merchantTradeNo, callbackFingerprint, providerTradeNo, rtnCode, status string, captured bool, updatedUnix int64) (bool, error)
 
+	// Categories
+	ListCategories(ctx context.Context, activeOnly bool) ([]Category, error)
+	GetCategory(ctx context.Context, id string) (Category, error)
+	UpsertCategory(ctx context.Context, c Category) error
+	DeleteCategory(ctx context.Context, id string) error
+
+	// Product variants
+	ListProductVariants(ctx context.Context, productID string) ([]ProductVariant, error)
+	// ReplaceProductVariants atomically replaces all variant rows for a
+	// product in a single transaction.
+	ReplaceProductVariants(ctx context.Context, productID string, variants []ProductVariant) error
+	GetVariantBySKU(ctx context.Context, sku string) (ProductVariant, error)
+
+	// Product comments
+	ListProductComments(ctx context.Context, productID, status string) ([]ProductComment, error)
+	ListComments(ctx context.Context, status string) ([]ProductComment, error)
+	GetComment(ctx context.Context, id string) (ProductComment, error)
+	InsertComment(ctx context.Context, c ProductComment) error
+	UpdateCommentModeration(ctx context.Context, id, status, adminReply string, repliedUnix, updatedUnix int64) error
+	// IncrementProductSoldCount adds qty to products.sold_count for the SKU.
+	IncrementProductSoldCount(ctx context.Context, sku string, qty int, updatedUnix int64) error
+
+	// Notification templates and logs
+	ListNotificationTemplates(ctx context.Context) ([]NotificationTemplate, error)
+	GetNotificationTemplateByCode(ctx context.Context, code string) (NotificationTemplate, error)
+	UpsertNotificationTemplate(ctx context.Context, t NotificationTemplate) error
+	DeleteNotificationTemplate(ctx context.Context, id string) error
+	InsertNotificationLog(ctx context.Context, l NotificationLog) error
+	ListNotificationLogs(ctx context.Context, filter NotificationLogFilter) ([]NotificationLog, error)
+
 	// Promos
 	ListPromos(ctx context.Context) ([]Promo, error)
 	GetActivePromoByCode(ctx context.Context, code string, now int64) (Promo, error)
 	UpsertPromo(ctx context.Context, p Promo) error
 	DeletePromo(ctx context.Context, id string) error
+	// IncrementPromoUsage adds qty to promos.used_count for the given code.
+	IncrementPromoUsage(ctx context.Context, code string, qty int, updatedUnix int64) error
+
+	// Admin dashboard
+	CountProducts(ctx context.Context) (int, error)
+	CountPendingComments(ctx context.Context) (int, error)
+	SumOrderRevenue(ctx context.Context) (int, error)
 
 	// Payment methods
 	ListPaymentMethods(ctx context.Context) ([]PaymentMethod, error)
@@ -129,17 +166,27 @@ func NewSQLStore(db *sql.DB, dialect database.Dialect) SQLStore {
 
 // ----- helpers --------------------------------------------------------------
 
+// productColumns is the canonical products SELECT column list. Appending
+// columns requires updating scanProducts/scanProductRow in the same order.
+const productColumns = "id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, is_featured, sold_count, updated_unix"
+
+// orderColumns is the canonical orders SELECT column list. Appending
+// columns requires updating scanOrders/scanOrderRow in the same order.
+const orderColumns = "id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix, recipient_name, recipient_phone, city, district, cvs_store_name, cvs_store_address, invoice_type, invoice_tax_id, payment_fee, coupon_code, buyer_note"
+
 func scanProducts(rows *sql.Rows) ([]Product, error) {
 	var out []Product
 	for rows.Next() {
 		var p Product
+		var featured int
 		if err := rows.Scan(
 			&p.ID, &p.SKU, &p.Name, &p.Slug, &p.Description, &p.LongDescription, &p.Image, &p.Images,
 			&p.Category, &p.Status, &p.Material, &p.Origin, &p.Price, &p.OriginalPrice, &p.Stock,
-			&p.Tag, &p.Rating, &p.ReviewsCount, &p.UpdatedUnix,
+			&p.Tag, &p.Rating, &p.ReviewsCount, &featured, &p.SoldCount, &p.UpdatedUnix,
 		); err != nil {
 			return nil, err
 		}
+		p.IsFeatured = featured == 1
 		out = append(out, p)
 	}
 	return out, rows.Err()
@@ -147,10 +194,11 @@ func scanProducts(rows *sql.Rows) ([]Product, error) {
 
 func scanProductRow(row *sql.Row) (Product, error) {
 	var p Product
+	var featured int
 	err := row.Scan(
 		&p.ID, &p.SKU, &p.Name, &p.Slug, &p.Description, &p.LongDescription, &p.Image, &p.Images,
 		&p.Category, &p.Status, &p.Material, &p.Origin, &p.Price, &p.OriginalPrice, &p.Stock,
-		&p.Tag, &p.Rating, &p.ReviewsCount, &p.UpdatedUnix,
+		&p.Tag, &p.Rating, &p.ReviewsCount, &featured, &p.SoldCount, &p.UpdatedUnix,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -158,6 +206,7 @@ func scanProductRow(row *sql.Row) (Product, error) {
 		}
 		return Product{}, err
 	}
+	p.IsFeatured = featured == 1
 	return p, nil
 }
 
@@ -171,6 +220,9 @@ func scanOrders(rows *sql.Rows) ([]Order, error) {
 			&o.Subtotal, &o.Discount, &o.Shipping, &o.Total,
 			&o.Status, &o.PaymentStatus, &o.ReturnRequestStatus, &o.PaymentIntentID, &o.IdempotencyKey, &o.AccessTokenHash, &o.RequestFingerprint,
 			&o.TimelineJSON, &o.ExpectedStatus, &o.Version, &o.UpdatedUnix,
+			&o.RecipientName, &o.RecipientPhone, &o.City, &o.District,
+			&o.CVSStoreName, &o.CVSStoreAddress, &o.InvoiceType, &o.InvoiceTaxID,
+			&o.PaymentFee, &o.CouponCode, &o.BuyerNote,
 		); err != nil {
 			return nil, err
 		}
@@ -187,6 +239,9 @@ func scanOrderRow(row *sql.Row) (Order, error) {
 		&o.Subtotal, &o.Discount, &o.Shipping, &o.Total,
 		&o.Status, &o.PaymentStatus, &o.ReturnRequestStatus, &o.PaymentIntentID, &o.IdempotencyKey, &o.AccessTokenHash, &o.RequestFingerprint,
 		&o.TimelineJSON, &o.ExpectedStatus, &o.Version, &o.UpdatedUnix,
+		&o.RecipientName, &o.RecipientPhone, &o.City, &o.District,
+		&o.CVSStoreName, &o.CVSStoreAddress, &o.InvoiceType, &o.InvoiceTaxID,
+		&o.PaymentFee, &o.CouponCode, &o.BuyerNote,
 	)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -202,10 +257,15 @@ func scanPromos(rows *sql.Rows) ([]Promo, error) {
 	for rows.Next() {
 		var p Promo
 		var enabled int
-		if err := rows.Scan(&p.ID, &p.Code, &p.Label, &p.Type, &p.Value, &enabled, &p.StartsUnix, &p.ExpiresUnix, &p.UpdatedUnix); err != nil {
+		var usageLimit sql.NullInt64
+		if err := rows.Scan(&p.ID, &p.Code, &p.Label, &p.Type, &p.Value, &enabled, &p.StartsUnix, &p.ExpiresUnix, &p.MinSubtotal, &usageLimit, &p.UsedCount, &p.UpdatedUnix); err != nil {
 			return nil, err
 		}
 		p.Enabled = enabled == 1
+		if usageLimit.Valid {
+			limit := int(usageLimit.Int64)
+			p.UsageLimit = &limit
+		}
 		out = append(out, p)
 	}
 	return out, rows.Err()

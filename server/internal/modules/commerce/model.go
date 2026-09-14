@@ -26,7 +26,12 @@ type Product struct {
 	Tag             string  `json:"tag"`
 	Rating          float64 `json:"rating"`
 	ReviewsCount    int     `json:"reviews_count"`
+	IsFeatured      bool    `json:"is_featured"`
+	SoldCount       int     `json:"sold_count"`
 	UpdatedUnix     int64   `json:"updated_unix"`
+	// Variants is loaded from the product_variants table (not the products
+	// table). Empty means the product is sold as a single SKU.
+	Variants []ProductVariant `json:"variants"`
 	// ProductImages is loaded from the product_images table (not the
 	// products table). For public responses, the service derives
 	// image/images URLs from this field. For admin responses, the
@@ -122,13 +127,130 @@ type ProductInput struct {
 	OriginalPrice   int                 `json:"original_price"`
 	Stock           int                 `json:"stock"`
 	Tag             string              `json:"tag"`
+	IsFeatured      bool                `json:"is_featured"`
 	ProductImages   []ProductImageInput `json:"product_images"`
+	Variants        []ProductVariantInput `json:"variants"`
 }
 
 // ProductFilter narrows product listings by status and/or category.
+// Featured restricts to is_featured products when true. Query matches a
+// case-insensitive substring of name, description, or sku. Sort selects
+// the public ordering: newest|price_asc|price_desc|popular (sold_count).
 type ProductFilter struct {
 	Status   string
 	Category string
+	Featured bool
+	Query    string
+	Sort     string
+}
+
+// Category is a first-class catalog grouping entity. Product.Category
+// stores the category slug for backward compatibility with seeded rows.
+type Category struct {
+	ID          string `json:"id"`
+	Slug        string `json:"slug"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Image       string `json:"image"`
+	SortOrder   int    `json:"sort_order"`
+	IsActive    bool   `json:"is_active"`
+	UpdatedUnix int64  `json:"updated_unix"`
+}
+
+// CategoryInput is the admin-supplied payload for category create/update.
+type CategoryInput struct {
+	Slug        string `json:"slug"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Image       string `json:"image"`
+	SortOrder   int    `json:"sort_order"`
+	IsActive    bool   `json:"is_active"`
+}
+
+// ProductVariant is a purchasable option of a product (e.g. a size or
+// color). PriceDelta is added to the product base price. A variant SKU is
+// used for stock accounting when non-empty; otherwise the parent product
+// SKU is used.
+type ProductVariant struct {
+	ID         string `json:"id"`
+	ProductID  string `json:"product_id"`
+	Name       string `json:"name"`
+	SKU        string `json:"sku"`
+	PriceDelta int    `json:"price_delta"`
+	Stock      int    `json:"stock"`
+	SortOrder  int    `json:"sort_order"`
+	UpdatedUnix int64 `json:"updated_unix"`
+}
+
+// ProductVariantInput is the admin-supplied payload for one variant row.
+type ProductVariantInput struct {
+	Name       string `json:"name"`
+	SKU        string `json:"sku"`
+	PriceDelta int    `json:"price_delta"`
+	Stock      int    `json:"stock"`
+}
+
+// ProductComment is a visitor-submitted product review. Status is the
+// moderation state: pending until a staff member approves or rejects it.
+type ProductComment struct {
+	ID          string `json:"id"`
+	ProductID   string `json:"product_id"`
+	Nickname    string `json:"nickname"`
+	Content     string `json:"content"`
+	Rating      *int   `json:"rating,omitempty"`
+	Status      string `json:"status"` // pending|approved|rejected
+	AdminReply  string `json:"admin_reply,omitempty"`
+	RepliedUnix int64  `json:"replied_unix,omitempty"`
+	CreatedUnix int64  `json:"created_unix"`
+	UpdatedUnix int64  `json:"updated_unix"`
+}
+
+// CommentInput is the public submission payload. Server assigns status.
+type CommentInput struct {
+	Nickname string `json:"nickname"`
+	Content  string `json:"content"`
+	Rating   *int   `json:"rating"`
+}
+
+// NotificationTemplate is a staff-managed mail template for an order
+// lifecycle event. Code is the stable template key
+// (order_placed|order_paid|order_shipped|order_completed|order_cancelled).
+// Subject/Body support {{placeholder}} substitution at render time.
+type NotificationTemplate struct {
+	ID          string `json:"id"`
+	Code        string `json:"code"`
+	Name        string `json:"name"`
+	Subject     string `json:"subject"`
+	Body        string `json:"body"`
+	IsEnabled   bool   `json:"is_enabled"`
+	UpdatedUnix int64  `json:"updated_unix"`
+}
+
+// NotificationTemplateInput is the admin-supplied payload for template
+// create/update.
+type NotificationTemplateInput struct {
+	Code      string `json:"code"`
+	Name      string `json:"name"`
+	Subject   string `json:"subject"`
+	Body      string `json:"body"`
+	IsEnabled bool   `json:"is_enabled"`
+}
+
+// NotificationLog is an append-only record of one notification send
+// attempt. Status is sent|skipped|failed; a skipped row records why no
+// mail went out (e.g. template disabled) so the admin view shows the
+// complete decision trail, not just deliveries.
+type NotificationLog struct {
+	ID          string `json:"id"`
+	Code        string `json:"code"`
+	OrderID     string `json:"order_id"`
+	Recipient   string `json:"recipient"`
+	Subject     string `json:"subject"`
+	Body        string `json:"body"`
+	Status      string `json:"status"`
+	Provider    string `json:"provider"`
+	Error       string `json:"error,omitempty"`
+	CreatedUnix int64  `json:"created_unix"`
 }
 
 // Member is a registered customer record.
@@ -170,6 +292,9 @@ type OrderItem struct {
 	Name              string `json:"name"`
 	Price             int    `json:"price"`
 	Quantity          int    `json:"quantity"`
+	// VariantName is set when the line was resolved through a
+	// product_variants row; the SKU then addresses the variant.
+	VariantName       string `json:"variant_name,omitempty"`
 	ReturnedQuantity  int    `json:"returned_quantity,omitempty"`
 	RestockedQuantity int    `json:"restocked_quantity,omitempty"`
 }
@@ -213,10 +338,27 @@ type Order struct {
 	Discount            int         `json:"discount"`
 	Shipping            int         `json:"shipping"`
 	Total               int         `json:"total"`
-	Status              string      `json:"status"` // pending|processing|shipped|delivered|cancelled
+	Status              string      `json:"status"` // pending|processing|shipped|delivered|completed|cancelled
 	PaymentStatus       string      `json:"payment_status"`
 	ReturnRequestStatus string      `json:"return_request_status"`
 	PaymentIntentID     string      `json:"payment_intent_id"`
+	// Curatory checkout fields. Recipient* describe the delivery target
+	// which may differ from the buyer contact identity (CustomerName/Email/
+	// Phone). City/District and CVSStore* hold the shipping destination;
+	// ShippingAddress keeps the composed home-delivery address for backward
+	// compatibility. InvoiceType is personal|company; InvoiceTaxID is the
+	// company uniform-invoice number required when InvoiceType is company.
+	RecipientName   string `json:"recipient_name"`
+	RecipientPhone  string `json:"recipient_phone"`
+	City            string `json:"city"`
+	District        string `json:"district"`
+	CVSStoreName    string `json:"cvs_store_name"`
+	CVSStoreAddress string `json:"cvs_store_address"`
+	InvoiceType     string `json:"invoice_type"`
+	InvoiceTaxID    string `json:"invoice_tax_id"`
+	PaymentFee      int    `json:"payment_fee"`
+	CouponCode      string `json:"coupon_code"`
+	BuyerNote       string `json:"buyer_note"`
 	IdempotencyKey      string      `json:"idempotency_key,omitempty"`
 	// AccessToken is the plaintext access token. It is ONLY set in the
 	// create-order response (one-time display to the customer). It is
@@ -265,6 +407,16 @@ type OrderInput struct {
 	Discount        int         `json:"discount"`
 	PromoCode       string      `json:"promo_code"`
 	IdempotencyKey  string      `json:"idempotency_key"`
+	// Curatory checkout fields — all untrusted client input.
+	RecipientName   string `json:"recipient_name"`
+	RecipientPhone  string `json:"recipient_phone"`
+	City            string `json:"city"`
+	District        string `json:"district"`
+	CVSStoreName    string `json:"cvs_store_name"`
+	CVSStoreAddress string `json:"cvs_store_address"`
+	InvoiceType     string `json:"invoice_type"`
+	InvoiceTaxID    string `json:"invoice_tax_id"`
+	BuyerNote       string `json:"buyer_note"`
 }
 
 // OrderFilter narrows order listings by status, payment status, and/or member.

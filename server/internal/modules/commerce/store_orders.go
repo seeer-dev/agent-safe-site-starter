@@ -30,7 +30,7 @@ func (s SQLStore) ListOrders(ctx context.Context, filter OrderFilter) ([]Order, 
 		clauses = append(clauses, "member_id = ?")
 		args = append(args, filter.MemberID)
 	}
-	query := `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix FROM orders`
+	query := `SELECT ` + orderColumns + ` FROM orders`
 	if len(clauses) > 0 {
 		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
@@ -45,7 +45,7 @@ func (s SQLStore) ListOrders(ctx context.Context, filter OrderFilter) ([]Order, 
 }
 
 func (s SQLStore) GetOrder(ctx context.Context, id string) (Order, error) {
-	query := database.Bind(s.dialect, `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix
+	query := database.Bind(s.dialect, `SELECT ` + orderColumns + `
 		FROM orders WHERE id = ? LIMIT 1`)
 	return scanOrderRow(s.db.QueryRowContext(ctx, query, id))
 }
@@ -60,7 +60,7 @@ func (s SQLStore) GetOrderByAccessToken(ctx context.Context, id, token string) (
 		return Order{}, ErrNotFound
 	}
 	tokenHash := hashAccessToken(token)
-	query := database.Bind(s.dialect, `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix
+	query := database.Bind(s.dialect, `SELECT ` + orderColumns + `
 		FROM orders WHERE id = ? AND access_token = ? LIMIT 1`)
 	return scanOrderRow(s.db.QueryRowContext(ctx, query, id, tokenHash))
 }
@@ -69,7 +69,7 @@ func (s SQLStore) FindOrderByIdempotencyKey(ctx context.Context, key string) (Or
 	if key == "" {
 		return Order{}, ErrNotFound
 	}
-	query := database.Bind(s.dialect, `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix
+	query := database.Bind(s.dialect, `SELECT ` + orderColumns + `
 		FROM orders WHERE idempotency_key = ? LIMIT 1`)
 	return scanOrderRow(s.db.QueryRowContext(ctx, query, key))
 }
@@ -92,14 +92,17 @@ func (s SQLStore) CreateOrderTx(ctx context.Context, o Order, items []OrderItem)
 	defer func() { _ = tx.Rollback() }()
 
 	insertQuery := database.Bind(s.dialect, `INSERT INTO orders
-		(id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		(` + orderColumns + `)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	if _, err := tx.ExecContext(ctx, insertQuery,
 		o.ID, o.MemberID, o.CustomerName, o.Email, o.Phone, o.ItemsJSON,
 		o.ShippingAddress, o.ShippingMethod, o.PaymentMethod, o.TrackingNumber,
 		o.Subtotal, o.Discount, o.Shipping, o.Total,
 		o.Status, o.PaymentStatus, o.ReturnRequestStatus, o.PaymentIntentID, o.IdempotencyKey, o.AccessTokenHash, o.RequestFingerprint,
-		o.TimelineJSON, o.ExpectedStatus, 1, o.UpdatedUnix); err != nil {
+		o.TimelineJSON, o.ExpectedStatus, 1, o.UpdatedUnix,
+		o.RecipientName, o.RecipientPhone, o.City, o.District,
+		o.CVSStoreName, o.CVSStoreAddress, o.InvoiceType, o.InvoiceTaxID,
+		o.PaymentFee, o.CouponCode, o.BuyerNote); err != nil {
 		return fmt.Errorf("create order tx: %w", err)
 	}
 	if err := s.insertOrderEvent(ctx, tx, OrderEvent{
@@ -112,23 +115,113 @@ func (s SQLStore) CreateOrderTx(ctx context.Context, o Order, items []OrderItem)
 		return err
 	}
 
-	decrementQuery := database.Bind(s.dialect, `UPDATE products SET stock = stock - ?, updated_unix = ? WHERE sku = ? AND stock >= ?`)
 	for _, item := range items {
-		res, err := tx.ExecContext(ctx, decrementQuery, item.Quantity, o.UpdatedUnix, item.SKU, item.Quantity)
-		if err != nil {
-			return fmt.Errorf("decrement stock for %s: %w", item.SKU, err)
-		}
-		affected, err := res.RowsAffected()
-		if err != nil {
+		if err := s.decrementStockTx(ctx, tx, item.SKU, item.Quantity, o.UpdatedUnix); err != nil {
 			return err
 		}
-		if affected == 0 {
-			return ErrInsufficientStock
-		}
+	}
+	if err := s.incrementPromoUsageTx(ctx, tx, o.CouponCode, o.UpdatedUnix); err != nil {
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {
 		return fmt.Errorf("commit order tx: %w", err)
+	}
+	return nil
+}
+
+// decrementStockTx decrements stock for the given SKU inside tx. The SKU
+// may address a products row or a product_variants row — the product is
+// tried first, then the variant. Zero rows on both means the item was
+// unavailable or unknown at commit time → ErrInsufficientStock.
+func (s SQLStore) decrementStockTx(ctx context.Context, tx *sql.Tx, sku string, qty int, now int64) error {
+	res, err := tx.ExecContext(ctx, database.Bind(s.dialect,
+		`UPDATE products SET stock = stock - ?, updated_unix = ? WHERE sku = ? AND stock >= ?`),
+		qty, now, sku, qty)
+	if err != nil {
+		return fmt.Errorf("decrement stock for %s: %w", sku, err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected > 0 {
+		return nil
+	}
+	res, err = tx.ExecContext(ctx, database.Bind(s.dialect,
+		`UPDATE product_variants SET stock = stock - ?, updated_unix = ? WHERE sku = ? AND stock >= ?`),
+		qty, now, sku, qty)
+	if err != nil {
+		return fmt.Errorf("decrement variant stock for %s: %w", sku, err)
+	}
+	affected, err = res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrInsufficientStock
+	}
+	return nil
+}
+
+// incrementStockTx returns stock to the products row or the
+// product_variants row addressed by sku. Used by cancel/restock paths.
+// Zero rows on both returns ErrNotFound so a missing stock row is never
+// silently skipped.
+func (s SQLStore) incrementStockTx(ctx context.Context, tx *sql.Tx, sku string, qty int, now int64) error {
+	res, err := tx.ExecContext(ctx, database.Bind(s.dialect,
+		`UPDATE products SET stock = stock + ?, updated_unix = ? WHERE sku = ?`),
+		qty, now, sku)
+	if err != nil {
+		return fmt.Errorf("increment stock for %s: %w", sku, err)
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected > 0 {
+		return nil
+	}
+	res, err = tx.ExecContext(ctx, database.Bind(s.dialect,
+		`UPDATE product_variants SET stock = stock + ?, updated_unix = ? WHERE sku = ?`),
+		qty, now, sku)
+	if err != nil {
+		return fmt.Errorf("increment variant stock for %s: %w", sku, err)
+	}
+	affected, err = res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// incrementPromoUsageTx records one redemption of the order's coupon code
+// inside the order transaction so usage limits are enforced atomically.
+// Empty code is a no-op.
+func (s SQLStore) incrementPromoUsageTx(ctx context.Context, tx *sql.Tx, code string, now int64) error {
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return nil
+	}
+	res, err := tx.ExecContext(ctx, database.Bind(s.dialect,
+		`UPDATE promos SET used_count = used_count + 1, updated_unix = ? WHERE code = ?`),
+		now, code)
+	if err != nil {
+		return fmt.Errorf("increment promo usage: %w", err)
+	}
+	// The code was validated before persistence; a missing row here means
+	// the promo was deleted between validation and commit. Treat as
+	// non-fatal: the order is already priced server-side, usage tracking
+	// is best-effort bookkeeping.
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected == 0 {
+		return nil
 	}
 	return nil
 }
@@ -155,7 +248,7 @@ func (s SQLStore) CreateOrderTxWithIdempotency(ctx context.Context, o Order, ite
 
 	// Step 1: Check for existing order with the same key INSIDE the tx.
 	if key != "" {
-		findQuery := database.Bind(s.dialect, `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix
+		findQuery := database.Bind(s.dialect, `SELECT ` + orderColumns + `
 			FROM orders WHERE idempotency_key = ? LIMIT 1`)
 		existing, err := scanOrderRow(tx.QueryRowContext(ctx, findQuery, key))
 		if err == nil {
@@ -169,14 +262,17 @@ func (s SQLStore) CreateOrderTxWithIdempotency(ctx context.Context, o Order, ite
 
 	// Step 2: Insert the new order.
 	insertQuery := database.Bind(s.dialect, `INSERT INTO orders
-		(id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+		(` + orderColumns + `)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
 	_, err = tx.ExecContext(ctx, insertQuery,
 		o.ID, o.MemberID, o.CustomerName, o.Email, o.Phone, o.ItemsJSON,
 		o.ShippingAddress, o.ShippingMethod, o.PaymentMethod, o.TrackingNumber,
 		o.Subtotal, o.Discount, o.Shipping, o.Total,
 		o.Status, o.PaymentStatus, o.ReturnRequestStatus, o.PaymentIntentID, o.IdempotencyKey, o.AccessTokenHash, o.RequestFingerprint,
-		o.TimelineJSON, o.ExpectedStatus, 1, o.UpdatedUnix)
+		o.TimelineJSON, o.ExpectedStatus, 1, o.UpdatedUnix,
+		o.RecipientName, o.RecipientPhone, o.City, o.District,
+		o.CVSStoreName, o.CVSStoreAddress, o.InvoiceType, o.InvoiceTaxID,
+		o.PaymentFee, o.CouponCode, o.BuyerNote)
 	if err != nil {
 		// Unique constraint violation — a concurrent request inserted first.
 		// The transaction is now aborted (PostgreSQL) or must be rolled back
@@ -184,7 +280,7 @@ func (s SQLStore) CreateOrderTxWithIdempotency(ctx context.Context, o Order, ite
 		// connection from the pool, not the aborted tx.
 		if database.IsUniqueViolation(err) && key != "" {
 			_ = tx.Rollback()
-			findQuery := database.Bind(s.dialect, `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix
+			findQuery := database.Bind(s.dialect, `SELECT ` + orderColumns + `
 				FROM orders WHERE idempotency_key = ? LIMIT 1`)
 			existing, findErr := scanOrderRow(s.db.QueryRowContext(ctx, findQuery, key))
 			if findErr == nil {
@@ -203,20 +299,14 @@ func (s SQLStore) CreateOrderTxWithIdempotency(ctx context.Context, o Order, ite
 		return Order{}, false, err
 	}
 
-	// Step 3: Decrement stock for each item.
-	decrementQuery := database.Bind(s.dialect, `UPDATE products SET stock = stock - ?, updated_unix = ? WHERE sku = ? AND stock >= ?`)
+	// Step 3: Decrement stock for each item (product or variant SKU).
 	for _, item := range items {
-		res, err := tx.ExecContext(ctx, decrementQuery, item.Quantity, o.UpdatedUnix, item.SKU, item.Quantity)
-		if err != nil {
-			return Order{}, false, fmt.Errorf("decrement stock for %s: %w", item.SKU, err)
-		}
-		affected, err := res.RowsAffected()
-		if err != nil {
+		if err := s.decrementStockTx(ctx, tx, item.SKU, item.Quantity, o.UpdatedUnix); err != nil {
 			return Order{}, false, err
 		}
-		if affected == 0 {
-			return Order{}, false, ErrInsufficientStock
-		}
+	}
+	if err := s.incrementPromoUsageTx(ctx, tx, o.CouponCode, o.UpdatedUnix); err != nil {
+		return Order{}, false, err
 	}
 
 	if err := tx.Commit(); err != nil {
@@ -376,26 +466,20 @@ func (s SQLStore) RestockOrderItemsTx(ctx context.Context, orderID string, expec
 		}
 	}
 
-	// Step 4: Increment product stock for the restocked amount. Each UPDATE
-	// must affect exactly 1 row — if the product SKU is missing (0 rows),
-	// the entire transaction is rolled back with ErrRestockItemNotFound.
-	// This prevents a partial restock where the order_items ledger is
-	// updated but inventory is not.
-	stockQuery := database.Bind(s.dialect, `UPDATE products SET stock = stock + ?, updated_unix = ? WHERE sku = ?`)
+	// Step 4: Increment stock for the restocked amount. The SKU may
+	// address a products row or a product_variants row. A SKU missing
+	// from both rolls back with ErrRestockItemNotFound — this prevents
+	// a partial restock where the order_items ledger is updated but
+	// inventory is not.
 	for _, ri := range items {
 		if ri.RestockedQuantity <= 0 {
 			continue
 		}
-		res, err := tx.ExecContext(ctx, stockQuery, ri.RestockedQuantity, createdUnix, ri.SKU)
-		if err != nil {
+		if err := s.incrementStockTx(ctx, tx, ri.SKU, ri.RestockedQuantity, createdUnix); err != nil {
+			if errors.Is(err, ErrNotFound) {
+				return "", "", false, fmt.Errorf("%w: product sku %s missing during stock increment", ErrRestockItemNotFound, ri.SKU)
+			}
 			return "", "", false, fmt.Errorf("increment stock for %s: %w", ri.SKU, err)
-		}
-		n, err := res.RowsAffected()
-		if err != nil {
-			return "", "", false, err
-		}
-		if n != 1 {
-			return "", "", false, fmt.Errorf("%w: product sku %s missing during stock increment", ErrRestockItemNotFound, ri.SKU)
 		}
 	}
 
@@ -445,7 +529,7 @@ func (s SQLStore) RestockOrderItemsTx(ctx context.Context, orderID string, expec
 // into Items. This is the exact state that will be returned to the caller
 // and stored as the idempotency response snapshot.
 func (s SQLStore) buildRestockSnapshot(ctx context.Context, tx *sql.Tx, orderID string) (Order, error) {
-	orderQuery := database.Bind(s.dialect, `SELECT id, member_id, customer_name, email, phone, items_json, shipping_address, shipping_method, payment_method, tracking_number, subtotal, discount, shipping, total, status, payment_status, return_request_status, payment_intent_id, idempotency_key, access_token, request_fingerprint, timeline_json, expected_status, version, updated_unix
+	orderQuery := database.Bind(s.dialect, `SELECT ` + orderColumns + `
 		FROM orders WHERE id = ? LIMIT 1`)
 	o, err := scanOrderRow(tx.QueryRowContext(ctx, orderQuery, orderID))
 	if err != nil {
@@ -486,7 +570,7 @@ func (s SQLStore) buildRestockSnapshot(ctx context.Context, tx *sql.Tx, orderID 
 	return o, nil
 }
 
-func (s SQLStore) transitionOrder(ctx context.Context, updateQuery string, args []any, restock []OrderItem, event OrderEvent) error {
+func (s SQLStore) transitionOrder(ctx context.Context, updateQuery string, args []any, restock []OrderItem, soldOut []OrderItem, event OrderEvent) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("begin order transition: %w", err)
@@ -505,14 +589,18 @@ func (s SQLStore) transitionOrder(ctx context.Context, updateQuery string, args 
 		return ErrStaleVersion
 	}
 
-	stockQuery := database.Bind(s.dialect, `UPDATE products SET stock = stock + ?, updated_unix = ? WHERE sku = ?`)
 	for _, item := range restock {
-		res, err := tx.ExecContext(ctx, stockQuery, item.Quantity, event.CreatedUnix, item.SKU)
-		if err != nil {
+		if err := s.incrementStockTx(ctx, tx, item.SKU, item.Quantity, event.CreatedUnix); err != nil {
 			return fmt.Errorf("restock %s: %w", item.SKU, err)
 		}
-		if err := requireAffected(res); err != nil {
-			return fmt.Errorf("restock %s: %w", item.SKU, err)
+	}
+	// soldOut increments products.sold_count when the order reaches a
+	// fulfilled state. A variant SKU credits the parent product.
+	soldQuery := database.Bind(s.dialect, `UPDATE products SET sold_count = sold_count + ?, updated_unix = ?
+		WHERE sku = ? OR id = (SELECT product_id FROM product_variants WHERE sku = ?)`)
+	for _, item := range soldOut {
+		if _, err := tx.ExecContext(ctx, soldQuery, item.Quantity, event.CreatedUnix, item.SKU, item.SKU); err != nil {
+			return fmt.Errorf("increment sold count for %s: %w", item.SKU, err)
 		}
 	}
 	sequenceQuery := database.Bind(s.dialect, `SELECT COALESCE(MAX(sequence), 0) + 1 FROM order_events WHERE order_id = ?`)
@@ -528,16 +616,16 @@ func (s SQLStore) transitionOrder(ctx context.Context, updateQuery string, args 
 	return nil
 }
 
-func (s SQLStore) TransitionOrderStatus(ctx context.Context, id string, expectedVersion int, newStatus, timelineJSON string, updatedUnix int64, restock []OrderItem, event OrderEvent) error {
+func (s SQLStore) TransitionOrderStatus(ctx context.Context, id string, expectedVersion int, newStatus, timelineJSON string, updatedUnix int64, restock []OrderItem, soldOut []OrderItem, event OrderEvent) error {
 	return s.transitionOrder(ctx,
 		`UPDATE orders SET status = ?, version = version + 1, timeline_json = ?, updated_unix = ? WHERE id = ? AND version = ?`,
-		[]any{newStatus, timelineJSON, updatedUnix, id, expectedVersion}, restock, event)
+		[]any{newStatus, timelineJSON, updatedUnix, id, expectedVersion}, restock, soldOut, event)
 }
 
 func (s SQLStore) TransitionOrderReturnStatus(ctx context.Context, id string, expectedVersion int, newStatus string, updatedUnix int64, event OrderEvent) error {
 	return s.transitionOrder(ctx,
 		`UPDATE orders SET return_request_status = ?, version = version + 1, updated_unix = ? WHERE id = ? AND version = ?`,
-		[]any{newStatus, updatedUnix, id, expectedVersion}, nil, event)
+		[]any{newStatus, updatedUnix, id, expectedVersion}, nil, nil, event)
 }
 
 func (s SQLStore) ListOrderEvents(ctx context.Context, orderID string) ([]OrderEvent, error) {
@@ -569,4 +657,14 @@ func (s SQLStore) CountOrders(ctx context.Context) (int, error) {
 	var n int
 	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM orders`).Scan(&n)
 	return n, err
+}
+
+// SumOrderRevenue totals non-cancelled orders for the admin dashboard.
+func (s SQLStore) SumOrderRevenue(ctx context.Context) (int, error) {
+	var n sql.NullInt64
+	err := s.db.QueryRowContext(ctx, `SELECT COALESCE(SUM(total), 0) FROM orders WHERE status <> 'cancelled'`).Scan(&n)
+	if err != nil {
+		return 0, err
+	}
+	return int(n.Int64), nil
 }

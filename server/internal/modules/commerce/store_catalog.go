@@ -3,6 +3,7 @@ package commerce
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -11,6 +12,22 @@ import (
 )
 
 // ----- Products -------------------------------------------------------------
+
+// productSortClause maps a public sort key to a safe ORDER BY fragment.
+// The key is never interpolated from client input directly — unknown keys
+// fall back to newest-first.
+func productSortClause(sort string) string {
+	switch sort {
+	case "price_asc":
+		return " ORDER BY price ASC, updated_unix DESC"
+	case "price_desc":
+		return " ORDER BY price DESC, updated_unix DESC"
+	case "popular":
+		return " ORDER BY sold_count DESC, updated_unix DESC"
+	default:
+		return " ORDER BY updated_unix DESC"
+	}
+}
 
 func (s SQLStore) ListProducts(ctx context.Context, filter ProductFilter) ([]Product, error) {
 	var (
@@ -25,11 +42,20 @@ func (s SQLStore) ListProducts(ctx context.Context, filter ProductFilter) ([]Pro
 		clauses = append(clauses, "category = ?")
 		args = append(args, filter.Category)
 	}
-	query := `SELECT id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix FROM products`
+	if filter.Featured {
+		clauses = append(clauses, "is_featured = ?")
+		args = append(args, true)
+	}
+	if filter.Query != "" {
+		clauses = append(clauses, "(LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(sku) LIKE ?)")
+		q := "%" + strings.ToLower(filter.Query) + "%"
+		args = append(args, q, q, q)
+	}
+	query := `SELECT ` + productColumns + ` FROM products`
 	if len(clauses) > 0 {
 		query += " WHERE " + strings.Join(clauses, " AND ")
 	}
-	query += " ORDER BY updated_unix DESC"
+	query += productSortClause(filter.Sort)
 	query = database.Bind(s.dialect, query)
 	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -39,10 +65,31 @@ func (s SQLStore) ListProducts(ctx context.Context, filter ProductFilter) ([]Pro
 	return scanProducts(rows)
 }
 
-func (s SQLStore) ListPublishedProducts(ctx context.Context) ([]Product, error) {
-	query := database.Bind(s.dialect, `SELECT id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix
-		FROM products WHERE status IN ('active','low_stock','out_of_stock') ORDER BY updated_unix DESC`)
-	rows, err := s.db.QueryContext(ctx, query)
+// ListPublishedProducts returns products in customer-visible statuses.
+// The filter's Status field is ignored — the publishable status set is
+// fixed by the server; only Category, Featured, Query, and Sort apply.
+func (s SQLStore) ListPublishedProducts(ctx context.Context, filter ProductFilter) ([]Product, error) {
+	var (
+		clauses = []string{`status IN ('active','low_stock','out_of_stock')`}
+		args    []any
+	)
+	if filter.Category != "" {
+		clauses = append(clauses, "category = ?")
+		args = append(args, filter.Category)
+	}
+	if filter.Featured {
+		clauses = append(clauses, "is_featured = ?")
+		args = append(args, true)
+	}
+	if filter.Query != "" {
+		clauses = append(clauses, "(LOWER(name) LIKE ? OR LOWER(description) LIKE ? OR LOWER(sku) LIKE ?)")
+		q := "%" + strings.ToLower(filter.Query) + "%"
+		args = append(args, q, q, q)
+	}
+	query := `SELECT ` + productColumns + ` FROM products WHERE ` + strings.Join(clauses, " AND ")
+	query += productSortClause(filter.Sort)
+	query = database.Bind(s.dialect, query)
+	rows, err := s.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -51,21 +98,38 @@ func (s SQLStore) ListPublishedProducts(ctx context.Context) ([]Product, error) 
 }
 
 func (s SQLStore) GetProduct(ctx context.Context, id string) (Product, error) {
-	query := database.Bind(s.dialect, `SELECT id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix
+	query := database.Bind(s.dialect, `SELECT ` + productColumns + `
 		FROM products WHERE id = ? LIMIT 1`)
 	return scanProductRow(s.db.QueryRowContext(ctx, query, id))
 }
 
 func (s SQLStore) GetProductBySlug(ctx context.Context, slug string) (Product, error) {
-	query := database.Bind(s.dialect, `SELECT id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix
+	query := database.Bind(s.dialect, `SELECT ` + productColumns + `
 		FROM products WHERE slug = ? AND status IN ('active','low_stock','out_of_stock') LIMIT 1`)
 	return scanProductRow(s.db.QueryRowContext(ctx, query, slug))
 }
 
+// findProductByVariantSKU locates a variant row by its own SKU so checkout
+// can resolve variant-priced line items.
+func (s SQLStore) GetVariantBySKU(ctx context.Context, sku string) (ProductVariant, error) {
+	query := database.Bind(s.dialect, `SELECT id, product_id, name, sku, price_delta, stock, sort_order, updated_unix
+		FROM product_variants WHERE sku = ? LIMIT 1`)
+	var v ProductVariant
+	err := s.db.QueryRowContext(ctx, query, sku).Scan(
+		&v.ID, &v.ProductID, &v.Name, &v.SKU, &v.PriceDelta, &v.Stock, &v.SortOrder, &v.UpdatedUnix)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ProductVariant{}, ErrNotFound
+		}
+		return ProductVariant{}, err
+	}
+	return v, nil
+}
+
 func (s SQLStore) UpsertProduct(ctx context.Context, p Product) error {
 	query := database.Bind(s.dialect, `INSERT INTO products
-		(id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, is_featured, sold_count, updated_unix)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			sku = excluded.sku,
 			name = excluded.name,
@@ -84,11 +148,14 @@ func (s SQLStore) UpsertProduct(ctx context.Context, p Product) error {
 			tag = excluded.tag,
 			rating = excluded.rating,
 			reviews_count = excluded.reviews_count,
+			is_featured = excluded.is_featured,
 			updated_unix = excluded.updated_unix`)
+	// sold_count is intentionally excluded from the upsert SET — it is
+	// advanced only by IncrementProductSoldCount at order completion.
 	_, err := s.db.ExecContext(ctx, query,
 		p.ID, p.SKU, p.Name, p.Slug, p.Description, p.LongDescription, p.Image, p.Images,
 		p.Category, p.Status, p.Material, p.Origin, p.Price, p.OriginalPrice, p.Stock,
-		p.Tag, p.Rating, p.ReviewsCount, p.UpdatedUnix)
+		p.Tag, p.Rating, p.ReviewsCount, p.IsFeatured, p.SoldCount, p.UpdatedUnix)
 	if err != nil {
 		return fmt.Errorf("upsert product: %w", err)
 	}
@@ -168,6 +235,41 @@ func (s SQLStore) IncrementProductStock(ctx context.Context, sku string, qty int
 	return requireAffected(res)
 }
 
+func (s SQLStore) IncrementProductSoldCount(ctx context.Context, sku string, qty int, updatedUnix int64) error {
+	query := database.Bind(s.dialect, `UPDATE products SET sold_count = sold_count + ?, updated_unix = ? WHERE sku = ?`)
+	res, err := s.db.ExecContext(ctx, query, qty, updatedUnix, sku)
+	if err != nil {
+		return fmt.Errorf("increment sold count: %w", err)
+	}
+	return requireAffected(res)
+}
+
+// DecrementVariantStock atomically decrements a variant's stock when the
+// order line references a variant SKU.
+func (s SQLStore) DecrementVariantStock(ctx context.Context, sku string, qty int, updatedUnix int64) error {
+	query := database.Bind(s.dialect, `UPDATE product_variants SET stock = stock - ?, updated_unix = ? WHERE sku = ? AND stock >= ?`)
+	res, err := s.db.ExecContext(ctx, query, qty, updatedUnix, sku, qty)
+	if err != nil {
+		return fmt.Errorf("decrement variant stock: %w", err)
+	}
+	return requireAffected(res)
+}
+
+func (s SQLStore) IncrementVariantStock(ctx context.Context, sku string, qty int, updatedUnix int64) error {
+	query := database.Bind(s.dialect, `UPDATE product_variants SET stock = stock + ?, updated_unix = ? WHERE sku = ?`)
+	res, err := s.db.ExecContext(ctx, query, qty, updatedUnix, sku)
+	if err != nil {
+		return fmt.Errorf("increment variant stock: %w", err)
+	}
+	return requireAffected(res)
+}
+
+func (s SQLStore) CountProducts(ctx context.Context) (int, error) {
+	var n int
+	err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM products`).Scan(&n)
+	return n, err
+}
+
 // ----- Product images -------------------------------------------------------
 
 func (s SQLStore) ListProductImages(ctx context.Context, productID string) ([]ProductImage, error) {
@@ -239,8 +341,8 @@ func (s SQLStore) UpsertProductWithImages(ctx context.Context, p Product, images
 	defer func() { _ = tx.Rollback() }()
 
 	upsertQuery := database.Bind(s.dialect, `INSERT INTO products
-		(id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		(id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, is_featured, sold_count, updated_unix)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT(id) DO UPDATE SET
 			sku = excluded.sku,
 			name = excluded.name,
@@ -259,11 +361,12 @@ func (s SQLStore) UpsertProductWithImages(ctx context.Context, p Product, images
 			tag = excluded.tag,
 			rating = excluded.rating,
 			reviews_count = excluded.reviews_count,
+			is_featured = excluded.is_featured,
 			updated_unix = excluded.updated_unix`)
 	if _, err := tx.ExecContext(ctx, upsertQuery,
 		p.ID, p.SKU, p.Name, p.Slug, p.Description, p.LongDescription, p.Image, p.Images,
 		p.Category, p.Status, p.Material, p.Origin, p.Price, p.OriginalPrice, p.Stock,
-		p.Tag, p.Rating, p.ReviewsCount, p.UpdatedUnix); err != nil {
+		p.Tag, p.Rating, p.ReviewsCount, p.IsFeatured, p.SoldCount, p.UpdatedUnix); err != nil {
 		return fmt.Errorf("upsert product in tx: %w", err)
 	}
 	oldKeys, err := productImageKeysTx(ctx, tx, s.dialect, p.ID)

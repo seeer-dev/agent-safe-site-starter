@@ -2,7 +2,7 @@
 
 Change ID: curatory-storefront-port
 Revision: 2
-Status: Draft
+Status: Applying
 
 Normative specification: [`spec.md`](spec.md)
 
@@ -18,6 +18,7 @@ Normative specification: [`spec.md`](spec.md)
 - `server/internal/config/**`
 - `server/tools/render/**`
 - `server/tools/dev/**`
+- `server/tools/seed/**`
 - `server/tools/internal/rendercompose/**`
 - `contracts/**`
 - `db/migrations/**`

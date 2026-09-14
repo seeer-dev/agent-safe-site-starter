@@ -50,7 +50,7 @@ func Compose(ctx context.Context, db *sql.DB, dialect database.Dialect, r2Public
 
 	commerceStore := commerce.NewSQLStore(db, dialect)
 	commerceService := commerce.NewService(commerceStore).WithPublicBaseURL(r2PublicBaseURL)
-	products, err := commerceService.ListPublishedProducts(ctx)
+	products, err := commerceService.ListPublishedProducts(ctx, commerce.ProductFilter{})
 	if err != nil {
 		return Input{}, fmt.Errorf("list published products: %w", err)
 	}

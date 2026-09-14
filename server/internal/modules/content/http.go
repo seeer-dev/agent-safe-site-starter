@@ -26,6 +26,28 @@ func (h Handler) ListPublished(w http.ResponseWriter, r *http.Request) {
 	httpx.JSON(w, http.StatusOK, map[string]any{"articles": articles})
 }
 
+// ListAll returns every article (draft and published) for the admin
+// announcements screen. Requires authentication; the service enforces
+// content.publish since announcement management is a publish-side
+// capability in this starter.
+func (h Handler) ListAll(w http.ResponseWriter, r *http.Request) {
+	principal, err := h.auth.Principal(r)
+	if err != nil {
+		auth.WriteError(w, err)
+		return
+	}
+	articles, err := h.service.ListAll(r.Context(), principal)
+	if err != nil {
+		if errors.Is(err, ErrForbidden) {
+			httpx.Error(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		httpx.Error(w, http.StatusInternalServerError, "failed to list articles")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{"articles": articles})
+}
+
 func (h Handler) Publish(w http.ResponseWriter, r *http.Request) {
 	principal, err := h.auth.Principal(r)
 	if err != nil {

@@ -957,10 +957,16 @@ func TestMigration014BackfillRestockable(t *testing.T) {
 	db, dialect, root := newPre014TestStore(t)
 	ctx := context.Background()
 
-	// Seed a product so restock can increment stock.
+	// Seed a product so restock can increment stock. The fixture is a
+	// pre-014 schema, which predates the is_featured/sold_count columns
+	// added later — seed via raw INSERT on the pre-014 column set rather
+	// than the service upsert (which writes the full current column set).
 	store := NewSQLStore(db, dialect)
-	seedProduct(t, store, Product{ID: "p-up", SKU: "SKU-UP", Name: "Upgrade", Slug: "up", Status: "active", Stock: 10, Price: 100, Category: "apparel"})
-	seedReadyPaymentMethod(t, store)
+	if _, err := db.ExecContext(ctx, `INSERT INTO products
+		(id, sku, name, slug, description, long_description, image, images, category, status, material, origin, price, original_price, stock, tag, rating, reviews_count, updated_unix)
+		VALUES ('p-up', 'SKU-UP', 'Upgrade', 'up', '', '', '', '[]', 'apparel', 'active', '', '', 100, 0, 10, '', 0, 0, 1000)`); err != nil {
+		t.Fatalf("seed product: %v", err)
+	}
 
 	// Insert a pre-014 order with one SKU, qty 2, return_request_status = "received".
 	insertPre014Order(t, db, "ord-up",
@@ -973,6 +979,10 @@ func TestMigration014BackfillRestockable(t *testing.T) {
 
 	// Re-create the store (now with order_items table).
 	store = NewSQLStore(db, dialect)
+	// Seed after migrations: the payment_methods.fee column is added by a
+	// later migration, so the upsert can only run on the post-migration
+	// schema.
+	seedReadyPaymentMethod(t, store)
 	svc := func() Service { seedDefaultShippingMethods(t, store); return NewService(store) }()
 
 	// GetOrder must load the order and merge ledger columns from order_items.

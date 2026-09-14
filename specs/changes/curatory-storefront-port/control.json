@@ -1,9 +1,9 @@
 {
   "change_id": "curatory-storefront-port",
   "revision": 2,
-  "status": "Draft",
+  "status": "Applying",
   "decision_authority": "Repository owner/user",
-  "approval_basis": "Owner direction 2026-09-14: storefront ports the 質選所 (CURATORY) design and dynamic effects into the Go template + Vue islands architecture; the existing starter Vue admin SPA remains the backoffice. Pending review of this proposal.",
+  "approval_basis": "Owner direction 2026-09-14: storefront ports the 質選所 (CURATORY) design and dynamic effects into the Go template + Vue islands architecture; the existing starter Vue admin SPA remains the backoffice. Owner approved revision 2 via plain 'apply' on 2026-09-14, additionally granting latitude to redesign admin UX for intuitiveness (functional completeness is the bar).",
   "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
   "supersedes": [],
   "applies_to": [
@@ -17,6 +17,7 @@
     "server/internal/config/**",
     "server/tools/render/**",
     "server/tools/dev/**",
+    "server/tools/seed/**",
     "server/tools/internal/rendercompose/**",
     "contracts/**",
     "db/migrations/**",

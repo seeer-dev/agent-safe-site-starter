@@ -94,7 +94,7 @@ func TestOrderTransitionRollsBackWhenAuditEventFails(t *testing.T) {
 	// Reusing the creation-event ID forces the final event insert to fail. The
 	// status update and restock must roll back with it.
 	err = store.TransitionOrderStatus(context.Background(), order.ID, order.Version, "cancelled", order.TimelineJSON, order.UpdatedUnix+1,
-		[]OrderItem{{SKU: "SKU-A", Quantity: 3}}, OrderEvent{
+		[]OrderItem{{SKU: "SKU-A", Quantity: 3}}, nil, OrderEvent{
 			ID: order.ID + ":created", OrderID: order.ID, EventType: "order_status",
 			FromStatus: "pending", ToStatus: "cancelled", CreatedUnix: order.UpdatedUnix + 1,
 		})

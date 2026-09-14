@@ -697,7 +697,7 @@ func TestPublicListFailsWhenProductImagesExistButBaseURLEmpty(t *testing.T) {
 		t.Fatalf("CreateProduct: %v", err)
 	}
 
-	_, err = svc.ListPublishedProducts(context.Background())
+	_, err = svc.ListPublishedProducts(context.Background(), ProductFilter{})
 	if !errors.Is(err, ErrMediaURLUnavailable) {
 		t.Fatalf("error = %v, want ErrMediaURLUnavailable", err)
 	}

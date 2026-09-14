@@ -17,6 +17,7 @@ type PaymentMethod struct {
 	Environment     string `json:"environment"`      // production|sandbox
 	ReadinessStatus string `json:"readiness_status"` // ready|pending_setup
 	Enabled         bool   `json:"enabled"`
+	Fee             int    `json:"fee"`
 	UpdatedUnix     int64  `json:"updated_unix"`
 }
 
@@ -27,6 +28,7 @@ type PaymentMethodInput struct {
 	Environment     string `json:"environment"`
 	ReadinessStatus string `json:"readiness_status"`
 	Enabled         bool   `json:"enabled"`
+	Fee             int    `json:"fee"`
 }
 
 // PublicPaymentMethod is the public-facing payment method descriptor.
@@ -37,6 +39,7 @@ type PublicPaymentMethod struct {
 	Method    string `json:"method"`
 	Label     string `json:"label"`
 	Available bool   `json:"available"`
+	Fee       int    `json:"fee"`
 }
 
 // ListPublicPaymentMethods returns the admin-managed payment methods that
@@ -57,35 +60,44 @@ func (s Service) ListPublicPaymentMethods(ctx context.Context) ([]PublicPaymentM
 			Method:    m.Method,
 			Label:     m.ProviderLabel,
 			Available: true,
+			Fee:       m.Fee,
 		})
 	}
 	return out, nil
 }
 
-// validatePaymentMethod validates the payment method against the
+// resolvePaymentMethod validates the payment method against the
 // admin-managed payment_methods table. It rejects empty or unknown methods
 // with ErrInvalidPaymentMethod. It rejects methods that are disabled or
 // not ready (readiness_status != "ready") with ErrInvalidPaymentMethod.
 // The server is the authority for payment method availability — the
-// browser must not decide which payment methods are available.
-func (s Service) validatePaymentMethod(ctx context.Context, methodID string) error {
+// browser must not decide which payment methods are available. On success
+// it returns the method row so callers can derive the server-side fee.
+func (s Service) resolvePaymentMethod(ctx context.Context, methodID string) (PaymentMethod, error) {
 	methodID = strings.TrimSpace(methodID)
 	if methodID == "" {
-		return ErrInvalidPaymentMethod
+		return PaymentMethod{}, ErrInvalidPaymentMethod
 	}
 	methods, err := s.store.ListPaymentMethods(ctx)
 	if err != nil {
-		return fmt.Errorf("validate payment method: %w", err)
+		return PaymentMethod{}, fmt.Errorf("validate payment method: %w", err)
 	}
 	for _, m := range methods {
 		if m.ID == methodID || m.Method == methodID {
 			if !m.Enabled || m.ReadinessStatus != "ready" {
-				return ErrInvalidPaymentMethod
+				return PaymentMethod{}, ErrInvalidPaymentMethod
 			}
-			return nil
+			return m, nil
 		}
 	}
-	return ErrInvalidPaymentMethod
+	return PaymentMethod{}, ErrInvalidPaymentMethod
+}
+
+// validatePaymentMethod keeps the original signature for existing callers
+// that only need availability validation.
+func (s Service) validatePaymentMethod(ctx context.Context, methodID string) error {
+	_, err := s.resolvePaymentMethod(ctx, methodID)
+	return err
 }
 
 // ----- Payment methods ------------------------------------------------------
@@ -104,6 +116,9 @@ func (s Service) UpdatePaymentMethod(ctx context.Context, principal auth.Princip
 	if in.ReadinessStatus != "ready" && in.ReadinessStatus != "pending_setup" {
 		return PaymentMethod{}, fmt.Errorf("%w: readiness_status must be ready or pending_setup", ErrInvalidAdminInput)
 	}
+	if in.Fee < 0 {
+		return PaymentMethod{}, fmt.Errorf("%w: fee must be non-negative", ErrInvalidAdminInput)
+	}
 	pm := PaymentMethod{
 		ID:              id,
 		Method:          strings.TrimSpace(in.Method),
@@ -111,6 +126,7 @@ func (s Service) UpdatePaymentMethod(ctx context.Context, principal auth.Princip
 		Environment:     in.Environment,
 		ReadinessStatus: in.ReadinessStatus,
 		Enabled:         in.Enabled,
+		Fee:             in.Fee,
 		UpdatedUnix:     time.Now().Unix(),
 	}
 	if err := s.store.UpsertPaymentMethod(ctx, pm); err != nil {

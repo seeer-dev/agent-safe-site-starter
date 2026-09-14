@@ -10,14 +10,20 @@ import (
 	"github.com/example/ai-site-starter/server/internal/auth"
 )
 
-// Promo is a discount code applicable at checkout.
+// Promo is a discount code applicable at checkout. Type is percent,
+// fixed, or freeshipping. MinSubtotal gates eligibility; UsageLimit caps
+// total redemptions (nil = unlimited); UsedCount is incremented when an
+// order is created with the code.
 type Promo struct {
 	ID          string `json:"id"`
 	Code        string `json:"code"`
 	Label       string `json:"label"`
-	Type        string `json:"type"` // percent|fixed
+	Type        string `json:"type"` // percent|fixed|freeshipping
 	Value       int    `json:"value"`
 	Enabled     bool   `json:"enabled"`
+	MinSubtotal int    `json:"min_subtotal"`
+	UsageLimit  *int   `json:"usage_limit"`
+	UsedCount   int    `json:"used_count"`
 	StartsUnix  int64  `json:"starts_unix"`
 	ExpiresUnix int64  `json:"expires_unix"`
 	UpdatedUnix int64  `json:"updated_unix"`
@@ -30,8 +36,18 @@ type PromoInput struct {
 	Type        string `json:"type"`
 	Value       int    `json:"value"`
 	Enabled     bool   `json:"enabled"`
+	MinSubtotal int    `json:"min_subtotal"`
+	UsageLimit  *int   `json:"usage_limit"`
 	StartsUnix  int64  `json:"starts_unix"`
 	ExpiresUnix int64  `json:"expires_unix"`
+}
+
+// NotificationLogFilter narrows notification log listings for the admin
+// view. OrderID/Code/Status empty means unfiltered.
+type NotificationLogFilter struct {
+	OrderID string
+	Code    string
+	Status  string
 }
 
 // ----- Promos ---------------------------------------------------------------
@@ -47,11 +63,8 @@ func (s Service) CreatePromo(ctx context.Context, principal auth.Principal, in P
 	if strings.TrimSpace(in.Code) == "" {
 		return Promo{}, fmt.Errorf("%w: promo code is required", ErrInvalidAdminInput)
 	}
-	if in.Type != "percent" && in.Type != "fixed" {
-		return Promo{}, fmt.Errorf("%w: promo type must be percent or fixed", ErrInvalidAdminInput)
-	}
-	if in.Value < 0 {
-		return Promo{}, fmt.Errorf("%w: promo value must be non-negative", ErrInvalidAdminInput)
+	if err := validatePromoInput(in); err != nil {
+		return Promo{}, err
 	}
 	id, err := randomID()
 	if err != nil {
@@ -64,6 +77,8 @@ func (s Service) CreatePromo(ctx context.Context, principal auth.Principal, in P
 		Type:        in.Type,
 		Value:       in.Value,
 		Enabled:     in.Enabled,
+		MinSubtotal: in.MinSubtotal,
+		UsageLimit:  in.UsageLimit,
 		StartsUnix:  in.StartsUnix,
 		ExpiresUnix: in.ExpiresUnix,
 		UpdatedUnix: time.Now().Unix(),
@@ -92,11 +107,8 @@ func (s Service) UpdatePromo(ctx context.Context, principal auth.Principal, id s
 	if found == nil {
 		return Promo{}, ErrNotFound
 	}
-	if in.Type != "percent" && in.Type != "fixed" {
-		return Promo{}, fmt.Errorf("%w: promo type must be percent or fixed", ErrInvalidAdminInput)
-	}
-	if in.Value < 0 {
-		return Promo{}, fmt.Errorf("%w: promo value must be non-negative", ErrInvalidAdminInput)
+	if err := validatePromoInput(in); err != nil {
+		return Promo{}, err
 	}
 	p := Promo{
 		ID:          id,
@@ -105,6 +117,9 @@ func (s Service) UpdatePromo(ctx context.Context, principal auth.Principal, id s
 		Type:        in.Type,
 		Value:       in.Value,
 		Enabled:     in.Enabled,
+		MinSubtotal: in.MinSubtotal,
+		UsageLimit:  in.UsageLimit,
+		UsedCount:   found.UsedCount,
 		StartsUnix:  in.StartsUnix,
 		ExpiresUnix: in.ExpiresUnix,
 		UpdatedUnix: time.Now().Unix(),
@@ -115,6 +130,31 @@ func (s Service) UpdatePromo(ctx context.Context, principal auth.Principal, id s
 	return p, nil
 }
 
+// validatePromoInput enforces the promo domain rules shared by create and
+// update. freeshipping promos carry no discount value; percent values are
+// bounded at 100.
+func validatePromoInput(in PromoInput) error {
+	switch in.Type {
+	case "percent":
+		if in.Value < 0 || in.Value > 100 {
+			return fmt.Errorf("%w: percent promo value must be 0-100", ErrInvalidAdminInput)
+		}
+	case "fixed", "freeshipping":
+		if in.Value < 0 {
+			return fmt.Errorf("%w: promo value must be non-negative", ErrInvalidAdminInput)
+		}
+	default:
+		return fmt.Errorf("%w: promo type must be percent, fixed, or freeshipping", ErrInvalidAdminInput)
+	}
+	if in.MinSubtotal < 0 {
+		return fmt.Errorf("%w: promo min_subtotal must be non-negative", ErrInvalidAdminInput)
+	}
+	if in.UsageLimit != nil && *in.UsageLimit <= 0 {
+		return fmt.Errorf("%w: promo usage_limit must be positive when set", ErrInvalidAdminInput)
+	}
+	return nil
+}
+
 func (s Service) DeletePromo(ctx context.Context, principal auth.Principal, id string) error {
 	if !auth.Can(principal, "twcommerce.admin") {
 		return ErrForbidden
@@ -122,21 +162,45 @@ func (s Service) DeletePromo(ctx context.Context, principal auth.Principal, id s
 	return s.store.DeletePromo(ctx, id)
 }
 
+// resolvePromo loads an active promo by code, enforcing the eligibility
+// rules beyond the time window: minimum subtotal and usage limit. A promo
+// that is unknown, disabled, outside its window, below min_subtotal, or
+// exhausted fails closed with ErrInvalidPromoCode — the failure reason is
+// never enumerated to the public browser.
+func (s Service) resolvePromo(ctx context.Context, subtotal int, promoCode string) (Promo, error) {
+	promoCode = strings.TrimSpace(promoCode)
+	if promoCode == "" {
+		return Promo{}, ErrInvalidPromoCode
+	}
+	p, err := s.store.GetActivePromoByCode(ctx, promoCode, time.Now().Unix())
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return Promo{}, ErrInvalidPromoCode
+		}
+		return Promo{}, fmt.Errorf("%w: %v", ErrPromoValidationUnavailable, err)
+	}
+	if p.MinSubtotal > 0 && subtotal < p.MinSubtotal {
+		return Promo{}, ErrInvalidPromoCode
+	}
+	if p.UsageLimit != nil && p.UsedCount >= *p.UsageLimit {
+		return Promo{}, ErrInvalidPromoCode
+	}
+	return p, nil
+}
+
 // calculateDiscount applies an active promo code to the subtotal. Empty means
-// no promo. Any other code that is not currently active fails closed with
+// no promo. Any other code that is not currently eligible fails closed with
 // ErrInvalidPromoCode. Store errors are propagated rather than treated as a
-// zero discount. Returns ErrOverflow on arithmetic overflow.
+// zero discount. Returns ErrOverflow on arithmetic overflow. A freeshipping
+// promo yields zero discount — the shipping effect is applied separately.
 func (s Service) calculateDiscount(ctx context.Context, subtotal int, promoCode string) (int, error) {
 	promoCode = strings.TrimSpace(promoCode)
 	if promoCode == "" {
 		return 0, nil
 	}
-	p, err := s.store.GetActivePromoByCode(ctx, promoCode, time.Now().Unix())
+	p, err := s.resolvePromo(ctx, subtotal, promoCode)
 	if err != nil {
-		if errors.Is(err, ErrNotFound) {
-			return 0, ErrInvalidPromoCode
-		}
-		return 0, fmt.Errorf("%w: %v", ErrPromoValidationUnavailable, err)
+		return 0, err
 	}
 	var discount int
 	switch p.Type {
@@ -148,6 +212,8 @@ func (s Service) calculateDiscount(ctx context.Context, subtotal int, promoCode 
 		discount = product / 100
 	case "fixed":
 		discount = p.Value
+	case "freeshipping":
+		discount = 0
 	default:
 		return 0, ErrInvalidPromoCode
 	}
@@ -158,4 +224,27 @@ func (s Service) calculateDiscount(ctx context.Context, subtotal int, promoCode 
 		discount = 0
 	}
 	return discount, nil
+}
+
+// promoFreeShipping reports whether the given code resolves to a
+// freeshipping promo at the given subtotal. Unknown/ineligible codes
+// return false (the error was already surfaced by calculateDiscount).
+func (s Service) promoFreeShipping(ctx context.Context, subtotal int, promoCode string) bool {
+	promoCode = strings.TrimSpace(promoCode)
+	if promoCode == "" {
+		return false
+	}
+	p, err := s.resolvePromo(ctx, subtotal, promoCode)
+	return err == nil && p.Type == "freeshipping"
+}
+
+// ValidateCoupon is the public coupon check used by the storefront cart
+// drawer. It returns the promo's discount semantics for display when the
+// code is currently eligible against the supplied subtotal. Empty codes
+// and ineligible codes return ErrInvalidPromoCode.
+func (s Service) ValidateCoupon(ctx context.Context, code string, subtotal int) (Promo, error) {
+	if subtotal < 0 {
+		return Promo{}, ErrInvalidPromoCode
+	}
+	return s.resolvePromo(ctx, subtotal, code)
 }
