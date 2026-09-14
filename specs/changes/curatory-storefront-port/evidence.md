@@ -1,7 +1,7 @@
 # Curatory Storefront Port Evidence
 
 Change ID: curatory-storefront-port
-Revision: 1
+Revision: 2
 Status: Draft
 
 All evidence pending — proposal stage, no implementation yet.
@@ -39,6 +39,8 @@ All evidence pending — proposal stage, no implementation yet.
 | AC-015 | pending |  |
 | AC-016 | pending |  |
 | AC-017 | pending |  |
+| AC-018 | pending |  |
+| AC-019 | pending |  |
 
 ## Gaps
 
