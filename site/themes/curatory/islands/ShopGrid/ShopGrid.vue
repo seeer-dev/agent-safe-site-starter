@@ -21,8 +21,8 @@ const props = defineProps<{ initialCategory?: string }>()
 
 const SORT_OPTIONS = [
   { value: 'new', label: '最新上架' },
-  { value: 'price-asc', label: '價格：低 → 高' },
-  { value: 'price-desc', label: '價格：高 → 低' },
+  { value: 'price_asc', label: '價格：低 → 高' },
+  { value: 'price_desc', label: '價格：高 → 低' },
   { value: 'popular', label: '熱門商品' },
 ]
 

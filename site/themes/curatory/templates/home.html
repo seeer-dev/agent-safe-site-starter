@@ -116,15 +116,19 @@
       </div>
     </div>
     <div class="mt-10">
-      {{if gt (len .Featured) 0}}
-      <div class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
-        {{range $p := .Featured}}
-        {{template "product-card" $p}}
+      {{/* 靜態基線（no-JS / API 失敗時的降級）；ProductRail 島掛上後隱藏 */}}
+      <div id="featured-static">
+        {{if gt (len .Featured) 0}}
+        <div class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+          {{range $p := .Featured}}
+          {{template "product-card" $p}}
+          {{end}}
+        </div>
+        {{else}}
+        <p class="py-10 text-center text-sm text-muted-foreground">精選商品準備中…</p>
         {{end}}
       </div>
-      {{else}}
-      <p class="py-10 text-center text-sm text-muted-foreground">精選商品準備中…</p>
-      {{end}}
+      <div data-vue-island="ProductRail" data-prop-mode="featured" data-prop-static-id="featured-static" data-prop-limit="8"></div>
     </div>
   </section>
 
@@ -194,17 +198,20 @@
       </div>
     </div>
     <div class="mt-10">
-      {{if gt (len .Products) 0}}
-      <div class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
-        {{range $i, $p := .Products}}
-        {{if lt $i 8}}
-        {{template "product-card" $p}}
-        {{end}}
+      <div id="latest-static">
+        {{if gt (len .Products) 0}}
+        <div class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+          {{range $i, $p := .Products}}
+          {{if lt $i 8}}
+          {{template "product-card" $p}}
+          {{end}}
+          {{end}}
+        </div>
+        {{else}}
+        <p class="py-10 text-center text-sm text-muted-foreground">商品上架中…</p>
         {{end}}
       </div>
-      {{else}}
-      <p class="py-10 text-center text-sm text-muted-foreground">商品上架中…</p>
-      {{end}}
+      <div data-vue-island="ProductRail" data-prop-mode="latest" data-prop-static-id="latest-static" data-prop-limit="8"></div>
     </div>
   </section>
 

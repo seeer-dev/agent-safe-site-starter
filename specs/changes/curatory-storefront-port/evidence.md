@@ -264,3 +264,37 @@ pass; browser walkthrough confirmed products list renders 12 rows with
 Chinese category names, category/status selects + name search filter
 rows correctly (home-living -> 2/12), settings page renders with the
 standard page header and legible disabled buttons.
+
+## Live product islands (2026-09-14, store->storefront closure)
+
+User chose "API island" approach so admin product changes reach the
+storefront without a manual render. Product surfaces now live-fetch
+`/api/products` while keeping server-rendered static HTML as the no-JS /
+API-failure baseline.
+
+- New island `islands/ProductRail/ProductRail.vue` (modes: featured /
+  latest / related). featured -> `?featured=1`; latest -> default
+  newest-first; related -> `?category=` + client-side slug exclusion.
+  `limit` applied client-side. The static baseline (`staticId`) is
+  hidden only after a successful fetch; API failure keeps the static
+  snapshot visible and the island renders nothing.
+- home.html: 本季嚴選 + 最新商品 sections mount ProductRail over
+  `#featured-static` / `#latest-static` baselines.
+- product.html: 相關商品 section always renders its header; static
+  `#related-static` baseline + ProductRail related mode (limit 4).
+- ShopGrid sort fix: options sent `price-asc`/`price-desc` but the
+  backend only recognises `price_asc`/`price_desc` — price sorting was
+  silently falling back to newest-first. Options corrected; verified
+  `/api/products?sort=price_asc` returns ascending prices and the shop
+  island renders that order.
+
+Browser verification (puppeteer, cache-busted):
+- `/`: featured rail mounted with 5 cards, latest rail 8 cards, both
+  static baselines hidden after load.
+- `/products/glazed-mug-grey/`: related rail mounted with 4 cards,
+  self excluded, same category.
+- `/categories/tableware/`: ShopGrid mounted, 5 items, live-filtered.
+- `/shop/?sort=price_asc`: island renders API ascending order.
+- Live closure: PATCH product status active->draft via admin API made
+  `/api/products?featured=1` drop 5->4 and the featured rail re-rendered
+  4 cards on reload — no re-render needed. Product restored to active.
