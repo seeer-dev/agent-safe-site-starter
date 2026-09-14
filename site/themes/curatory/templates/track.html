@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  {{/* TrackPage 島：訪客查單。輸入訂單編號 + 查單碼（下單時提供）；
+       本機 recent orders 可自動帶出查單碼。 */}}
+  <div data-vue-island="TrackPage">
+    <div class="mx-auto w-full max-w-xl px-4 py-16 text-center sm:px-6">
+      <p class="eyebrow">Track Order</p>
+      <h1 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">訂單查詢</h1>
+      <p class="mt-4 text-sm text-muted-foreground">載入中…</p>
+      <noscript>
+        <p class="mt-6 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">訂單查詢需要啟用 JavaScript。</p>
+      </noscript>
+    </div>
+  </div>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

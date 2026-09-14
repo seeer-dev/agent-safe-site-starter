@@ -5,20 +5,22 @@ import (
 
 	"github.com/example/ai-site-starter/server/internal/httpx"
 	"github.com/example/ai-site-starter/server/internal/modules/commerce"
+	"github.com/example/ai-site-starter/server/internal/modules/content"
 	"github.com/example/ai-site-starter/server/internal/modules/sitecontent"
 )
 
 // storefrontHandler implements GET /api/storefront/bootstrap — the single
 // aggregation call the storefront makes on first load. It composes the
-// commerce and sitecontent services here in the bootstrap layer so no
-// business module imports another module.
+// commerce, content, and sitecontent services here in the bootstrap layer
+// so no business module imports another module.
 type storefrontHandler struct {
 	commerce    commerce.Service
+	content     content.Service
 	sitecontent sitecontent.Service
 }
 
-func newStorefrontHandler(commerceService commerce.Service, siteContentService sitecontent.Service) storefrontHandler {
-	return storefrontHandler{commerce: commerceService, sitecontent: siteContentService}
+func newStorefrontHandler(commerceService commerce.Service, contentService content.Service, siteContentService sitecontent.Service) storefrontHandler {
+	return storefrontHandler{commerce: commerceService, content: contentService, sitecontent: siteContentService}
 }
 
 // Get returns everything the storefront shell needs in one round trip:
@@ -53,6 +55,11 @@ func (h storefrontHandler) Get(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "failed to load shipping methods")
 		return
 	}
+	announcements, err := h.content.ListPublished(ctx)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "failed to load announcements")
+		return
+	}
 
 	if categories == nil {
 		categories = []commerce.Category{}
@@ -66,6 +73,9 @@ func (h storefrontHandler) Get(w http.ResponseWriter, r *http.Request) {
 	if shippingMethods == nil {
 		shippingMethods = []commerce.PublicShippingMethod{}
 	}
+	if announcements == nil {
+		announcements = []content.Article{}
+	}
 	if settings == nil {
 		settings = []byte("{}")
 	}
@@ -76,5 +86,6 @@ func (h storefrontHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"site_content":     blocks,
 		"payment_methods":  paymentMethods,
 		"shipping_methods": shippingMethods,
+		"announcements":    announcements,
 	})
 }

@@ -1,0 +1,167 @@
+{{/* ─── Curatory 共享 chrome ────────────────────────────────
+   所有頁面模板共用：
+     doc-head     — <head> 內容（meta/CSS/theme-init）
+     chrome-top   — 轉場簾幕 + PageLoader + 跑馬燈 + Header（含 no-JS 靜態版）
+     chrome-bottom— Footer（含 no-JS 靜態版）+ CartDrawer/Toaster 掛點 + islands.js
+     product-card — 靜態商品卡（含 data-add-to-cart quick-add 掛鉤）
+
+   每個 data-vue-island 掛點內含等價靜態版：Vue 掛上後取代，無 JS 時
+   靜態版仍完整可用（no-JS baseline）。 */}}
+
+{{define "doc-head"}}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{if eq .Title .SiteName}}{{.SiteName}}{{else}}{{.Title}} · {{.SiteName}}{{end}}</title>
+{{if .Description}}<meta name="description" content="{{.Description}}">{{end}}
+{{if .PublicSiteURL}}<link rel="canonical" href="{{.PublicSiteURL}}{{.PagePath}}">{{end}}
+<link rel="stylesheet" href="/assets/islands/islands-{{.IslandsCSSHash}}.css">
+{{/* 預繪初始化（深色模式 + 轉場揭幕偵測）。CSP script-src 'self' 禁止 inline，
+     故以外部檔同步載入。 */}}
+<script src="/assets/islands/theme-init.js"></script>
+{{end}}
+
+{{define "chrome-top"}}
+{{/* 頁面轉場簾幕（對應 reference 墨色轉場層）。theme-init.js 偵測到
+     轉場標記時 <html> 會有 curtain-reveal，此 div 自動播揭幕。 */}}
+<div id="page-curtain" aria-hidden="true">
+  <span class="curtain-brand font-serif text-xl tracking-[0.4em]">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
+</div>
+
+<div data-vue-island="PageLoader"></div>
+
+{{/* 頂部跑馬燈：靜態版直接渲染 promoBanner；島掛上後接管（加入置頂公告輪播）。 */}}
+<div data-vue-island="AnnouncementBar">
+  {{if index .Settings "promoBannerEnabled"}}
+  {{with index .Settings "promoBanner"}}
+  <a href="/news/" class="relative block h-8 w-full overflow-hidden bg-ink text-cream" aria-label="最新消息">
+    <div class="flex h-full items-center justify-center">
+      <span class="whitespace-nowrap px-4 text-[11px] font-light tracking-[0.18em]">{{.}}</span>
+    </div>
+  </a>
+  {{end}}
+  {{end}}
+</div>
+
+<div data-vue-island="SiteHeader">
+  <header class="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
+    <div class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 md:px-6">
+      <a href="/" class="flex items-center gap-2.5" aria-label="回到首頁">
+        <span class="font-serif text-lg font-semibold tracking-[0.24em]">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
+      </a>
+      <nav class="hidden items-center gap-1 md:flex" aria-label="主選單">
+        <a href="/shop/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">全部商品</a>
+        <a href="/news/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">最新消息</a>
+        <a href="/about/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">品牌故事</a>
+        <a href="/track/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">訂單查詢</a>
+      </nav>
+      <div class="flex items-center gap-2">
+        <a href="/cart/" class="inline-flex h-10 items-center rounded-full border px-4 text-sm transition-colors hover:bg-muted">購物車</a>
+      </div>
+    </div>
+  </header>
+</div>
+{{end}}
+
+{{define "chrome-bottom"}}
+<div data-vue-island="SiteFooter">
+  <footer class="mt-auto bg-ink text-cream/70">
+    <div class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
+      <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.2fr]">
+        <div>
+          <span class="font-serif text-xl font-semibold tracking-[0.24em] text-cream">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
+          <p class="mt-4 max-w-xs text-sm leading-relaxed text-cream/55">
+            {{with index .Settings "tagline"}}{{.}}{{else}}為日常，嚴選美好{{end}}——我們走訪窯場、工坊與工作室，只把親手摸過、真心喜歡的物件帶回來。
+          </p>
+        </div>
+        <nav aria-label="頁尾導覽">
+          <h3 class="text-[11px] font-medium uppercase tracking-[0.32em] text-cream/40">Navigate</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            <li><a href="/" class="transition-colors hover:text-cream">首頁</a></li>
+            <li><a href="/shop/" class="transition-colors hover:text-cream">全部商品</a></li>
+            <li><a href="/news/" class="transition-colors hover:text-cream">最新公告</a></li>
+            <li><a href="/about/" class="transition-colors hover:text-cream">品牌故事</a></li>
+            <li><a href="/cart/" class="transition-colors hover:text-cream">購物車</a></li>
+            <li><a href="/track/" class="transition-colors hover:text-cream">訂單查詢</a></li>
+          </ul>
+        </nav>
+        <nav aria-label="商品分類">
+          <h3 class="text-[11px] font-medium uppercase tracking-[0.32em] text-cream/40">Categories</h3>
+          <ul class="mt-4 space-y-2.5 text-sm">
+            {{range $c := .CategoryList}}
+            <li><a href="/categories/{{$c.Slug}}/" class="transition-colors hover:text-cream">{{$c.Name}}</a></li>
+            {{end}}
+          </ul>
+        </nav>
+        <div>
+          <h3 class="text-[11px] font-medium uppercase tracking-[0.32em] text-cream/40">Contact</h3>
+          <ul class="mt-4 space-y-3 text-sm">
+            {{with index .Settings "contactEmail"}}
+            <li><a href="mailto:{{.}}" class="transition-colors hover:text-cream">{{.}}</a></li>
+            {{end}}
+            {{with index .Settings "contactPhone"}}
+            <li>{{.}}</li>
+            {{end}}
+            <li class="text-cream/55">{{with index .Settings "serviceHours"}}{{.}}{{else}}週一至週五 10:00–18:00{{end}}</li>
+          </ul>
+        </div>
+      </div>
+      {{if gt (len .FooterContent) 0}}
+      <div class="mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-cream/10 pt-6 text-xs text-cream/45">
+        {{range .FooterContent}}
+        <a href="/content/{{.Key}}/" class="transition-colors hover:text-cream/80">{{.Title}}</a>
+        {{end}}
+      </div>
+      {{end}}
+      <div class="mt-6 border-t border-cream/10 pt-6 text-xs text-cream/40">
+        <p>© {{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}} {{with index .Settings "storeNameEn"}}{{.}}{{else}}CURATORY{{end}}. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</div>
+
+<div data-vue-island="CartDrawer"></div>
+<div data-vue-island="Toaster"></div>
+
+{{/* Islands bootstrap：掃描 data-vue-island 掛點並 lazy-mount */}}
+<script type="module" src="/assets/islands/islands.js"></script>
+{{end}}
+
+{{/* ─── 靜態商品卡（no-JS 基線；data-add-to-cart 由 bootstrap 全域掛鉤接管） ─── */}}
+{{define "product-card"}}
+<article class="group lift">
+  <a href="/products/{{.Slug}}/" class="block" aria-label="查看商品 {{.Name}}">
+    <div class="relative overflow-hidden rounded-xl bg-muted/40">
+      {{if .Image}}
+      <img src="{{.Image}}" alt="{{.Name}}" loading="lazy" class="aspect-[4/5] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]">
+      {{else}}
+      <div class="aspect-[4/5] w-full bg-muted/40"></div>
+      {{end}}
+      {{if and .IsFeatured (gt .Stock 0)}}
+      <span class="absolute left-3 top-3 rounded-full border border-gold/40 bg-gold/15 px-2.5 py-1 text-[10px] font-medium tracking-[0.22em] text-gold backdrop-blur-sm">精選</span>
+      {{end}}
+      {{if le .Stock 0}}
+      <div class="absolute inset-0 flex items-center justify-center bg-background/55 backdrop-blur-[1px]">
+        <span class="rotate-[-12deg] rounded border-2 border-foreground/50 bg-background/80 px-4 py-1.5 font-serif text-sm tracking-[0.32em] text-foreground/70">已售完</span>
+      </div>
+      {{end}}
+      {{if gt .Stock 0}}
+      <button type="button" data-add-to-cart="{{.Slug}}"
+        class="absolute inset-x-0 bottom-0 flex translate-y-full items-center justify-center gap-1.5 bg-ink/90 py-3 text-xs font-medium tracking-[0.25em] text-cream backdrop-blur-sm transition-all duration-300 ease-out hover:bg-ink group-hover:translate-y-0 group-focus-within:translate-y-0"
+        aria-label="將 {{.Name}} 加入購物車">＋ {{if gt (len .Variants) 0}}選擇規格{{else}}加入購物車{{end}}</button>
+      {{end}}
+    </div>
+    <div class="mt-3 space-y-1.5 px-0.5">
+      <p class="text-[11px] tracking-wider text-muted-foreground">{{with .CategoryName}}{{.}}{{else}}嚴選商品{{end}}</p>
+      <h3 class="clamp-1 text-sm font-medium leading-snug transition-colors group-hover:text-primary">{{.Name}}</h3>
+      <p class="flex items-baseline gap-2 text-sm font-medium tabular-nums">
+        {{if and (gt .OriginalPrice 0) (gt .OriginalPrice .Price)}}
+        <span class="text-xs font-normal text-muted-foreground line-through">NT$ {{.OriginalPrice}}</span>
+        <span class="text-primary">NT$ {{.Price}}</span>
+        {{else}}
+        <span>NT$ {{.Price}}</span>
+        {{end}}
+      </p>
+    </div>
+  </a>
+</article>
+{{end}}

@@ -30,10 +30,10 @@ func main() {
 
 	renderer := siterender.New(rendererConfig(cfg, siteTheme))
 
-	// Compose the full minimal-cart public render input (articles,
-	// published products, categories, site content) via the shared
+	// Compose the full public render input (articles, published products,
+	// categories, site content, theme shell pages) via the shared
 	// composition package used by both render and dev tools.
-	input, err := rendercompose.Compose(ctx, db, dialect, cfg.R2PublicBaseURL)
+	input, err := rendercompose.Compose(ctx, db, dialect, cfg.R2PublicBaseURL, siteTheme)
 	if err != nil {
 		log.Fatalf("compose render input: %v", err)
 	}
@@ -41,11 +41,11 @@ func main() {
 	// Render everything into a staging directory, then atomically promote.
 	// On any failure, the existing dist is preserved (last-known-good) and
 	// the tool exits with a non-zero status code.
-	if err := renderer.RenderAllFull(input.Articles, input.Products, input.Categories, input.CategoryLabels, input.ProductsByCategory, input.ContentBlocks); err != nil {
+	if err := renderer.RenderSite(input); err != nil {
 		log.Fatalf("render failed (dist preserved): %v", err)
 	}
-	log.Printf("rendered %d article(s), %d product(s), %d categor(y/ies), %d content page(s) into dist/",
-		len(input.Articles), len(input.Products), len(input.Categories), len(input.ContentBlocks))
+	log.Printf("rendered %d article(s), %d product(s), %d categor(y/ies), %d content page(s), %d static page(s) into dist/",
+		len(input.Articles), len(input.Products), len(input.Categories), len(input.ContentBlocks), len(input.Pages))
 }
 
 // rendererConfig builds a siterender.Config from the app config and the
@@ -54,10 +54,22 @@ func main() {
 // through so the renderer can include the R2 CDN origin in the CSP
 // img-src directive of the generated _headers file.
 func siteNameForTheme(siteTheme string) string {
-	if siteTheme == "minimal-cart" {
+	switch siteTheme {
+	case "minimal-cart":
 		return "質物選物"
+	case "curatory":
+		return "質選所"
 	}
 	return "AI Site Starter"
+}
+
+// articleDirForTheme selects the article detail output directory.
+// The curatory theme brands articles as news and links to /news/<slug>/.
+func articleDirForTheme(siteTheme string) string {
+	if siteTheme == "curatory" {
+		return "news"
+	}
+	return ""
 }
 
 func rendererConfig(cfg config.Config, siteTheme string) siterender.Config {
@@ -71,5 +83,6 @@ func rendererConfig(cfg config.Config, siteTheme string) siterender.Config {
 		SiteTheme:       siteTheme,
 		R2PublicBaseURL: cfg.R2PublicBaseURL,
 		SupabaseURL:     cfg.SupabaseURL,
+		ArticleDir:      articleDirForTheme(siteTheme),
 	}
 }

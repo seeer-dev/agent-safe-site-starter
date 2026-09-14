@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  <article class="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+    <nav class="text-xs text-muted-foreground" aria-label="麵包屑">
+      <a href="/news/" class="link-underline transition-colors hover:text-foreground">最新公告</a>
+      <span class="mx-2">/</span>
+      <span>{{.Article.Title}}</span>
+    </nav>
+
+    <header class="mt-6" data-reveal>
+      {{if .Article.Pinned}}
+      <span class="inline-block rounded-full bg-gold/15 px-2.5 py-1 text-[10px] tracking-widest text-gold">置頂公告</span>
+      {{end}}
+      <h1 class="mt-3 font-serif text-3xl font-semibold leading-snug tracking-wide sm:text-4xl">{{.Article.Title}}</h1>
+      <p class="mt-4 text-sm text-muted-foreground">
+        <time>{{dateLabel .Article.PublishedAt}}</time>
+      </p>
+    </header>
+
+    <div class="prose-curatory mt-8 border-t pt-8 text-[15px] leading-[1.95] text-foreground/90" data-reveal data-reveal-delay="0.08">
+      {{.Body}}
+    </div>
+
+    <footer class="mt-12 border-t pt-6">
+      <a href="/news/" class="inline-flex items-center gap-2 text-sm text-primary link-underline">
+        ← 回到最新公告
+      </a>
+    </footer>
+  </article>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

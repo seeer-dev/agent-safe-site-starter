@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  {{/* CheckoutPage 島：收件人/台灣地址/CVS/發票/金物流/優惠券/quote → 建單 */}}
+  <div data-vue-island="CheckoutPage">
+    <div class="mx-auto w-full max-w-5xl px-4 py-16 text-center sm:px-6">
+      <p class="eyebrow">Checkout</p>
+      <h1 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">結帳</h1>
+      <p class="mt-4 text-sm text-muted-foreground">載入結帳資訊中…</p>
+      <noscript>
+        <p class="mt-6 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">結帳功能需要啟用 JavaScript。</p>
+      </noscript>
+    </div>
+  </div>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

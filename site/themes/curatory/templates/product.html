@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  <div class="mx-auto w-full max-w-7xl px-4 pt-8 sm:px-6 sm:pt-12 lg:px-8">
+    {{/* 麵包屑（靜態，no-JS 可導航） */}}
+    <nav aria-label="麵包屑" class="flex items-center gap-2 text-sm text-muted-foreground" data-reveal>
+      <a href="/" class="transition-colors hover:text-foreground">首頁</a>
+      <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      {{if .Product.Category}}
+      <a href="/categories/{{.Product.Category}}/" class="transition-colors hover:text-foreground">{{with .Product.CategoryName}}{{.}}{{else}}全部商品{{end}}</a>
+      {{else}}
+      <a href="/shop/" class="transition-colors hover:text-foreground">全部商品</a>
+      {{end}}
+      <svg class="size-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg>
+      <span class="clamp-1 max-w-56 text-foreground/80">{{.Product.Name}}</span>
+    </nav>
+
+    {{/* ProductDetail 島掛上後接管此整個區塊（圖庫/規格/數量/CTA/accordion）。
+         島內會以 slug 重新拉取商品（價格/庫存以 API 為準）。 */}}
+    <div data-vue-island="ProductDetail" data-prop-slug="{{.Product.Slug}}">
+      {{/* 靜態基線：圖片 + 基本資訊（no-JS 可讀） */}}
+      <div class="mt-6 grid gap-10 pb-16 lg:grid-cols-2 lg:gap-16">
+        <div data-reveal>
+          <div class="overflow-hidden rounded-2xl bg-muted/40">
+            {{if .Product.Image}}
+            <img src="{{.Product.Image}}" alt="{{.Product.Name}}" class="aspect-[4/5] w-full object-cover">
+            {{else}}
+            <div class="aspect-[4/5] w-full bg-muted/40"></div>
+            {{end}}
+          </div>
+          {{if gt (len .Product.Images) 1}}
+          <div class="mt-4 flex gap-3">
+            {{range $img := .Product.Images}}
+            <span class="overflow-hidden rounded-lg bg-muted/40"><img src="{{$img}}" alt="{{$.Product.Name}}" class="aspect-[4/5] w-16 object-cover sm:w-20" loading="lazy"></span>
+            {{end}}
+          </div>
+          {{end}}
+        </div>
+
+        <div class="flex flex-col" data-reveal data-reveal-delay="0.1">
+          <p class="eyebrow">{{with .Product.CategoryName}}{{.}}{{else}}嚴選商品{{end}}</p>
+          <h1 class="mt-3 font-serif text-3xl font-semibold leading-snug sm:text-4xl">{{.Product.Name}}</h1>
+
+          <div class="mt-5 flex flex-wrap items-center gap-3">
+            <p class="flex items-baseline gap-2 text-2xl font-medium tabular-nums sm:text-3xl">
+              {{if and (gt .Product.OriginalPrice 0) (gt .Product.OriginalPrice .Product.Price)}}
+              <span class="text-sm font-normal text-muted-foreground line-through">NT$ {{.Product.OriginalPrice}}</span>
+              <span class="text-primary">NT$ {{.Product.Price}}</span>
+              {{else}}
+              <span>NT$ {{.Product.Price}}</span>
+              {{end}}
+            </p>
+            {{if gt .Product.SoldCount 0}}
+            <span class="text-xs text-muted-foreground">已售出 {{.Product.SoldCount}} 件</span>
+            {{end}}
+          </div>
+
+          <p class="mt-6 leading-relaxed text-muted-foreground">{{.Product.Description}}</p>
+
+          {{if .Product.Material}}<p class="mt-3 text-sm text-muted-foreground">材質：{{.Product.Material}}{{if .Product.Origin}}・產地：{{.Product.Origin}}{{end}}</p>{{end}}
+
+          <div class="my-7 h-px bg-border"></div>
+
+          {{if gt (len .Product.Variants) 0}}
+          <div>
+            <p class="text-sm font-medium">規格</p>
+            <ul class="mt-3 flex flex-wrap gap-2.5">
+              {{range .Product.Variants}}
+              <li class="rounded-full border border-border bg-card px-4 py-2 text-sm {{if le .Stock 0}}text-muted-foreground/50 line-through opacity-60{{end}}">
+                {{.Name}}{{if ne .PriceDelta 0}}<span class="ml-1.5 text-xs text-primary">{{if gt .PriceDelta 0}}+{{end}}NT$ {{.PriceDelta}}</span>{{end}}
+              </li>
+              {{end}}
+            </ul>
+          </div>
+          {{end}}
+
+          <div class="mt-7">
+            {{if le .Product.Stock 0}}
+            <p class="text-sm text-muted-foreground">此商品已售完</p>
+            {{else}}
+            <p class="text-sm text-muted-foreground">{{if le .Product.Stock 5}}僅剩 {{.Product.Stock}} 件{{else}}庫存充足{{end}}</p>
+            {{end}}
+            <noscript>
+              <p class="mt-4 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">加入購物車與結帳需要啟用 JavaScript。</p>
+            </noscript>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {{/* 商品介紹（靜態） */}}
+    {{if .Product.LongDescription}}
+    <section class="pb-4" data-reveal>
+      <p class="eyebrow">Details</p>
+      <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">商品介紹</h2>
+      <div class="mt-6 max-w-3xl space-y-4 text-[15px] leading-[1.9] text-foreground/90">
+        <p class="text-muted-foreground">{{.Product.Description}}</p>
+        <p>{{.Product.LongDescription}}</p>
+      </div>
+    </section>
+    {{end}}
+
+    {{/* 顧客評價（島：列表 + 表單 + 審核狀態） */}}
+    <div data-vue-island="ProductComments" data-prop-slug="{{.Product.Slug}}"></div>
+
+    {{/* 相關商品（靜態） */}}
+    {{if gt (len .Related) 0}}
+    <section class="mt-14" data-reveal>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="eyebrow">You May Also Like</p>
+          <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">相關商品</h2>
+        </div>
+        {{if .Product.Category}}
+        <a href="/categories/{{.Product.Category}}/" class="link-underline text-sm text-muted-foreground hover:text-foreground">查看分類全部</a>
+        {{end}}
+      </div>
+      <div class="mt-10 grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {{range $p := .Related}}
+        {{template "product-card" $p}}
+        {{end}}
+      </div>
+    </section>
+    {{end}}
+
+    <div class="h-16 sm:h-20"></div>
+  </div>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

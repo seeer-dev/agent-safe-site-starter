@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  {{/* ── 大圖疊字 ── */}}
+  <section class="relative">
+    <div class="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div class="relative overflow-hidden rounded-2xl lg:rounded-3xl" data-reveal>
+        <img src="/images/about.png" alt="{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}團隊走訪職人工坊"
+          class="aspect-[3/4] w-full object-cover sm:aspect-[16/9] lg:aspect-[21/9]" onerror="this.style.display='none'">
+        <div class="absolute inset-0 bg-gradient-to-t from-ink/75 via-ink/25 to-transparent"></div>
+        <div class="absolute inset-x-0 bottom-0 p-6 text-cream sm:p-10 lg:p-14">
+          <p class="text-[11px] font-medium uppercase tracking-[0.35em] text-gold">Our Story</p>
+          <h1 class="mt-3 font-serif text-3xl font-semibold tracking-wide sm:text-4xl lg:text-5xl">為日常，嚴選美好</h1>
+          <p class="mt-3 max-w-xl text-sm leading-relaxed text-cream/75 sm:text-base">
+            {{with index .Settings "tagline"}}{{.}}{{else}}為日常，嚴選美好{{end}}——一間走進工坊才說得出故事的選物店。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 品牌故事 ── */}}
+  <section class="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+    <div data-reveal>
+      <p class="eyebrow">Since 2025</p>
+      <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">每一件，都親自挑過</h2>
+    </div>
+    <div class="mt-8" data-reveal data-reveal-delay="0.08">
+      <div class="space-y-6 text-[15px] leading-[1.95] text-foreground/90">
+        <p>{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}} {{with index .Settings "storeNameEn"}}{{.}}{{else}}CURATORY{{end}} 的起點，是一個很單純的念頭：市面上什麼都賣的商店太多了，但「每一件都挑過」的商店，很少。</p>
+        <p>我們不是買手，更像是編輯。每一季，我們花上數週走訪苗栗與新竹的窯場、台中的木工坊、以及京都的竹細工老舖，和職人聊聊材料、工序與生活的關係。摸過手感、用過一輪，確認它經得起日常，才會成為貨架上的一員。</p>
+        <p>所以這裡沒有爆款、沒有快時尚。只有十二位職人夥伴、五個日常分類，以及我們願意用自己的名字推薦的物件。希望你挑走的那一件，也能陪你安靜地過上很多年。</p>
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 價值觀 3 卡 ── */}}
+  <section class="bg-muted/30 py-16 sm:py-24">
+    <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div data-reveal>
+        <p class="eyebrow">Values</p>
+        <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">我們相信的事</h2>
+      </div>
+      <div class="mt-10 grid gap-6 md:grid-cols-3">
+        <div class="h-full rounded-xl border bg-card p-6 sm:p-8" data-reveal>
+          <div class="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8 9l4-6 4 6-4 12"/></svg>
+          </div>
+          <h3 class="mt-5 font-serif text-lg font-semibold tracking-wide">嚴選 Curated</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted-foreground">如果不是我們自己願意放在家裡、天天使用的東西，就不會出現在貨架上。每件商品都經過親自挑選與試用。</p>
+        </div>
+        <div class="h-full rounded-xl border bg-card p-6 sm:p-8" data-reveal data-reveal-delay="0.08">
+          <div class="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+          </div>
+          <h3 class="mt-5 font-serif text-lg font-semibold tracking-wide">手作 Crafted</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted-foreground">我們相信手感溫度無法被量產取代。與職人合作，讓每一件作品都留有製作者的指紋與心意。</p>
+        </div>
+        <div class="h-full rounded-xl border bg-card p-6 sm:p-8" data-reveal data-reveal-delay="0.16">
+          <div class="flex size-11 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <svg class="size-5" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+          </div>
+          <h3 class="mt-5 font-serif text-lg font-semibold tracking-wide">永續 Sustainable</h3>
+          <p class="mt-3 text-sm leading-relaxed text-muted-foreground">選擇天然材料與耐用品質——買一件用十年的東西，勝過買十件用一年的。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 數據列 ── */}}
+  <section class="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8">
+    <dl class="grid grid-cols-2 gap-8 border-y py-10 text-center sm:grid-cols-4" data-reveal>
+      <div>
+        <dd class="font-serif text-3xl font-semibold tabular-nums sm:text-4xl">12+</dd>
+        <dt class="mt-2 text-xs tracking-wider text-muted-foreground">職人合作夥伴</dt>
+      </div>
+      <div>
+        <dd class="font-serif text-3xl font-semibold tabular-nums sm:text-4xl">{{if .ProductCount}}{{.ProductCount}}{{else}}12{{end}}</dd>
+        <dt class="mt-2 text-xs tracking-wider text-muted-foreground">嚴選商品</dt>
+      </div>
+      <div>
+        <dd class="font-serif text-3xl font-semibold tabular-nums sm:text-4xl">{{if .CategoryList}}{{len .CategoryList}}{{else}}5{{end}}</dd>
+        <dt class="mt-2 text-xs tracking-wider text-muted-foreground">商品分類</dt>
+      </div>
+      <div>
+        <dd class="font-serif text-3xl font-semibold tabular-nums sm:text-4xl">7 天</dd>
+        <dt class="mt-2 text-xs tracking-wider text-muted-foreground">鑑賞期保障</dt>
+      </div>
+    </dl>
+  </section>
+
+  {{/* ── CTA ── */}}
+  <section class="mx-auto w-full max-w-7xl px-4 pb-20 text-center sm:px-6 sm:pb-28 lg:px-8">
+    <div data-reveal>
+      <p class="eyebrow">Start Exploring</p>
+      <h2 class="mt-3 font-serif text-2xl font-semibold sm:text-3xl">從一件小物開始，把日常過好</h2>
+      <a href="/shop/" class="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-primary px-9 text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90">
+        回到商店
+        <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </section>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

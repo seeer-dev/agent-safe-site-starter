@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  {{/* ── Hero ─────────────────────────────────────────── */}}
+  <section class="relative overflow-hidden">
+    <div aria-hidden="true" class="pointer-events-none absolute -right-48 -top-48 size-[520px] rounded-full border border-primary/10 bg-primary/[0.035]"></div>
+    <div aria-hidden="true" class="pointer-events-none absolute -left-40 bottom-0 hidden size-[360px] rounded-full border border-primary/[0.07] lg:block"></div>
+
+    <div class="relative mx-auto grid w-full max-w-7xl items-center gap-12 px-4 pb-16 pt-10 sm:px-6 lg:grid-cols-2 lg:gap-16 lg:pb-24 lg:pt-16 lg:px-8">
+      <div data-reveal>
+        <p class="eyebrow">Curated for Daily Life</p>
+        <h1 class="mt-4 font-serif text-4xl font-semibold leading-[1.15] tracking-wide sm:text-5xl lg:text-[3.4rem]">
+          為日常，<br class="sm:hidden">嚴選美好
+        </h1>
+        <p class="mt-6 max-w-md leading-relaxed text-muted-foreground">
+          我們走訪台灣與日本的窯場、工坊與設計工作室，只把親手觸摸過、真心喜歡的物件帶回來——{{with index .Settings "tagline"}}{{.}}{{else}}為日常，嚴選美好{{end}}。
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a href="/shop/" class="inline-flex h-12 items-center gap-2 rounded-full bg-primary px-9 text-base font-medium tracking-wide text-primary-foreground transition-colors hover:bg-primary/90">
+            開始探索
+            <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+          <a href="/about/" class="inline-flex h-12 items-center rounded-full border px-8 text-base tracking-wide transition-colors hover:bg-muted">
+            認識我們
+          </a>
+        </div>
+
+        <dl class="mt-12 grid grid-cols-3 border-t pt-6">
+          <div class="px-1 first:pl-0">
+            <dt class="text-[11px] tracking-wider text-muted-foreground">職人合作夥伴</dt>
+            <dd class="mt-1.5 font-serif text-xl font-semibold tabular-nums sm:text-2xl">12+</dd>
+          </div>
+          <div class="px-1 first:pl-0">
+            <dt class="text-[11px] tracking-wider text-muted-foreground">嚴選商品</dt>
+            <dd class="mt-1.5 font-serif text-xl font-semibold tabular-nums sm:text-2xl">{{if gt (len .Products) 0}}{{len .Products}}{{else}}—{{end}}</dd>
+          </div>
+          <div class="px-1 first:pl-0">
+            <dt class="text-[11px] tracking-wider text-muted-foreground">免運門檻</dt>
+            <dd class="mt-1.5 font-serif text-xl font-semibold tabular-nums sm:text-2xl">{{with index .Settings "freeShippingThreshold"}}NT$ {{.}}{{else}}—{{end}}</dd>
+          </div>
+        </dl>
+      </div>
+
+      <div class="relative" data-reveal data-reveal-delay="0.25">
+        <img src="/images/hero.png" alt="{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}嚴選商品情境" class="aspect-[4/3] w-full rounded-2xl object-cover shadow-[0_32px_64px_-32px_rgba(60,35,25,0.35)] lg:aspect-[5/6] lg:rounded-3xl" onerror="this.style.display='none'">
+        {{if gt (len .Featured) 0}}
+        {{with index .Featured 0}}
+        <a href="/products/{{.Slug}}/"
+           class="absolute -bottom-5 left-2 flex items-center gap-3 rounded-xl border bg-card/95 p-3 pr-5 text-left shadow-lg backdrop-blur-sm transition-shadow hover:shadow-xl sm:left-6 lg:-left-6"
+           aria-label="查看商品 {{.Name}}">
+          <span class="animate-float flex items-center gap-3">
+            {{if .Image}}<img src="{{.Image}}" alt="{{.Name}}" class="size-14 rounded-lg object-cover">{{end}}
+            <span class="min-w-0">
+              <span class="clamp-1 block max-w-40 text-xs font-medium">{{.Name}}</span>
+              <span class="mt-0.5 block text-xs font-medium text-primary">NT$ {{.Price}}</span>
+            </span>
+          </span>
+        </a>
+        {{end}}
+        {{end}}
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 價值主張列 ───────────────────────────────────── */}}
+  <section class="border-y bg-card/60">
+    <div class="mx-auto grid w-full max-w-7xl grid-cols-2 gap-6 px-4 py-8 sm:px-6 lg:grid-cols-4 lg:divide-x lg:px-8">
+      <div class="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0" data-reveal>
+        <svg class="mt-0.5 size-5 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M6 3h12l4 6-10 12L2 9z"/><path d="M2 9h20M12 21L8 9l4-6 4 6-4 12"/></svg>
+        <div>
+          <p class="text-sm font-medium tracking-wide">嚴選職人手作</p>
+          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">每件商品皆親自挑選、試用</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0" data-reveal data-reveal-delay="0.06">
+        <svg class="mt-0.5 size-5 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+        <div>
+          <p class="text-sm font-medium tracking-wide">超商・宅配配送</p>
+          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">7-11／全家店到店・黑貓宅配</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0" data-reveal data-reveal-delay="0.12">
+        <svg class="mt-0.5 size-5 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        <div>
+          <p class="text-sm font-medium tracking-wide">多元付款方式</p>
+          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">信用卡・LINE Pay・貨到付款</p>
+        </div>
+      </div>
+      <div class="flex items-start gap-3 lg:px-6 lg:first:pl-0 lg:last:pr-0" data-reveal data-reveal-delay="0.18">
+        <svg class="mt-0.5 size-5 shrink-0 text-primary" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/></svg>
+        <div>
+          <p class="text-sm font-medium tracking-wide">免登入快速結帳</p>
+          <p class="mt-1 text-xs leading-relaxed text-muted-foreground">無需註冊會員，輕鬆完成訂購</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 本季嚴選 ─────────────────────────────────────── */}}
+  <section class="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+    <div data-reveal>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="eyebrow">Featured</p>
+          <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">本季嚴選</h2>
+          <p class="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">編輯部本季最推薦的作品——從手感食器到溫暖織品，每一件都值得慢慢欣賞。</p>
+        </div>
+        <a href="/shop/?sort=popular" class="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-primary">查看全部 →</a>
+      </div>
+    </div>
+    <div class="mt-10">
+      {{if gt (len .Featured) 0}}
+      <div class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {{range $p := .Featured}}
+        {{template "product-card" $p}}
+        {{end}}
+      </div>
+      {{else}}
+      <p class="py-10 text-center text-sm text-muted-foreground">精選商品準備中…</p>
+      {{end}}
+    </div>
+  </section>
+
+  {{/* ── 分類導覽 ─────────────────────────────────────── */}}
+  <section class="bg-muted/30 py-16 sm:py-24">
+    <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div data-reveal>
+        <p class="eyebrow">Collections</p>
+        <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">探索分類</h2>
+        <p class="mt-2 max-w-lg text-sm leading-relaxed text-muted-foreground">五個日常情境，五種挑選的眼光。</p>
+      </div>
+      <div class="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-6">
+        {{range $i, $c := .CategoryList}}
+        {{if lt $i 5}}
+        <div data-reveal data-reveal-delay="{{revealDelay $i 0.06}}">
+          <a href="/categories/{{$c.Slug}}/" class="group block w-full text-left">
+            <div class="overflow-hidden rounded-xl bg-muted/50">
+              {{if $c.Image}}
+              <img src="{{$c.Image}}" alt="{{$c.Name}}分類情境" loading="lazy" class="aspect-[4/3] w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]">
+              {{else}}
+              <div class="flex aspect-[4/3] w-full items-center justify-center bg-muted/50 font-serif text-2xl text-muted-foreground/40">{{$c.Name}}</div>
+              {{end}}
+            </div>
+            <div class="mt-3 flex items-baseline justify-between gap-2">
+              <span class="link-underline font-serif text-base font-semibold tracking-wide">{{$c.Name}}</span>
+            </div>
+          </a>
+        </div>
+        {{end}}
+        {{end}}
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 編輯者故事（墨色） ───────────────────────────── */}}
+  <section class="bg-ink text-cream">
+    <div class="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2 lg:gap-16 lg:px-8">
+      <div data-reveal>
+        <img src="/images/about.png" alt="編輯走訪工坊" loading="lazy" class="aspect-[4/3] w-full rounded-2xl object-cover opacity-95" onerror="this.style.display='none'">
+      </div>
+      <div data-reveal data-reveal-delay="0.12">
+        <p class="text-[11px] font-medium uppercase tracking-[0.35em] text-gold">Our Story</p>
+        <h2 class="mt-4 font-serif text-3xl font-semibold tracking-wide sm:text-4xl">每一件，都親自挑過</h2>
+        <p class="mt-6 leading-relaxed text-cream/70">
+          {{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}不是一間什麼都賣的商店。我們的選品標準很簡單：如果不是我們自己願意放在家裡、天天使用的東西，就不會出現在貨架上。
+        </p>
+        <p class="mt-4 leading-relaxed text-cream/70">
+          每一季，我們花上數週走訪窯場、木工坊與織品工作室，和職人聊聊材料與工序，確認每一道手感都經得起日常。
+        </p>
+        <a href="/about/" class="mt-8 inline-flex h-11 items-center gap-2 rounded-full border border-cream/25 px-8 text-cream transition-colors hover:bg-cream/10 hover:text-cream">
+          了解更多
+          <svg class="size-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  {{/* ── 最新商品 ─────────────────────────────────────── */}}
+  <section class="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
+    <div data-reveal>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="eyebrow">New Arrivals</p>
+          <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">最新商品</h2>
+        </div>
+        <a href="/shop/?sort=new" class="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-primary">查看全部 →</a>
+      </div>
+    </div>
+    <div class="mt-10">
+      {{if gt (len .Products) 0}}
+      <div class="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-3 lg:grid-cols-4 lg:gap-x-6">
+        {{range $i, $p := .Products}}
+        {{if lt $i 8}}
+        {{template "product-card" $p}}
+        {{end}}
+        {{end}}
+      </div>
+      {{else}}
+      <p class="py-10 text-center text-sm text-muted-foreground">商品上架中…</p>
+      {{end}}
+    </div>
+  </section>
+
+  {{/* ── 公告預覽 ─────────────────────────────────────── */}}
+  {{if gt (len .NewsPreview) 0}}
+  <section class="border-t bg-card/40 py-16 sm:py-20">
+    <div class="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div data-reveal>
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p class="eyebrow">Journal</p>
+            <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">最新消息</h2>
+          </div>
+          <a href="/news/" class="link-underline inline-flex items-center gap-1.5 text-sm font-medium text-primary">全部公告 →</a>
+        </div>
+      </div>
+      <div class="mt-8 grid gap-4 sm:grid-cols-2">
+        {{range $i, $a := .NewsPreview}}
+        {{if lt $i 2}}
+        <div data-reveal data-reveal-delay="{{revealDelay $i 0.08}}">
+          <a href="/news/{{$a.Slug}}/" class="group lift flex w-full items-center justify-between gap-4 rounded-xl border bg-card p-5 text-left">
+            <span class="min-w-0">
+              {{if $a.Pinned}}<span class="mb-2 inline-block rounded-full bg-gold/15 px-2 py-0.5 text-[10px] tracking-widest text-gold">置頂</span>{{end}}
+              <span class="clamp-1 block font-serif text-base font-semibold group-hover:text-primary">{{$a.Title}}</span>
+              <span class="mt-1.5 block text-xs text-muted-foreground">{{dateLabel $a.PublishedAt}}</span>
+            </span>
+            <svg class="size-4 shrink-0 text-muted-foreground/50 transition-all group-hover:translate-x-1 group-hover:text-primary" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </a>
+        </div>
+        {{end}}
+        {{end}}
+      </div>
+    </div>
+  </section>
+  {{end}}
+
+  {{/* ── Newsletter 訂閱區 ────────────────────────────── */}}
+  <section class="mx-auto w-full max-w-7xl px-4 pb-16 sm:px-6 sm:pb-24 lg:px-8">
+    <div data-reveal>
+      <div class="relative overflow-hidden rounded-2xl border bg-card px-6 py-12 text-center sm:px-12">
+        <div aria-hidden="true" class="pointer-events-none absolute -right-24 -top-24 size-64 rounded-full border border-primary/10"></div>
+        <div aria-hidden="true" class="pointer-events-none absolute -bottom-32 -left-16 size-72 rounded-full bg-primary/[0.04]"></div>
+        <p class="eyebrow">Newsletter</p>
+        <h2 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">訂閱{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}電子報</h2>
+        <p class="mx-auto mt-3 max-w-md text-sm leading-relaxed text-muted-foreground">
+          每季嚴選新品、職人故事與會員限定優惠，<br class="hidden sm:block">安安靜靜地送到您的信箱，絕不叨擾。
+        </p>
+        <form data-newsletter-form class="mx-auto mt-7 flex max-w-md gap-2" novalidate>
+          <input type="email" placeholder="您的 Email 信箱" aria-label="訂閱電子報的 Email"
+            class="h-11 flex-1 rounded-full border bg-background px-5 text-sm outline-none transition-colors focus:border-primary">
+          <button type="submit" class="h-11 rounded-full bg-primary px-7 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90">訂閱</button>
+        </form>
+      </div>
+    </div>
+  </section>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

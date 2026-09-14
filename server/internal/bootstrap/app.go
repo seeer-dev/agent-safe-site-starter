@@ -144,7 +144,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 
 	// Storefront bootstrap: one round trip for settings, categories,
 	// site-content blocks, and customer-usable payment/shipping methods.
-	storefrontHandler := newStorefrontHandler(commerceService, sitecontent.NewService(siteContentStore))
+	storefrontHandler := newStorefrontHandler(commerceService, content.NewService(contentStore), sitecontent.NewService(siteContentStore))
 	mux.HandleFunc("GET /api/storefront/bootstrap", storefrontHandler.Get)
 
 	// Public commerce endpoints (no auth)

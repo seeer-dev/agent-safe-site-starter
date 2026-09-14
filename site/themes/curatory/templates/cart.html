@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-Hant" data-api-base="{{.APIBase}}" class="{{if .DarkMode}}dark{{end}}">
+<head>
+{{template "doc-head" .}}
+</head>
+<body class="flex min-h-screen flex-col bg-background text-foreground antialiased">
+{{template "chrome-top" .}}
+
+<main class="flex-1">
+  {{/* CartPage 島：完整購物車頁（列表/數量/優惠券/結帳 CTA）。 */}}
+  <div data-vue-island="CartPage">
+    <div class="mx-auto w-full max-w-4xl px-4 py-16 text-center sm:px-6">
+      <p class="eyebrow">Cart</p>
+      <h1 class="mt-3 font-serif text-2xl font-semibold tracking-wide sm:text-3xl">購物車</h1>
+      <p class="mt-4 text-sm text-muted-foreground">載入購物車中…</p>
+      <noscript>
+        <p class="mt-6 rounded-lg border border-dashed px-4 py-3 text-sm text-muted-foreground">購物車功能需要啟用 JavaScript。</p>
+      </noscript>
+    </div>
+  </div>
+</main>
+
+{{template "chrome-bottom" .}}
+</body>
+</html>

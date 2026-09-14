@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/example/ai-site-starter/server/internal/modules/content"
 )
@@ -120,6 +121,15 @@ func (r Renderer) validateThemeAssets() error {
 	return nil
 }
 
+// VariantData is a purchasable option rendered on the product page.
+// PriceDelta is added to the product base price.
+type VariantData struct {
+	Name       string
+	SKU        string
+	PriceDelta int
+	Stock      int
+}
+
 // ProductData is a minimal product shape for rendering product detail pages.
 // It avoids importing the commerce module to keep the render package
 // independent of business modules. Price is in TWD (integer, not cents).
@@ -131,10 +141,51 @@ type ProductData struct {
 	Price           int
 	OriginalPrice   int
 	Image           string
+	Images          []string
 	Category        string
+	CategoryName    string
 	Material        string
 	Origin          string
 	Stock           int
+	IsFeatured      bool
+	SoldCount       int
+	Variants        []VariantData
+}
+
+// CategoryData is a first-class catalog grouping rendered in navigation
+// and filter chrome. ProductData.Category stores the category slug.
+type CategoryData struct {
+	Slug        string
+	Name        string
+	Description string
+	Image       string
+}
+
+// StaticPage describes a single non-entity page rendered once from a
+// named template in the theme templates directory. Path is validated as
+// a single safe route segment and produces <out>/<Path>/index.html.
+// Data carries page-specific values; the renderer injects the shared
+// chrome keys (SiteName, PublicSiteURL, APIBase, FooterContent, DarkMode,
+// IslandsCSSHash, CategoryList, Settings) before executing the template.
+type StaticPage struct {
+	Template string
+	Path     string
+	Data     map[string]any
+}
+
+// Input aggregates everything RenderSite renders in a single staging pass.
+type Input struct {
+	Articles           []content.Article
+	Products           []ProductData
+	Categories         []string
+	CategoryLabels     map[string]string
+	CategoryList       []CategoryData
+	ProductsByCategory map[string][]ProductData
+	ContentBlocks      []SiteContentData
+	Featured           []ProductData
+	NewsPreview        []content.Article
+	Settings           map[string]any
+	Pages              []StaticPage
 }
 
 // SiteContentData is a minimal site-content shape for rendering content pages.
@@ -176,6 +227,11 @@ type Config struct {
 	// When empty it is omitted. When non-empty but invalid,
 	// buildHeaders returns an error and renderToStaging fails-closed.
 	SupabaseURL string
+
+	// ArticleDir is the output directory for article detail pages.
+	// Empty defaults to "articles". Themes that brand the news section
+	// differently (e.g. "news") set this to match their template links.
+	ArticleDir string
 }
 
 type Renderer struct {
@@ -184,62 +240,58 @@ type Renderer struct {
 
 func New(cfg Config) Renderer { return Renderer{cfg: cfg} }
 
-type homeData struct {
+// chromeFields carries the shared values every page template needs:
+// site identity, per-page SEO meta (Title/Description/PagePath), footer
+// content, category nav, published store settings, and theme flags.
+// It is embedded in each page data struct so partials can reference
+// these fields uniformly.
+type chromeFields struct {
 	SiteName       string
 	PublicSiteURL  string
 	APIBase        string
+	Title          string
+	Description    string
+	PagePath       string
+	FooterContent  []SiteContentData
+	CategoryList   []CategoryData
+	Settings       map[string]any
+	DarkMode       bool
+	IslandsCSSHash string
+}
+
+type homeData struct {
+	chromeFields
 	Articles       []content.Article
 	Products       []ProductData
 	Categories     []string
 	CategoryLabels map[string]string
-	FooterContent  []SiteContentData
-	DarkMode       bool
-	IslandsCSSHash string
+	Featured       []ProductData
+	NewsPreview    []content.Article
 }
 
 type articleData struct {
-	SiteName       string
-	PublicSiteURL  string
-	APIBase        string
-	Article        content.Article
-	Body           template.HTML
-	FooterContent  []SiteContentData
-	DarkMode       bool
-	IslandsCSSHash string
+	chromeFields
+	Article content.Article
+	Body    template.HTML
 }
 
 type productPageData struct {
-	SiteName       string
-	PublicSiteURL  string
-	APIBase        string
-	Product        ProductData
-	FooterContent  []SiteContentData
-	DarkMode       bool
-	IslandsCSSHash string
+	chromeFields
+	Product ProductData
+	Related []ProductData
 }
 
 type categoryPageData struct {
-	SiteName       string
-	PublicSiteURL  string
-	APIBase        string
-	Category       string
-	CategoryLabel  string
-	Products       []ProductData
-	FooterContent  []SiteContentData
-	DarkMode       bool
-	IslandsCSSHash string
+	chromeFields
+	Category      string
+	CategoryLabel string
+	Products      []ProductData
 }
 
 type contentPageData struct {
-	SiteName       string
-	PublicSiteURL  string
-	APIBase        string
-	Key            string
-	Title          string
-	Body           string // plain text, escaped by html/template
-	FooterContent  []SiteContentData
-	DarkMode       bool
-	IslandsCSSHash string
+	chromeFields
+	Key  string
+	Body string // plain text, escaped by html/template
 }
 
 // themeDir returns the theme root directory or empty when no theme is set.
@@ -257,6 +309,44 @@ func (r Renderer) templateDir() string {
 		return filepath.Join(td, "templates")
 	}
 	return r.cfg.TemplateDir
+}
+
+// articleDir returns the output directory for article detail pages.
+func (r Renderer) articleDir() string {
+	if r.cfg.ArticleDir != "" {
+		return r.cfg.ArticleDir
+	}
+	return "articles"
+}
+
+// templateFuncs are the small formatting helpers page templates may use.
+// Keep this list minimal and pure -- no I/O, no business logic.
+var templateFuncs = template.FuncMap{
+	// revealDelay returns a transition-delay seconds string like "0.06"
+	// for staggered data-reveal animations.
+	"revealDelay": func(i int, step float64) string {
+		return fmt.Sprintf("%.2f", float64(i)*step)
+	},
+	// dateLabel formats a unix timestamp as a zh-TW style date (2006/01/02).
+	"dateLabel": func(unix int64) string {
+		if unix <= 0 {
+			return ""
+		}
+		return time.Unix(unix, 0).Format("2006/01/02")
+	},
+}
+
+// parseTemplate parses the named page template together with the theme's
+// optional partials file (templates/partials.html) so pages can share
+// chrome blocks via {{define}}. When no partials file exists, the page
+// template is parsed alone (backward compatible with existing themes).
+func (r Renderer) parseTemplate(name string) (*template.Template, error) {
+	files := []string{filepath.Join(r.templateDir(), name)}
+	partials := filepath.Join(r.templateDir(), "partials.html")
+	if info, err := os.Stat(partials); err == nil && info.Mode().IsRegular() {
+		files = append(files, partials)
+	}
+	return template.New(name).Funcs(templateFuncs).ParseFiles(files...)
 }
 
 // islandsCSSHash extracts the hash portion from a CSS file named
@@ -290,7 +380,7 @@ func (r Renderer) RenderAll(articles []content.Article) error {
 		return err
 	}
 	return r.renderToStaging(func(stagingDir string) error {
-		return r.renderHomeAndArticles(stagingDir, articles, nil, nil, nil, nil)
+		return r.renderHomeAndArticles(stagingDir, Input{Articles: articles})
 	})
 }
 
@@ -299,24 +389,60 @@ func (r Renderer) RenderAll(articles []content.Article) error {
 // and only promoted to OutputDir on full success. Any failure preserves
 // the existing dist.
 func (r Renderer) RenderAllFull(articles []content.Article, products []ProductData, categories []string, categoryLabels map[string]string, productsByCategory map[string][]ProductData, contentBlocks []SiteContentData) error {
+	return r.RenderSite(Input{
+		Articles:           articles,
+		Products:           products,
+		Categories:         categories,
+		CategoryLabels:     categoryLabels,
+		ProductsByCategory: productsByCategory,
+		ContentBlocks:      contentBlocks,
+	})
+}
+
+// RenderSite renders the full site described by Input in a single staging
+// pass: home, articles, products, categories, site content pages, and any
+// theme-declared static shell pages. Atomic staging + promotion semantics
+// are identical to RenderAllFull.
+func (r Renderer) RenderSite(in Input) error {
 	if err := r.validateThemeAssets(); err != nil {
 		return err
 	}
 	return r.renderToStaging(func(stagingDir string) error {
-		if err := r.renderHomeAndArticles(stagingDir, articles, products, categories, categoryLabels, contentBlocks); err != nil {
+		if err := r.renderHomeAndArticles(stagingDir, in); err != nil {
 			return err
 		}
-		if err := r.renderProductsTo(stagingDir, products, contentBlocks); err != nil {
+		if err := r.renderProductsTo(stagingDir, in); err != nil {
 			return fmt.Errorf("render products: %w", err)
 		}
-		if err := r.renderCategoriesTo(stagingDir, categories, categoryLabels, productsByCategory, contentBlocks); err != nil {
+		if err := r.renderCategoriesTo(stagingDir, in); err != nil {
 			return fmt.Errorf("render categories: %w", err)
 		}
-		if err := r.renderSiteContentTo(stagingDir, contentBlocks, contentBlocks); err != nil {
+		if err := r.renderSiteContentTo(stagingDir, in); err != nil {
 			return fmt.Errorf("render site content: %w", err)
+		}
+		if err := r.renderPagesTo(stagingDir, in); err != nil {
+			return fmt.Errorf("render static pages: %w", err)
 		}
 		return nil
 	})
+}
+
+// chrome returns a chromeFields populated with the shared values for
+// this render pass (identity, meta, footer, nav, settings, theme flags).
+func (r Renderer) chrome(in Input, islandsCSSHash, title, description, pagePath string) chromeFields {
+	return chromeFields{
+		SiteName:       r.cfg.SiteName,
+		PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
+		APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
+		Title:          title,
+		Description:    description,
+		PagePath:       pagePath,
+		FooterContent:  in.ContentBlocks,
+		CategoryList:   in.CategoryList,
+		Settings:       in.Settings,
+		DarkMode:       r.cfg.DarkMode,
+		IslandsCSSHash: islandsCSSHash,
+	}
 }
 
 // renderToStaging creates a staging directory, runs the render fn, and
@@ -389,34 +515,35 @@ func (r Renderer) renderToStaging(fn func(stagingDir string) error) error {
 	return nil
 }
 
-func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Article, products []ProductData, categories []string, categoryLabels map[string]string, footerContent []SiteContentData) error {
+func (r Renderer) renderHomeAndArticles(outputDir string, in Input) error {
 	islandsCSSHash := r.islandsCSSHash()
 
-	home, err := template.ParseFiles(filepath.Join(r.templateDir(), "home.html"))
+	home, err := r.parseTemplate("home.html")
 	if err != nil {
 		return fmt.Errorf("parse home template: %w", err)
 	}
 	if err := writeTemplate(filepath.Join(outputDir, "index.html"), home, homeData{
-		SiteName:       r.cfg.SiteName,
-		PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
-		APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
-		Articles:       articles,
-		Products:       products,
-		Categories:     categories,
-		CategoryLabels: categoryLabels,
-		FooterContent:  footerContent,
-		DarkMode:       r.cfg.DarkMode,
-		IslandsCSSHash: islandsCSSHash,
+		chromeFields:   r.chrome(in, islandsCSSHash, r.cfg.SiteName, homeDescription(in.Settings), "/"),
+		Articles:       in.Articles,
+		Products:       in.Products,
+		Categories:     in.Categories,
+		CategoryLabels: in.CategoryLabels,
+		Featured:       in.Featured,
+		NewsPreview:    in.NewsPreview,
 	}); err != nil {
 		return err
 	}
 
-	articleTpl, err := template.ParseFiles(filepath.Join(r.templateDir(), "article.html"))
-	if err != nil {
-		return fmt.Errorf("parse article template: %w", err)
+	var articleTpl *template.Template
+	if len(in.Articles) > 0 {
+		var err error
+		articleTpl, err = r.parseTemplate("article.html")
+		if err != nil {
+			return fmt.Errorf("parse article template: %w", err)
+		}
 	}
-	for _, article := range articles {
-		articleDir, err := safeJoin(filepath.Join(outputDir, "articles"), article.Slug)
+	for _, article := range in.Articles {
+		articleDir, err := safeJoin(filepath.Join(outputDir, r.articleDir()), article.Slug)
 		if err != nil {
 			return fmt.Errorf("article slug %q: %w", article.Slug, err)
 		}
@@ -424,14 +551,9 @@ func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Art
 			return err
 		}
 		if err := writeTemplate(filepath.Join(articleDir, "index.html"), articleTpl, articleData{
-			SiteName:       r.cfg.SiteName,
-			PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
-			APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
-			Article:        article,
-			Body:           template.HTML(article.BodyHTML), // #nosec G203 -- trusted CMS contract
-			FooterContent:  footerContent,
-			DarkMode:       r.cfg.DarkMode,
-			IslandsCSSHash: islandsCSSHash,
+			chromeFields: r.chrome(in, islandsCSSHash, article.Title, article.Excerpt, "/"+r.articleDir()+"/"+article.Slug+"/"),
+			Article:      article,
+			Body:         template.HTML(article.BodyHTML), // #nosec G203 -- trusted CMS contract
 		}); err != nil {
 			return err
 		}
@@ -459,20 +581,19 @@ func (r Renderer) renderHomeAndArticles(outputDir string, articles []content.Art
 // the ProductDetailPage island providing interactive add-to-cart as
 // progressive enhancement.
 func (r Renderer) RenderProducts(products []ProductData) error {
-	return r.renderProductsTo(r.cfg.OutputDir, products, nil)
+	return r.renderProductsTo(r.cfg.OutputDir, Input{Products: products})
 }
 
-func (r Renderer) renderProductsTo(outputDir string, products []ProductData, footerContent []SiteContentData) error {
-	if len(products) == 0 {
+func (r Renderer) renderProductsTo(outputDir string, in Input) error {
+	if len(in.Products) == 0 {
 		return nil
 	}
 	islandsCSSHash := r.islandsCSSHash()
-	tplPath := filepath.Join(r.templateDir(), "product.html")
-	tpl, err := template.ParseFiles(tplPath)
+	tpl, err := r.parseTemplate("product.html")
 	if err != nil {
 		return fmt.Errorf("parse product template: %w", err)
 	}
-	for _, p := range products {
+	for _, p := range in.Products {
 		dir, err := safeJoin(filepath.Join(outputDir, "products"), p.Slug)
 		if err != nil {
 			return fmt.Errorf("product slug %q: %w", p.Slug, err)
@@ -481,13 +602,9 @@ func (r Renderer) renderProductsTo(outputDir string, products []ProductData, foo
 			return err
 		}
 		if err := writeTemplate(filepath.Join(dir, "index.html"), tpl, productPageData{
-			SiteName:       r.cfg.SiteName,
-			PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
-			APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
-			Product:        p,
-			FooterContent:  footerContent,
-			DarkMode:       r.cfg.DarkMode,
-			IslandsCSSHash: islandsCSSHash,
+			chromeFields: r.chrome(in, islandsCSSHash, p.Name, p.Description, "/products/"+p.Slug+"/"),
+			Product:      p,
+			Related:      relatedProducts(p, in.ProductsByCategory),
 		}); err != nil {
 			return err
 		}
@@ -495,25 +612,44 @@ func (r Renderer) renderProductsTo(outputDir string, products []ProductData, foo
 	return nil
 }
 
+// relatedProducts returns other products in the same category (up to 4)
+// for the product page "related" section. Returns nil when the input has
+// no per-category grouping or the product has no category.
+func relatedProducts(p ProductData, byCategory map[string][]ProductData) []ProductData {
+	if p.Category == "" || byCategory == nil {
+		return nil
+	}
+	var related []ProductData
+	for _, other := range byCategory[p.Category] {
+		if other.Slug == p.Slug {
+			continue
+		}
+		related = append(related, other)
+		if len(related) >= 4 {
+			break
+		}
+	}
+	return related
+}
+
 // RenderCategories renders a category listing page for each category key.
 // Each page includes a static list of products in that category, with the
 // ProductGrid island providing interactive filtering/sorting as progressive
 // enhancement.
 func (r Renderer) RenderCategories(categories []string, labels map[string]string, productsByCategory map[string][]ProductData) error {
-	return r.renderCategoriesTo(r.cfg.OutputDir, categories, labels, productsByCategory, nil)
+	return r.renderCategoriesTo(r.cfg.OutputDir, Input{Categories: categories, CategoryLabels: labels, ProductsByCategory: productsByCategory})
 }
 
-func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labels map[string]string, productsByCategory map[string][]ProductData, footerContent []SiteContentData) error {
-	if len(categories) == 0 {
+func (r Renderer) renderCategoriesTo(outputDir string, in Input) error {
+	if len(in.Categories) == 0 {
 		return nil
 	}
 	islandsCSSHash := r.islandsCSSHash()
-	tplPath := filepath.Join(r.templateDir(), "category.html")
-	tpl, err := template.ParseFiles(tplPath)
+	tpl, err := r.parseTemplate("category.html")
 	if err != nil {
 		return fmt.Errorf("parse category template: %w", err)
 	}
-	for _, cat := range categories {
+	for _, cat := range in.Categories {
 		dir, err := safeJoin(filepath.Join(outputDir, "categories"), cat)
 		if err != nil {
 			return fmt.Errorf("category %q: %w", cat, err)
@@ -521,20 +657,15 @@ func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labe
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			return err
 		}
-		label := labels[cat]
+		label := in.CategoryLabels[cat]
 		if label == "" {
 			label = cat
 		}
 		if err := writeTemplate(filepath.Join(dir, "index.html"), tpl, categoryPageData{
-			SiteName:       r.cfg.SiteName,
-			PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
-			APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
-			Category:       cat,
-			CategoryLabel:  label,
-			Products:       productsByCategory[cat],
-			FooterContent:  footerContent,
-			DarkMode:       r.cfg.DarkMode,
-			IslandsCSSHash: islandsCSSHash,
+			chromeFields:  r.chrome(in, islandsCSSHash, label, "", "/categories/"+cat+"/"),
+			Category:      cat,
+			CategoryLabel: label,
+			Products:      in.ProductsByCategory[cat],
 		}); err != nil {
 			return err
 		}
@@ -547,20 +678,19 @@ func (r Renderer) renderCategoriesTo(outputDir string, categories []string, labe
 // policy pages). Content in hero/announcement/popup placements are
 // rendered inline by the home page islands, not as separate routes.
 func (r Renderer) RenderSiteContent(blocks []SiteContentData) error {
-	return r.renderSiteContentTo(r.cfg.OutputDir, blocks, blocks)
+	return r.renderSiteContentTo(r.cfg.OutputDir, Input{ContentBlocks: blocks})
 }
 
-func (r Renderer) renderSiteContentTo(outputDir string, blocks []SiteContentData, footerContent []SiteContentData) error {
-	if len(blocks) == 0 {
+func (r Renderer) renderSiteContentTo(outputDir string, in Input) error {
+	if len(in.ContentBlocks) == 0 {
 		return nil
 	}
 	islandsCSSHash := r.islandsCSSHash()
-	tplPath := filepath.Join(r.templateDir(), "content.html")
-	tpl, err := template.ParseFiles(tplPath)
+	tpl, err := r.parseTemplate("content.html")
 	if err != nil {
 		return fmt.Errorf("parse content template: %w", err)
 	}
-	for _, b := range blocks {
+	for _, b := range in.ContentBlocks {
 		dir, err := safeJoin(filepath.Join(outputDir, "content"), b.Key)
 		if err != nil {
 			return fmt.Errorf("content key %q: %w", b.Key, err)
@@ -569,16 +699,75 @@ func (r Renderer) renderSiteContentTo(outputDir string, blocks []SiteContentData
 			return err
 		}
 		if err := writeTemplate(filepath.Join(dir, "index.html"), tpl, contentPageData{
-			SiteName:       r.cfg.SiteName,
-			PublicSiteURL:  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
-			APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
-			Key:            b.Key,
-			Title:          b.Title,
-			Body:           b.Body, // plain text -- html/template escapes this (INTEGRATION_PLAN.md:388)
-			FooterContent:  footerContent,
-			DarkMode:       r.cfg.DarkMode,
-			IslandsCSSHash: islandsCSSHash,
+			chromeFields: r.chrome(in, islandsCSSHash, b.Title, "", "/content/"+b.Key+"/"),
+			Key:          b.Key,
+			Body:         b.Body, // plain text -- html/template escapes this (INTEGRATION_PLAN.md:388)
 		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// chromeData returns the shared template values every page needs:
+// site identity, API base, footer content, theme flags, category nav,
+// and published store settings. StaticPage.Data is merged on top of
+// these keys (page-specific values win).
+func (r Renderer) chromeData(in Input) map[string]any {
+	return map[string]any{
+		"SiteName":       r.cfg.SiteName,
+		"PublicSiteURL":  strings.TrimRight(r.cfg.PublicSiteURL, "/"),
+		"APIBase":        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
+		"Title":          r.cfg.SiteName,
+		"Description":    homeDescription(in.Settings),
+		"PagePath":       "/",
+		"FooterContent":  in.ContentBlocks,
+		"DarkMode":       r.cfg.DarkMode,
+		"IslandsCSSHash": r.islandsCSSHash(),
+		"CategoryList":   in.CategoryList,
+		"Settings":       in.Settings,
+	}
+}
+
+// homeDescription picks the home meta description from published store
+// settings (metaDescription > tagline) with a generic fallback.
+func homeDescription(settings map[string]any) string {
+	for _, key := range []string{"metaDescription", "tagline"} {
+		if v, ok := settings[key].(string); ok && strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return "為日常，嚴選美好。"
+}
+
+// renderPagesTo renders each StaticPage declared by the theme
+// (e.g. shop/news/about/cart/checkout/track/order shells). Each page's
+// Data map is merged over the shared chrome keys, and the output is
+// written to <out>/<Path>/index.html after safeJoin validation.
+func (r Renderer) renderPagesTo(outputDir string, in Input) error {
+	for _, pg := range in.Pages {
+		if pg.Template == "" {
+			return fmt.Errorf("static page %q: template is empty", pg.Path)
+		}
+		if filepath.Base(pg.Template) != pg.Template {
+			return fmt.Errorf("static page template %q must be a file name", pg.Template)
+		}
+		tpl, err := r.parseTemplate(pg.Template)
+		if err != nil {
+			return fmt.Errorf("parse static page template %q: %w", pg.Template, err)
+		}
+		dir, err := safeJoin(outputDir, pg.Path)
+		if err != nil {
+			return fmt.Errorf("static page path %q: %w", pg.Path, err)
+		}
+		data := r.chromeData(in)
+		for k, v := range pg.Data {
+			data[k] = v
+		}
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return err
+		}
+		if err := writeTemplate(filepath.Join(dir, "index.html"), tpl, data); err != nil {
 			return err
 		}
 	}

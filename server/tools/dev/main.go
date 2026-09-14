@@ -204,7 +204,7 @@ func main() {
 	// categories, site content) using the same shared composition as
 	// server/tools/render. This ensures dev renders the integrated
 	// product/category/content site, not legacy article-only output.
-	input, err := rendercompose.Compose(ctx, db, dialect, cfg.R2PublicBaseURL)
+	input, err := rendercompose.Compose(ctx, db, dialect, cfg.R2PublicBaseURL, siteTheme)
 	if err != nil {
 		log.Fatalf("compose render input: %v", err)
 	}
@@ -216,11 +216,11 @@ func main() {
 	devCfg := cfg
 	devCfg.PublicAPIBase = ""
 	renderer := siterender.New(rendererConfig(devCfg, siteTheme))
-	if err := renderer.RenderAllFull(input.Articles, input.Products, input.Categories, input.CategoryLabels, input.ProductsByCategory, input.ContentBlocks); err != nil {
+	if err := renderer.RenderSite(input); err != nil {
 		log.Fatalf("render failed (dist preserved): %v", err)
 	}
-	log.Printf("rendered %d article(s), %d product(s), %d categor(y/ies), %d content page(s) into dist/",
-		len(input.Articles), len(input.Products), len(input.Categories), len(input.ContentBlocks))
+	log.Printf("rendered %d article(s), %d product(s), %d categor(y/ies), %d content page(s), %d static page(s) into dist/",
+		len(input.Articles), len(input.Products), len(input.Categories), len(input.ContentBlocks), len(input.Pages))
 
 	app, err := bootstrap.NewWithDB(ctx, cfg, db, dialect)
 	if err != nil {
@@ -263,14 +263,26 @@ func randomID() (string, error) {
 }
 
 func siteNameForTheme(siteTheme string) string {
-	if siteTheme == "minimal-cart" {
+	switch siteTheme {
+	case "minimal-cart":
 		return "質物選物"
+	case "curatory":
+		return "質選所"
 	}
 	return "AI Site Starter"
 }
 
+// articleDirForTheme selects the article detail output directory.
+// The curatory theme brands articles as news and links to /news/<slug>/.
+func articleDirForTheme(siteTheme string) string {
+	if siteTheme == "curatory" {
+		return "news"
+	}
+	return ""
+}
+
 func shouldSeedSampleArticle(siteTheme string) bool {
-	return siteTheme != "minimal-cart"
+	return siteTheme != "minimal-cart" && siteTheme != "curatory"
 }
 
 func rendererConfig(cfg config.Config, siteTheme string) siterender.Config {
@@ -284,6 +296,7 @@ func rendererConfig(cfg config.Config, siteTheme string) siterender.Config {
 		SiteTheme:       siteTheme,
 		R2PublicBaseURL: cfg.R2PublicBaseURL,
 		SupabaseURL:     cfg.SupabaseURL,
+		ArticleDir:      articleDirForTheme(siteTheme),
 	}
 }
 

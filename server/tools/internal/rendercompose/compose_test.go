@@ -142,7 +142,7 @@ func TestComposeReturnsFullInput(t *testing.T) {
 	seedTestDB(t, db, dialect)
 
 	ctx := context.Background()
-	input, err := Compose(ctx, db, dialect, "")
+	input, err := Compose(ctx, db, dialect, "", "minimal-cart")
 	if err != nil {
 		t.Fatalf("Compose: %v", err)
 	}
@@ -203,7 +203,7 @@ func TestComposeCategoriesAreSorted(t *testing.T) {
 		}
 	}
 
-	input, err := Compose(ctx, db, dialect, "")
+	input, err := Compose(ctx, db, dialect, "", "minimal-cart")
 	if err != nil {
 		t.Fatalf("Compose: %v", err)
 	}
@@ -248,7 +248,7 @@ func TestComposeAndRenderProducesMinimalCartOutput(t *testing.T) {
 	seedTestDB(t, db, dialect)
 
 	ctx := context.Background()
-	input, err := Compose(ctx, db, dialect, "")
+	input, err := Compose(ctx, db, dialect, "", "minimal-cart")
 	if err != nil {
 		t.Fatalf("Compose: %v", err)
 	}
