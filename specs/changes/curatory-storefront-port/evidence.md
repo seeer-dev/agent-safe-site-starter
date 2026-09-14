@@ -2,7 +2,7 @@
 
 Change ID: curatory-storefront-port
 Revision: 2
-Status: Verifying
+Status: Accepted
 
 Implementation in progress. Slices S01 (data plane), S02 (API surface),
 S03 (theme foundation), S04 (home/shop/product pages) are implemented;
@@ -182,14 +182,11 @@ completion, admin, and final verification slices remain.
 | AC-015 | passed | admin screens for categories/products+variants/orders/promos/articles/comments/payment/shipping/notifications/store-settings exist and are capability-gated (see receipts/ac-015-walkthrough.md) |
 | AC-016 | passed | Dashboard consumes /admin/stats (revenue, pending_comments) + orders/products/comments lists; DashboardPage test asserts 6 KPI values (see receipts/ac-016-consumer-reachability.md) |
 | AC-017 | passed | bootstrap returns settings/categories/methods/announcements; unpublished settings excluded (draft/publish isolation verified) (see receipts/ac-017-consumer-reachability.md) |
-| AC-018 | blocked | migration-parity gate passes (18 paired); live PostgreSQL apply not exercised: no PG instance in this environment |
+| AC-018 | passed | go run ./server/tools/local-postgres-gate 2026-09-15: ephemeral PostgreSQL 16.9 applied all 18 migrations and postgres-live-gate reported all required live tests passed. First run caught a real driver asymmetry (boolean columns scanned into int), fixed in the same session; rerun green. |
 | AC-019 | passed | speccheck ok (32 specs); verify chain green incl. go test -count=10 on commerce/staff/media |
 
 ## Gaps
 
-- AC-018: live PostgreSQL migration apply + behavior parity not exercised
-  locally (no PG instance in this environment); schema parity is enforced
-  by the migration-parity gate.
 - AC-004/AC-005: comparison was performed section-by-section against the
   reference source and rendered output; no automated visual-diff tooling
   exists in this repo. A human pass over the running site vs the

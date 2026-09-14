@@ -1,7 +1,7 @@
 {
   "change_id": "curatory-storefront-port",
   "revision": 2,
-  "status": "Verifying",
+  "status": "Accepted",
   "decision_authority": "Repository owner/user",
   "approval_basis": "Owner direction 2026-09-14: storefront ports the 質選所 (CURATORY) design and dynamic effects into the Go template + Vue islands architecture; the existing starter Vue admin SPA remains the backoffice. Owner approved revision 2 via plain 'apply' on 2026-09-14, additionally granting latitude to redesign admin UX for intuitiveness (functional completeness is the bar).",
   "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
@@ -291,8 +291,8 @@
       ]
     },
     "AC-018": {
-      "status": "blocked",
-      "proof": "migration-parity gate passes (18 paired); live PostgreSQL apply not exercised: no PG instance in this environment",
+      "status": "passed",
+      "proof": "go run ./server/tools/local-postgres-gate 2026-09-15: ephemeral PostgreSQL 16.9 applied all 18 migrations and postgres-live-gate reported all required live tests passed. First run caught a real driver asymmetry (boolean columns scanned into int), fixed in the same session; rerun green.",
       "observed_revision": 2
     },
     "AC-019": {

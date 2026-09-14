@@ -9,12 +9,18 @@ Normative specification: [`spec.md`](spec.md)
 ## Scope Lock
 
 - `specs/changes/prelaunch-seo-reliability/**`
+- `specs/changes/curatory-storefront-port/**` (AC-018 close-out receipt from the PG live gate run)
 - `site/themes/curatory/**`
 - `server/internal/render/**`
-- `server/internal/modules/commerce/**`
 - `server/internal/bootstrap/**`
 - `server/tools/render/**`
 - `admin/**`
+
+Note: `server/internal/modules/commerce/**` and
+`server/internal/modules/content/**` remain owned by the still-open
+curatory-storefront-port spec on this stacked branch — speccheck requires
+exactly one authorizing owner per changed protected path, so this spec must
+not re-claim them even though S04/S06 code lives there.
 
 ## Slices (dependency order)
 
@@ -61,6 +67,20 @@ Render, inspect dist/ outputs, API retry walkthrough, full verify
 chain.
 
 Covers: AC-007 + REQ-001–REQ-004 closure
+
+### S06 — PostgreSQL live gate + boolean scan fix
+
+`local-postgres-gate` run surfaced a driver asymmetry: columns created
+as BOOLEAN on Postgres (products.is_featured, categories.is_active,
+promos.enabled, notification_templates.is_enabled, content
+articles.pinned) were scanned into `int` — correct for SQLite INTEGER
+storage, fatal under Postgres. Scans converted to `driver.Bool`;
+articles.pinned write path passes the Go bool directly (published stays
+INTEGER on both drivers). Fix for `content/**` rides under the still-open
+curatory-storefront-port spec whose migration 018 introduced the column;
+the gate run also closes curatory AC-018.
+
+Covers: AC-007 (live-gate receipt) + curatory AC-018 close-out
 
 ## Traceability
 

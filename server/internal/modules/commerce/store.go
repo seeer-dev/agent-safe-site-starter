@@ -179,7 +179,7 @@ func scanProducts(rows *sql.Rows) ([]Product, error) {
 	var out []Product
 	for rows.Next() {
 		var p Product
-		var featured int
+		var featured bool
 		if err := rows.Scan(
 			&p.ID, &p.SKU, &p.Name, &p.Slug, &p.Description, &p.LongDescription, &p.Image, &p.Images,
 			&p.Category, &p.Status, &p.Material, &p.Origin, &p.Price, &p.OriginalPrice, &p.Stock,
@@ -187,7 +187,7 @@ func scanProducts(rows *sql.Rows) ([]Product, error) {
 		); err != nil {
 			return nil, err
 		}
-		p.IsFeatured = featured == 1
+		p.IsFeatured = featured
 		out = append(out, p)
 	}
 	return out, rows.Err()
@@ -195,7 +195,7 @@ func scanProducts(rows *sql.Rows) ([]Product, error) {
 
 func scanProductRow(row *sql.Row) (Product, error) {
 	var p Product
-	var featured int
+	var featured bool
 	err := row.Scan(
 		&p.ID, &p.SKU, &p.Name, &p.Slug, &p.Description, &p.LongDescription, &p.Image, &p.Images,
 		&p.Category, &p.Status, &p.Material, &p.Origin, &p.Price, &p.OriginalPrice, &p.Stock,
@@ -207,7 +207,7 @@ func scanProductRow(row *sql.Row) (Product, error) {
 		}
 		return Product{}, err
 	}
-	p.IsFeatured = featured == 1
+	p.IsFeatured = featured
 	return p, nil
 }
 
@@ -257,12 +257,12 @@ func scanPromos(rows *sql.Rows) ([]Promo, error) {
 	var out []Promo
 	for rows.Next() {
 		var p Promo
-		var enabled int
+		var enabled bool
 		var usageLimit sql.NullInt64
 		if err := rows.Scan(&p.ID, &p.Code, &p.Label, &p.Type, &p.Value, &enabled, &p.StartsUnix, &p.ExpiresUnix, &p.MinSubtotal, &usageLimit, &p.UsedCount, &p.UpdatedUnix); err != nil {
 			return nil, err
 		}
-		p.Enabled = enabled == 1
+		p.Enabled = enabled
 		if usageLimit.Valid {
 			limit := int(usageLimit.Int64)
 			p.UsageLimit = &limit

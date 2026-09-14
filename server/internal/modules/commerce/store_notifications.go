@@ -22,11 +22,11 @@ func (s SQLStore) ListNotificationTemplates(ctx context.Context) ([]Notification
 	var out []NotificationTemplate
 	for rows.Next() {
 		var t NotificationTemplate
-		var enabled int
+		var enabled bool
 		if err := rows.Scan(&t.ID, &t.Code, &t.Name, &t.Subject, &t.Body, &enabled, &t.UpdatedUnix); err != nil {
 			return nil, err
 		}
-		t.IsEnabled = enabled == 1
+		t.IsEnabled = enabled
 		out = append(out, t)
 	}
 	return out, rows.Err()
@@ -36,7 +36,7 @@ func (s SQLStore) GetNotificationTemplateByCode(ctx context.Context, code string
 	query := database.Bind(s.dialect, `SELECT id, code, name, subject, body, is_enabled, updated_unix
 		FROM notification_templates WHERE code = ? LIMIT 1`)
 	var t NotificationTemplate
-	var enabled int
+	var enabled bool
 	err := s.db.QueryRowContext(ctx, query, code).Scan(
 		&t.ID, &t.Code, &t.Name, &t.Subject, &t.Body, &enabled, &t.UpdatedUnix)
 	if err != nil {
@@ -45,7 +45,7 @@ func (s SQLStore) GetNotificationTemplateByCode(ctx context.Context, code string
 		}
 		return NotificationTemplate{}, err
 	}
-	t.IsEnabled = enabled == 1
+	t.IsEnabled = enabled
 	return t, nil
 }
 

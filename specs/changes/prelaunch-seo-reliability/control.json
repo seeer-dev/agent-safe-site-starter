@@ -8,9 +8,9 @@
   "supersedes": [],
   "applies_to": [
     "specs/changes/prelaunch-seo-reliability/**",
+    "specs/changes/curatory-storefront-port/**",
     "site/themes/curatory/**",
     "server/internal/render/**",
-    "server/internal/modules/commerce/**",
     "server/internal/bootstrap/**",
     "server/tools/render/**",
     "admin/**"
@@ -84,7 +84,7 @@
     },
     "AC-007": {
       "status": "passed",
-      "proof": "go run ./server/tools/verify 2026-09-14: archcheck ok, migration-parity ok (18), speccheck ok (33 specs, 15 protected), scopecheck ok (19 files), go test ./... all ok, go test commerce/staff/media -count=10 ok, vet ok — 'verify: ok'.",
+      "proof": "go run ./server/tools/verify: archcheck ok, migration-parity ok (18), speccheck ok, scopecheck ok, go test ./... all ok, go test commerce/staff/media -count=10 ok, vet ok. go run ./server/tools/local-postgres-gate 2026-09-15: ephemeral PG 16.9 applied 18 migrations; first run caught bool→int scan asymmetry on is_featured/is_active/is_enabled/promos.enabled/articles.pinned (fixed via driver.Bool scan); rerun 'all required live PostgreSQL tests passed'.",
       "observed_revision": 1
     }
   }

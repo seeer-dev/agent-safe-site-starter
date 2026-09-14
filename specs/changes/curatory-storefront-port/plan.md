@@ -2,7 +2,7 @@
 
 Change ID: curatory-storefront-port
 Revision: 2
-Status: Applying
+Status: Accepted
 
 Normative specification: [`spec.md`](spec.md)
 

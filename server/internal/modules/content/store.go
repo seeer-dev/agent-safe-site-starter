@@ -32,11 +32,12 @@ const articleColumns = `id, slug, title, excerpt, body_html, published, pinned, 
 
 func scanArticle(row interface{ Scan(dest ...any) error }) (Article, error) {
 	var a Article
-	var published, pinned int
+	var published int
+	var pinned bool
 	err := row.Scan(&a.ID, &a.Slug, &a.Title, &a.Excerpt, &a.BodyHTML,
 		&published, &pinned, &a.PublishedAt, &a.UpdatedUnix)
 	a.Published = published == 1
-	a.Pinned = pinned == 1
+	a.Pinned = pinned
 	return a, err
 }
 
@@ -108,11 +109,11 @@ func (s SQLStore) Upsert(ctx context.Context, a Article) error {
 	if a.Published {
 		published = 1
 	}
-	pinned := 0
-	if a.Pinned {
-		pinned = 1
-	}
-	if _, err := s.db.ExecContext(ctx, query, a.ID, a.Slug, a.Title, a.Excerpt, a.BodyHTML, published, pinned, a.PublishedAt, a.UpdatedUnix); err != nil {
+	// pinned is BOOLEAN on Postgres and INTEGER on SQLite; bind the Go
+	// bool directly — driver.Bool maps it to 0/1 on SQLite and keeps the
+	// native boolean on Postgres. published is INTEGER on both drivers,
+	// so it keeps the explicit int conversion.
+	if _, err := s.db.ExecContext(ctx, query, a.ID, a.Slug, a.Title, a.Excerpt, a.BodyHTML, published, a.Pinned, a.PublishedAt, a.UpdatedUnix); err != nil {
 		return fmt.Errorf("upsert article: %w", err)
 	}
 	return nil

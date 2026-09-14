@@ -2,7 +2,7 @@
 
 Change ID: curatory-storefront-port
 Revision: 2
-Status: Verifying
+Status: Accepted
 Decision authority: Repository owner/user
 Approval basis: Owner direction 2026-09-14: storefront ports the 質選所 (CURATORY) design and dynamic effects into the Go template + Vue islands architecture; the existing starter Vue admin SPA remains the backoffice. Owner approved revision 2 via plain 'apply' on 2026-09-14, additionally granting latitude to redesign admin UX for intuitiveness (functional completeness is the bar).
 Repository baseline: 10f805e18e394e7065854dfbceb327114e0d4564

@@ -15,11 +15,11 @@ func scanCategories(rows *sql.Rows) ([]Category, error) {
 	var out []Category
 	for rows.Next() {
 		var c Category
-		var active int
+		var active bool
 		if err := rows.Scan(&c.ID, &c.Slug, &c.Name, &c.Description, &c.Image, &c.SortOrder, &active, &c.UpdatedUnix); err != nil {
 			return nil, err
 		}
-		c.IsActive = active == 1
+		c.IsActive = active
 		out = append(out, c)
 	}
 	return out, rows.Err()
@@ -52,7 +52,7 @@ func (s SQLStore) GetCategory(ctx context.Context, id string) (Category, error) 
 	query := database.Bind(s.dialect, `SELECT id, slug, name, description, image, sort_order, is_active, updated_unix
 		FROM categories WHERE id = ? LIMIT 1`)
 	var c Category
-	var active int
+	var active bool
 	err := s.db.QueryRowContext(ctx, query, id).Scan(
 		&c.ID, &c.Slug, &c.Name, &c.Description, &c.Image, &c.SortOrder, &active, &c.UpdatedUnix)
 	if err != nil {
@@ -61,7 +61,7 @@ func (s SQLStore) GetCategory(ctx context.Context, id string) (Category, error) 
 		}
 		return Category{}, err
 	}
-	c.IsActive = active == 1
+	c.IsActive = active
 	return c, nil
 }
 
