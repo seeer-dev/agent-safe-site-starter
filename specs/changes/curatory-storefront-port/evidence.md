@@ -153,38 +153,44 @@ completion, admin, and final verification slices remain.
 
 | REQ/AC | Status | Proof |
 |---|---|---|
-| REQ-001 | pending |  |
-| REQ-002 | pending |  |
-| REQ-003 | pending |  |
-| REQ-004 | pending |  |
-| REQ-005 | pending |  |
-| REQ-006 | pending |  |
-| REQ-007 | pending |  |
-| REQ-008 | pending |  |
-| REQ-009 | pending |  |
-| REQ-010 | pending |  |
-| REQ-011 | pending |  |
-| REQ-012 | pending |  |
-| AC-001 | pending |  |
-| AC-002 | pending |  |
-| AC-003 | pending |  |
-| AC-004 | pending |  |
-| AC-005 | pending |  |
-| AC-006 | pending |  |
-| AC-007 | pending |  |
-| AC-008 | pending |  |
-| AC-009 | pending |  |
-| AC-010 | pending |  |
-| AC-011 | pending |  |
-| AC-012 | pending |  |
-| AC-013 | pending |  |
-| AC-014 | pending |  |
-| AC-015 | pending |  |
-| AC-016 | pending |  |
-| AC-017 | pending |  |
-| AC-018 | pending |  |
-| AC-019 | pending |  |
+| REQ-001 | done | SITE_THEME=curatory render emits the ported theme; minimal-cart path untouched |
+| REQ-002 | done | 7 static pages + product/category/news routes in dist/; no-JS baselines present |
+| REQ-003 | done | tokens/components/interactions ported from reference (see S03–S06 notes) |
+| REQ-004 | done | categories + variants + featured + sold_count live (S01/S02 + seed) |
+| REQ-005 | done | CheckoutPage wizard + server-authoritative quote/order (smoke-verified) |
+| REQ-006 | done | TW- order number + access token + timeline + template notifications |
+| REQ-007 | done | news renders governed articles, pinned-first (verified in dist/news) |
+| REQ-008 | done | comments pending→approved moderation; admin reply supported |
+| REQ-009 | done | percent/fixed/freeshipping + min_subtotal + usage_limit + validate endpoint |
+| REQ-010 | done | admin resources cover all storefront entities (S07) |
+| REQ-011 | done | /api/storefront/bootstrap verified live with seeded settings |
+| REQ-012 | done | paired migrations (18 matching) + openapi.yaml updated + verify pass |
+| AC-001 | pass | `go run ./server/tools/render` → dist/ with curatory pages; SITE_THEME=minimal-cart still renders original theme |
+| AC-002 | pass | dist/*.html contain static nav/content/footer with islands mounted via data-vue-island (verified mounts on /, /products/stoneware-mug/) |
+| AC-003 | pass | product/news/category/order deep links are pre-rendered pages; order requires token as specced |
+| AC-004 | pass | section-by-section comparison against reference during S03–S06; deviations: SPA→MPA navigation, added no-JS baselines, search upgraded to live results |
+| AC-005 | pass | loader/transitions/reveal/fade-in/skeleton/toast/cart-persistence ported; prefers-reduced-motion handled in globals.css and bootstrap.ts |
+| AC-006 | pass | smoke: variant CUR-TEA-01-B → 930 = 880+50; order line resolves variant sku server-side |
+| AC-007 | pass | ?category/featured/q/sort filters verified; shop page chips/sort/search functional |
+| AC-008 | pass | quote 930×2 −186 +80 +15 = 1769; order persisted server totals (smoke) |
+| AC-009 | pass | city/district cascade + CVS picker; order stores city/district/cvs/invoice/note fields (smoke order) |
+| AC-010 | pass | guest GET /api/orders/{id}: 400 without token, 200 PII-masked with token (smoke) |
+| AC-011 | pass | seeded-templates order → notification-logs row status=sent with rendered subject/body; order/track pages render real timeline |
+| AC-012 | pass | news list pinned-first then published_at desc; only published articles render (3 seeded, 1 pinned observed first) |
+| AC-013 | pass | seeded pending comment absent from public comments API; approved ones render with reply |
+| AC-014 | pass | WELCOME10/FREESHIP validate + quote integration verified; used_count increments in order tx |
+| AC-015 | pass | admin screens for categories/products+variants/orders/promos/articles/comments/payment/shipping/notifications/store-settings exist and are capability-gated |
+| AC-016 | pass | Dashboard consumes /admin/stats (revenue, pending_comments) + orders/products/comments lists; DashboardPage test asserts 6 KPI values |
+| AC-017 | pass | bootstrap returns settings/categories/methods/announcements; unpublished settings excluded (draft/publish isolation verified) |
+| AC-018 | partial | migration-parity gate passes (18 paired); live PostgreSQL apply not exercised in this environment |
+| AC-019 | pass | speccheck ok (32 specs); verify chain green incl. go test -count=10 on commerce/staff/media |
 
 ## Gaps
 
-- None recorded yet.
+- AC-018: live PostgreSQL migration apply + behavior parity not exercised
+  locally (no PG instance in this environment); schema parity is enforced
+  by the migration-parity gate.
+- AC-004/AC-005: comparison was performed section-by-section against the
+  reference source and rendered output; no automated visual-diff tooling
+  exists in this repo. A human pass over the running site vs the
+  reference is recommended for pixel-level sign-off.

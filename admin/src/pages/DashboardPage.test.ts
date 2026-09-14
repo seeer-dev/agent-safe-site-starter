@@ -40,6 +40,16 @@ describe('DashboardPage loaded KPI and module content', () => {
           ],
         }
       }
+      if (path.includes('/admin/stats')) {
+        return { revenue: 4280, pending_comments: 1, orders: 2, products: 1 }
+      }
+      if (path.includes('/admin/comments')) {
+        return {
+          comments: [
+            { id: 'c1', status: 'pending', nickname: 'Cat', content: '待審評論內容' },
+          ],
+        }
+      }
       return {}
     })
   })
@@ -77,14 +87,16 @@ describe('DashboardPage loaded KPI and module content', () => {
     expect(mockedApi.get).toHaveBeenCalledWith('/admin/products')
 
     const kpis = wrapper.findAll('.kpi')
-    expect(kpis).toHaveLength(4)
+    expect(kpis).toHaveLength(6)
     expect(wrapper.text()).toContain('待處理訂單')
     expect(wrapper.text()).toContain('待出貨')
     expect(wrapper.text()).toContain('退貨待審')
     expect(wrapper.text()).toContain('低庫存商品')
+    expect(wrapper.text()).toContain('總營收')
+    expect(wrapper.text()).toContain('待審評論')
 
     const values = kpis.map((el) => el.find('b').text())
-    expect(values).toEqual(['1', '1', '0', '1'])
+    expect(values).toEqual(['1', '1', '0', '1', '4280', '1'])
 
     expect(wrapper.text()).toContain('TW-1')
     expect(wrapper.text()).toContain('開始處理')

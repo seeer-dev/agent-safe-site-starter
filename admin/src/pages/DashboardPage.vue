@@ -21,25 +21,33 @@ async function loadDashboard() {
   loading.value = true
   loadError.value = null
   try {
-    // Fetch real counts from the admin API. Each endpoint returns a shape
-    // like { orders: [...] } or { products: [...] }; we count what we need.
-    const [ordersRes, productsRes] = await Promise.all([
+    // Fetch real counts from the admin API. /admin/stats supplies the
+    // server-aggregated counters (revenue, pending comments); the orders
+    // and products lists drive the per-status KPIs and task list.
+    const [ordersRes, productsRes, statsRes, commentsRes] = await Promise.all([
       api.get<Record<string, any>>('/admin/orders').catch(() => null),
       api.get<Record<string, any>>('/admin/products').catch(() => null),
+      api.get<Record<string, any>>('/admin/stats').catch(() => null),
+      api.get<Record<string, any>>('/admin/comments').catch(() => null),
     ])
     const orders = extractArray(ordersRes)
     const products = extractArray(productsRes)
+    const comments = extractArray(commentsRes)
 
     const pending = orders.filter((o: any) => o.status === 'pending').length
     const processing = orders.filter((o: any) => o.status === 'processing').length
     const returnRequested = orders.filter((o: any) => o.return_request_status === 'requested').length
     const lowStock = products.filter((p: any) => p.stock <= 5 && p.status !== 'draft').length
+    const pendingComments = statsRes?.pending_comments ?? comments.filter((c: any) => c.status === 'pending').length
+    const revenue = typeof statsRes?.revenue === 'number' ? statsRes.revenue : null
 
     kpis.value = [
       { label: '待處理訂單', value: pending, desc: '履約狀態 pending' },
       { label: '待出貨', value: processing, desc: '履約狀態 processing' },
       { label: '退貨待審', value: returnRequested, desc: '退貨狀態 requested' },
       { label: '低庫存商品', value: lowStock, desc: '庫存 ≤ 5' },
+      ...(revenue != null ? [{ label: '總營收', value: revenue, desc: 'NT$，來自 /admin/stats' }] : []),
+      { label: '待審評論', value: pendingComments, desc: '狀態 pending' },
     ]
 
     // Build tasks from real orders + low-stock products (no PII when unverified).
@@ -65,6 +73,17 @@ async function loadDashboard() {
           desc: `${p.name} · 庫存 ${p.stock}`,
           action: '補貨',
           res: 'minimal-cart-products',
+        })),
+      ...comments
+        .filter((c: any) => c.status === 'pending')
+        .slice(0, 1)
+        .map((c: any) => ({
+          tone: 'warn' as const,
+          label: '評論待審',
+          id: c.id,
+          desc: `${c.nickname} · ${String(c.content ?? '').slice(0, 30)}`,
+          action: '審核',
+          res: 'comments',
         })),
     ]
   } catch (e: any) {
