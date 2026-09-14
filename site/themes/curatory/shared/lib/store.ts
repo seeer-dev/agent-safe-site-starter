@@ -62,6 +62,7 @@ export interface AppliedCoupon {
   type: 'percent' | 'fixed' | 'freeshipping'
   value: number
   label: string
+  freeShipping: boolean
 }
 
 export const checkoutStore = reactive<{ coupon: AppliedCoupon | null }>({

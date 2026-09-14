@@ -960,7 +960,16 @@ func (h Handler) ValidateCoupon(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "failed to validate coupon")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"coupon": promo})
+	discount, err := h.service.PreviewDiscount(r.Context(), body.Subtotal, promo.Code)
+	if err != nil {
+		httpx.Error(w, http.StatusInternalServerError, "failed to preview discount")
+		return
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"coupon":        promo,
+		"discount":      discount,
+		"free_shipping": promo.Type == "freeshipping",
+	})
 }
 
 // ----- Admin: categories ------------------------------------------------------

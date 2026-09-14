@@ -226,6 +226,12 @@ func (s Service) calculateDiscount(ctx context.Context, subtotal int, promoCode 
 	return discount, nil
 }
 
+// PreviewDiscount exposes the same discount calculation used at checkout
+// for display-only previews (coupon validation on the cart page).
+func (s Service) PreviewDiscount(ctx context.Context, subtotal int, promoCode string) (int, error) {
+	return s.calculateDiscount(ctx, subtotal, promoCode)
+}
+
 // promoFreeShipping reports whether the given code resolves to a
 // freeshipping promo at the given subtotal. Unknown/ineligible codes
 // return false (the error was already surfaced by calculateDiscount).

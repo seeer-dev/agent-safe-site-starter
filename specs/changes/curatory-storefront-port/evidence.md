@@ -5,8 +5,9 @@ Revision: 2
 Status: Applying
 
 Implementation in progress. Slices S01 (data plane), S02 (API surface),
-S03 (theme foundation) are implemented; S04 (home/shop/product pages) is
-in progress; checkout/admin/verification slices remain.
+S03 (theme foundation), S04 (home/shop/product pages) are implemented;
+S05 (cart/checkout/order/track) is in progress; news/about/chrome
+completion, admin, and final verification slices remain.
 
 ## Implementation progress
 
@@ -69,6 +70,32 @@ in progress; checkout/admin/verification slices remain.
   never includes fees publicly (`shipping_methods_test.go` asserts it);
   storefront shows the global `settings.freeShippingThreshold` instead
   and `/api/quote` remains the authoritative fee source.
+- **S05 in progress**: CartPage island (item rows with stepper/remove,
+  clear-cart dialog, subtotal, free-shipping progress from
+  `settings.freeShippingThreshold`, coupon validate via
+  `POST /api/coupons/validate` now returning `{coupon, discount,
+  free_shipping}` via new `Service.PreviewDiscount`, estimated total,
+  checkout CTA). CheckoutPage island — 4-step wizard (訂購資料 → 配送 →
+  付款 → 確認) ported from reference checkout-view: same-recipient toggle,
+  Taiwan city/district/ZIP cascade + CVS store picker dialog (static data
+  ported to `shared/data/`), shipping-method radio cards (fee shown only
+  after `/api/quote`), payment methods with credit-card sandbox visual
+  form (never transmitted — strict JSON decode), LINE Pay/COD explainer
+  cards, company-invoice fields, terms checkbox, per-step validation,
+  processing overlay, idempotency key via `crypto.randomUUID()`, flat
+  `OrderInput` payload, success → `rememberOrder` + navigate to
+  `/order/?id=`. Quote watcher recomputes authoritative totals whenever
+  items/methods/coupon change. OrderDetailCard shared component (status
+  stepper pending→processing→shipped→delivered→completed, COD-pending
+  badge variant, cancelled banner, items+totals, shipping/payment/invoice
+  cards, timeline, CTA). OrderPage (`?id=` + token from sessionStorage/
+  recent-orders/manual 查詢碼, success vs detail header) and TrackPage
+  (order-id + token form, recent-orders chips, skeleton/error/empty
+  states) — guest access via `GET /api/orders/{id}` +
+  `X-Order-Access-Token` (no order-number+email enumeration endpoint,
+  per spec decision). `npm run typecheck` + `npm run build` PASS;
+  `go run ./server/tools/render` emits /cart /checkout /order /track
+  with correct island mounts in generated `dist/`.
 
 ## Evidence log
 
