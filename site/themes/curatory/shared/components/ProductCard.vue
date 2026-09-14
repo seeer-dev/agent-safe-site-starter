@@ -55,7 +55,7 @@ function handleQuickAdd(e: MouseEvent) {
 <template>
   <article
     v-reveal="{ delay: Math.min((index ?? 0) * 0.06, 0.36) }"
-    :class="cn('group lift cursor-pointer')"
+    :class="cn('group lift cursor-pointer rounded-xl')"
     role="link"
     tabindex="0"
     :aria-label="`查看商品 ${product.name}`"
@@ -70,10 +70,10 @@ function handleQuickAdd(e: MouseEvent) {
         class="aspect-[4/5] w-full object-cover transition-transform duration-500 ease-out group-hover:scale-[1.04]"
       />
 
-      <!-- 精選金色徽章 -->
+      <!-- 精選徽章：奶油底+金邊，在圖片上保持可讀 -->
       <span
         v-if="product.is_featured && !soldOut"
-        class="absolute left-3 top-3 rounded-full border border-gold/40 bg-gold/15 px-2.5 py-1 text-[10px] font-medium tracking-[0.22em] text-gold backdrop-blur-sm"
+        class="absolute left-3 top-3 rounded-full border border-gold/60 bg-cream/90 px-2.5 py-1 text-[10px] font-medium tracking-[0.22em] text-ink/80 backdrop-blur-sm"
       >精選</span>
 
       <!-- 售完章 -->

@@ -23,7 +23,7 @@ Normative specification: [`spec.md`](spec.md)
 - `server/tools/internal/rendercompose/**`
 - `contracts/**`
 - `db/migrations/**`
-- `admin/src/**`
+- `admin/**`
 - `docs/**`
 
 Source of truth for design/behavior: `D:\MyTools\AI設計版面\購物車系列\質選所` (reference only — Next.js runtime, API routes, Prisma schema, and its database are never imported or executed as part of the product).

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 
 const props = withDefaults(defineProps<{
   modelValue?: string
-  options?: string[] | [string, string][]
+  options?: (string | [string, string])[]
   disabled?: boolean
   width?: string
   id?: string
@@ -20,8 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const normalized = computed(() => {
-  const opts = props.options as string[] | [string, string][]
-  return opts.map((o) => (Array.isArray(o) ? { value: o[0], label: o[1] } : { value: o, label: o }))
+  return props.options.map((o) => (Array.isArray(o) ? { value: o[0], label: o[1] } : { value: o, label: o }))
 })
 
 function onChange(ev: Event) {

@@ -15,8 +15,9 @@ const route = useRoute()
 const crumb = computed(() => {
   if (route.name === 'dashboard') return '總覽'
   if (route.name === 'states') return '五狀態'
+  if (route.name === 'store-settings') return '商店設定'
   if (route.name === 'resource') {
-    const key = route.path.replace('/res/', '')
+    const key = String(route.params.resourceKey ?? route.path.replace('/res/', ''))
     return RES[key]?.label ?? '—'
   }
   return '—'

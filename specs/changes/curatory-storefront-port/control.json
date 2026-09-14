@@ -22,7 +22,7 @@
     "server/tools/internal/rendercompose/**",
     "contracts/**",
     "db/migrations/**",
-    "admin/src/**",
+    "admin/**",
     "docs/**"
   ],
   "requirements": [

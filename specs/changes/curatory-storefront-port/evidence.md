@@ -219,3 +219,48 @@ User walkthrough feedback items addressed after Verifying entry:
   pre-paint gap.
 - Home stat formats freeShippingThreshold with thousands separators
   (1,500) via new `thousands` template func.
+
+## Admin UX hardening pass (post-Verifying)
+
+User feedback items addressed in the admin SPA:
+
+- ResourceListPage: fixed white-screen crash when a resource key is not
+  registered — page now renders an explicit not-found panel, and every
+  `resource.value` dereference is guarded.
+- Filters are now functional: new `ResourceFilters.vue` component renders
+  select/text filters bound to `filterVals`; `viewRows` applies select
+  exact-match + text contains filtering client-side, and the footer shows
+  "篩出 N / M 筆". All index-based row lookups (form open, row actions,
+  bulk actions, restock) were switched to `viewRows` so actions target
+  the visible row, not the unfiltered index.
+- Dynamic label resolution: `Col.optsSource` loads `{value,label}` pairs
+  from admin list endpoints; `ResourceTable` accepts `colLabels` and
+  resolves badge labels via col map -> global LABEL -> raw value.
+  Product category column now renders 分類名稱 instead of raw slugs.
+- Filter `optsSource`: product category filter became a real select fed
+  from /admin/categories (全部分類 + category names); product name text
+  filter added.
+- Form field `optsSource` now carries [value,label] tuples so select
+  widgets show display names; `FieldDef.opts`/`Select.options` accept
+  mixed (string | [value,label]) arrays.
+- `switch` fields render as a real Checkbox + 啟用/停用 label instead of
+  a raw true/false dropdown; label association uses `aria-labelledby`
+  (no for/id target needed since Checkbox is a span role=checkbox).
+- Button fix: `.btn.dis` no longer forces `background:var(--surface-2)`
+  over variant colors — disabled primary buttons keep brand bg + white
+  text at reduced opacity (was white-on-grey "empty" button). Hover
+  colors for dis variants pinned so :hover can't flash the wrong bg.
+- StoreSettingsPage: replaced non-existent CSS vars (--muted/--ok/--warn)
+  with design-system vars, adopted the shared `.pagehd` header layout,
+  added `.pbody` padding inside Panels, and version-status chips now use
+  `.st` badge styles. Topbar crumb resolves `store-settings` ->
+  商店設定 and uses route.params.resourceKey.
+- Brand naming unified to 質選所 (was mockup 質物選物) across Sidebar,
+  AuthGate, Dashboard, index.html title.
+- tones.ts: added `policy` placement label/tone.
+
+Verification: admin typecheck clean; vitest 16 files / 195 tests all
+pass; browser walkthrough confirmed products list renders 12 rows with
+Chinese category names, category/status selects + name search filter
+rows correctly (home-living -> 2/12), settings page renders with the
+standard page header and legible disabled buttons.

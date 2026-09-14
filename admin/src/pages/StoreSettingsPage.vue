@@ -107,12 +107,13 @@ onMounted(load)
 
 <template>
   <div class="page">
-    <header class="phd-row">
+    <!-- Page header — same .pagehd convention as resource pages -->
+    <div class="pagehd">
       <div>
-        <h2>商店設定</h2>
-        <p class="sub">前台顯示的商店資訊與門檻設定。先存草稿，再發布到前台。</p>
+        <h1>商店設定</h1>
+        <div class="sub">前台顯示的商店資訊與門檻設定。先存草稿，再發布到前台。</div>
       </div>
-      <div class="actions">
+      <div style="display:flex;gap:8px">
         <Button variant="sec" :disabled="loading || saving || !dirty" @click="save">
           {{ saving ? '儲存中…' : '儲存草稿' }}
         </Button>
@@ -120,15 +121,19 @@ onMounted(load)
           {{ publishing ? '發布中…' : '發布' }}
         </Button>
       </div>
-    </header>
+    </div>
 
-    <p v-if="error" class="err">{{ error }}</p>
-    <p v-if="notice" class="ok">{{ notice }}</p>
+    <div v-if="error" class="note danger">{{ error }}</div>
+    <div v-if="notice" class="note">{{ notice }}</div>
 
-    <div v-if="loading" class="sub">載入中…</div>
+    <div v-if="loading" class="panel">
+      <div class="emptybox">
+        <b>載入中…</b>
+      </div>
+    </div>
     <template v-else>
       <Panel title="商店資訊">
-        <div class="grid2">
+        <div class="pbody grid2">
           <label class="fld"><span>商店名稱</span><Input v-model="form.storeName" /></label>
           <label class="fld"><span>英文名稱</span><Input v-model="form.storeNameEn" /></label>
           <label class="fld wide"><span>標語</span><Input v-model="form.tagline" /></label>
@@ -138,14 +143,14 @@ onMounted(load)
       </Panel>
 
       <Panel title="公告列">
-        <div class="grid2">
+        <div class="pbody grid2">
           <label class="fld wide"><span>公告文字</span><Input v-model="form.promoBanner" /></label>
           <label class="fld row"><Checkbox v-model:checked="form.promoBannerEnabled" /><span>啟用公告列</span></label>
         </div>
       </Panel>
 
       <Panel title="門檻與通知">
-        <div class="grid2">
+        <div class="pbody grid2">
           <label class="fld"><span>免運門檻（NT$）</span><Input :model-value="String(form.freeShippingThreshold)" type="number" @update:model-value="form.freeShippingThreshold = Number($event) || 0" /></label>
           <label class="fld"><span>低庫存警示（件）</span><Input :model-value="String(form.lowStockThreshold)" type="number" @update:model-value="form.lowStockThreshold = Number($event) || 0" /></label>
           <label class="fld row"><Checkbox v-model:checked="form.notificationMaster" /><span>啟用訂單通知信</span></label>
@@ -153,11 +158,11 @@ onMounted(load)
       </Panel>
 
       <Panel v-if="row" title="版本狀態">
-        <div class="meta">
+        <div class="pbody meta">
           <span>草稿版本 v{{ row.version }}（{{ fmtUnix(row.draft_updated_unix) }}）</span>
           <span>前台發布於 {{ fmtUnix(row.published_unix) }}</span>
-          <span v-if="unpublishedChanges" class="warn">有未發布的草稿變更</span>
-          <span v-else class="ok">前台已是最新</span>
+          <span v-if="unpublishedChanges" class="st warn">有未發布的草稿變更</span>
+          <span v-else class="st success">前台已是最新</span>
         </div>
       </Panel>
     </template>
@@ -165,18 +170,13 @@ onMounted(load)
 </template>
 
 <style scoped>
-.page { display: flex; flex-direction: column; gap: 16px; }
-.phd-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-.sub { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
-.actions { display: flex; gap: 8px; }
-.err { color: var(--danger, #c0392b); }
-.ok { color: var(--ok, #1a7f37); }
-.warn { color: var(--warn, #b45309); }
-.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; padding: 4px 0 8px; }
-.fld { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
-.fld > span { color: var(--muted); }
+.page { display: flex; flex-direction: column; gap: 14px; }
+.pbody { padding: 14px 16px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; }
+.fld { display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+.fld > span { color: var(--text-2); }
 .fld.wide { grid-column: 1 / -1; }
-.fld.row { flex-direction: row; align-items: center; gap: 8px; }
-.meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.fld.row { flex-direction: row; align-items: center; gap: 8px; font-weight: 500; color: var(--text); }
+.meta { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; color: var(--text-2); align-items: center; }
 @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
 </style>

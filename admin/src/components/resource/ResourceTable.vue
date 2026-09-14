@@ -12,6 +12,8 @@ const props = defineProps<{
   resource: ResourceDef
   rows: Record<string, any>[]
   selected: Set<number>
+  /** Raw value -> display label per column (e.g. category slug -> name). */
+  colLabels?: Record<string, Record<string, string>>
 }>()
 
 const emit = defineEmits<{
@@ -28,8 +30,10 @@ function toneFor(v: unknown) {
   return TONE[String(v)] ?? 'neutral'
 }
 
-function labelFor(v: unknown) {
+function labelFor(col: Col, v: unknown) {
   const key = String(v)
+  const mapped = props.colLabels?.[col.k]?.[key]
+  if (mapped !== undefined) return mapped
   return LABEL[key] !== undefined ? LABEL[key] : key
 }
 
@@ -42,7 +46,7 @@ function absentDash(v: unknown): string {
 function cellContent(col: Col, row: Record<string, any>) {
   const v = row[col.k]
   if (col.r === 'mono') return { type: 'mono' as const, value: absentDash(v) }
-  if (col.r === 'badge') return { type: 'badge' as const, value: v, tone: toneFor(v), label: labelFor(v) }
+  if (col.r === 'badge') return { type: 'badge' as const, value: v, tone: toneFor(v), label: labelFor(col, v) }
   if (col.r === 'number') {
     if (v === null || v === undefined) return { type: 'number' as const, value: '—' }
     const isMoney = col.k === 'price' || col.k === 'total' || col.k === 'total_spent'

@@ -108,7 +108,7 @@ svg{stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-l
 .btn{border:1px solid var(--border-2);background:var(--surface);color:var(--text);padding:7px 13px;border-radius:8px;font:inherit;font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
 .btn:hover{background:var(--surface-2)}.btn svg{width:15px;height:15px}
 .btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}.btn.pri:hover{background:var(--brand-600)}
-.btn.sm{padding:4px 9px;font-size:12.5px}.btn.dis{opacity:.45;cursor:not-allowed;background:var(--surface-2)}
+.btn.sm{padding:4px 9px;font-size:12.5px}.btn.dis{opacity:.45;cursor:not-allowed}.btn.dis:hover{background:var(--surface)}.btn.pri.dis:hover{background:var(--brand)}.btn.sec.dis:hover{background:var(--surface-2)}.btn.ghost.dis:hover{background:transparent}.btn.danger.dis:hover{background:var(--surface)}
 .btn.ghost{border-color:transparent;background:transparent;color:var(--text-2)}
 .btn.danger{color:var(--red);border-color:var(--red-bg)}.btn.danger:hover{background:var(--red-bg)}
 .btn.sec{background:var(--surface-2)}

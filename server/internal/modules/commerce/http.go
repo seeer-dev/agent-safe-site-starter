@@ -57,7 +57,10 @@ type adminProductResponse struct {
 	Tag             string              `json:"tag"`
 	Rating          float64             `json:"rating"`
 	ReviewsCount    int                 `json:"reviews_count"`
+	IsFeatured      bool                `json:"is_featured"`
+	SoldCount       int                 `json:"sold_count"`
 	UpdatedUnix     int64               `json:"updated_unix"`
+	Variants        []ProductVariant    `json:"variants"`
 	ProductImages   []adminProductImage `json:"product_images"`
 }
 
@@ -94,7 +97,10 @@ func toAdminProductResponse(p Product) adminProductResponse {
 		Tag:             p.Tag,
 		Rating:          p.Rating,
 		ReviewsCount:    p.ReviewsCount,
+		IsFeatured:      p.IsFeatured,
+		SoldCount:       p.SoldCount,
 		UpdatedUnix:     p.UpdatedUnix,
+		Variants:        p.Variants,
 		ProductImages:   imgs,
 	}
 }

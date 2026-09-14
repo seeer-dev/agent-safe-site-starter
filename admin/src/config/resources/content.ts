@@ -85,7 +85,7 @@ export const contentResource: ResourceDef = {
         t: '內容',
         fields: [
           { k: 'key', l: 'Key', w: 'text', req: true },
-          { k: 'placement', l: '位置', w: 'select', req: true, opts: ['hero', 'announcement', 'popup', 'footer', 'policy'] },
+          { k: 'placement', l: '位置', w: 'select', req: true, opts: [['hero', 'Hero'], ['announcement', '公告'], ['popup', 'Popup'], ['footer', 'Footer'], ['policy', '政策']] },
           { k: 'title', l: '標題', w: 'text', req: true },
           { k: 'body', l: '內容', w: 'textarea', span: 2 },
           { k: 'sort_order', l: '排序', w: 'number' },

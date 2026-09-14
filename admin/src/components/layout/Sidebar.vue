@@ -67,7 +67,7 @@ function onNavigate() {
     <!-- Brand -->
     <div class="brand">
       <div class="logo">質</div>
-      <div class="brand-text"><b>質物選物後台</b><small>tw-minimal-cart</small></div>
+      <div class="brand-text"><b>質選所後台</b><small>tw-minimal-cart</small></div>
     </div>
 
     <!-- Nav -->

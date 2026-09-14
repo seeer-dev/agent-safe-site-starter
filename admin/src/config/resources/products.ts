@@ -30,7 +30,8 @@ export const productsResource: ResourceDef = {
   cols: [
     { k: 'sku', l: 'SKU', r: 'mono' },
     { k: 'name', l: '商品' },
-    { k: 'category', l: '分類', r: 'badge' },
+    { k: 'category', l: '分類', r: 'badge',
+      optsSource: { api: '/admin/categories', listKey: 'categories', value: 'slug', label: 'name' } },
     { k: 'is_featured', l: '精選', r: 'badge' },
     { k: 'price', l: '售價', r: 'number' },
     { k: 'stock', l: '庫存', r: 'number' },
@@ -50,7 +51,9 @@ export const productsResource: ResourceDef = {
   ],
   filters: [
     { k: 'status', l: '狀態', w: 'select', opts: [['', '全部'], ['active', '上架'], ['draft', '草稿']] },
-    { k: 'category', l: '分類', w: 'text' },
+    { k: 'category', l: '分類', w: 'select',
+      optsSource: { api: '/admin/categories', listKey: 'categories', value: 'slug', label: 'name' } },
+    { k: 'name', l: '商品名稱', w: 'text' },
   ],
   form: {
     title: '商品',

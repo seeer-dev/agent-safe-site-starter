@@ -2,6 +2,7 @@
 import { ref, watch, computed, reactive, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import ResourceTable from '@/components/resource/ResourceTable.vue'
+import ResourceFilters from '@/components/resource/ResourceFilters.vue'
 import Button from '@/components/ui/Button.vue'
 import Input from '@/components/ui/Input.vue'
 import Select from '@/components/ui/Select.vue'
@@ -10,6 +11,7 @@ import Modal from '@/components/ui/Modal.vue'
 import MediaUploader from '@/components/MediaUploader.vue'
 import VariantsEditor from '@/components/VariantsEditor.vue'
 import ConfirmDialog, { type ConfirmBody, type ConfirmMeta } from '@/components/ui/ConfirmDialog.vue'
+import Checkbox from '@/components/ui/Checkbox.vue'
 import { RES } from '@/config/resources'
 import { MACHINES } from '@/config/machines'
 import { LABEL } from '@/config/tones'
@@ -32,6 +34,7 @@ const mutating = ref(false)
 
 async function loadRows() {
   const r = resource.value
+  if (!r) return
   if (!r.api) {
     // No fixture fallback — require a real API endpoint.
     rows.value = []
@@ -56,10 +59,18 @@ async function loadRows() {
   }
 }
 
-onMounted(loadRows)
+onMounted(() => {
+  loadRows()
+  loadDynamicOpts()
+})
 watch(resourceKey, () => {
   selected.value = new Set()
+  filterVals.value = {}
+  colLabels.value = {}
+  filterOpts.value = {}
+  dynamicOpts.value = {}
   loadRows()
+  loadDynamicOpts()
 })
 
 // Selection state
@@ -73,10 +84,10 @@ function toggleRow(i: number) {
 }
 
 function toggleAll() {
-  if (selected.value.size === rows.value.length) {
+  if (selected.value.size === viewRows.value.length) {
     selected.value = new Set()
   } else {
-    selected.value = new Set(rows.value.map((_, i) => i))
+    selected.value = new Set(viewRows.value.map((_, i) => i))
   }
 }
 
@@ -126,7 +137,9 @@ function seedFieldValue(fd: FieldDef, value: unknown): unknown {
 
 function buildFormPayload(): Record<string, unknown> {
   const payload: Record<string, unknown> = {}
-  for (const section of resource.value.form.sections) {
+  const r = resource.value
+  if (!r) return payload
+  for (const section of r.form.sections) {
     for (const fd of section.fields) {
       const value = formData[fd.k]
       if (fd.req && (value == null || value === '' || (Array.isArray(value) && value.length === 0))) {
@@ -176,32 +189,91 @@ function buildFormPayload(): Record<string, unknown> {
   return payload
 }
 
-const dynamicOpts = ref<Record<string, string[]>>({})
+const dynamicOpts = ref<Record<string, [string, string][]>>({})
+/** Column raw-value -> display label maps (col.optsSource). */
+const colLabels = ref<Record<string, Record<string, string>>>({})
+/** Filter select options loaded from filter.optsSource. */
+const filterOpts = ref<Record<string, [string, string][]>>({})
+/** Current filter values keyed by filter key. */
+const filterVals = ref<Record<string, string>>({})
+
+async function fetchOptsSource(src: { api: string; listKey?: string; value: string; label: string }) {
+  const res = await api.get<any>(src.api)
+  const list = Array.isArray(res)
+    ? res
+    : (res?.[src.listKey ?? 'items'] ?? Object.values(res ?? {}).find(Array.isArray) ?? [])
+  return (list as any[])
+    .map((e) => ({ value: String(e[src.value] ?? ''), label: String(e[src.label] ?? e[src.value] ?? '') }))
+    .filter((e) => e.value)
+}
 
 async function loadDynamicOpts() {
-  for (const sec of resource.value.form.sections) {
+  const r = resource.value
+  if (!r) return
+  // 表單 select 欄位的動態選項
+  for (const sec of r.form.sections) {
     for (const fd of sec.fields) {
       if (!fd.optsSource || dynamicOpts.value[fd.k]) continue
       try {
-        const res = await api.get<any>(fd.optsSource.api)
-        const list = Array.isArray(res) ? res : (res?.[fd.optsSource.listKey ?? 'items'] ?? Object.values(res ?? {}).find(Array.isArray) ?? [])
+        const entries = await fetchOptsSource(fd.optsSource)
         dynamicOpts.value = {
           ...dynamicOpts.value,
-          [fd.k]: (list as any[]).map((e) => String(e[fd.optsSource!.value] ?? '')).filter(Boolean),
+          [fd.k]: entries.map((e) => [e.value, e.label] as [string, string]),
         }
       } catch {
         dynamicOpts.value = { ...dynamicOpts.value, [fd.k]: [] }
       }
     }
   }
+  // 欄位 badge 的原始值 → 顯示名稱對照（例如 category slug → 分類名稱）
+  for (const col of r.cols) {
+    if (!col.optsSource || colLabels.value[col.k]) continue
+    try {
+      const entries = await fetchOptsSource(col.optsSource)
+      const map: Record<string, string> = {}
+      for (const e of entries) map[e.value] = e.label
+      colLabels.value = { ...colLabels.value, [col.k]: map }
+    } catch {
+      /* 對照表載入失敗時維持原值顯示 */
+    }
+  }
+  // 篩選 select 的動態選項
+  for (const f of r.filters) {
+    if (!f.optsSource || filterOpts.value[f.k]) continue
+    try {
+      const entries = await fetchOptsSource(f.optsSource)
+      filterOpts.value = {
+        ...filterOpts.value,
+        [f.k]: entries.map((e) => [e.value, e.label] as [string, string]),
+      }
+    } catch {
+      filterOpts.value = { ...filterOpts.value, [f.k]: [] }
+    }
+  }
 }
+
+/** 篩選後的列：select 精確比對、text 欄位模糊包含（不分大小寫）。 */
+const viewRows = computed(() => {
+  const r = resource.value
+  if (!r) return []
+  const active = r.filters.filter((f) => (filterVals.value[f.k] ?? '') !== '')
+  if (active.length === 0) return rows.value
+  return rows.value.filter((row) =>
+    active.every((f) => {
+      const want = filterVals.value[f.k] ?? ''
+      const got = String(row[f.k] ?? '')
+      if (f.w === 'select') return got === want
+      return got.toLowerCase().includes(want.toLowerCase())
+    }),
+  )
+})
 
 function openForm(i: number | null) {
   formTriggerEl.value = (document.activeElement as HTMLElement) || null
   formRowIndex.value = i
   formError.value = null
   // Seed form data from the row (edit) or empty (create)
-  const seed = i !== null ? rows.value[i] ?? {} : {}
+  const seed = i !== null ? viewRows.value[i] ?? {} : {}
   for (const k of Object.keys(formData)) delete formData[k]
   for (const sec of resource.value.form.sections) {
     for (const fd of sec.fields) {
@@ -259,7 +331,7 @@ function requestCloseForm() {
 
 async function saveForm() {
   const r = resource.value
-  if (!r.api) {
+  if (!r?.api) {
     formError.value = '此資源未設定 API 端點，無法儲存。'
     return
   }
@@ -270,7 +342,7 @@ async function saveForm() {
     if (formIsNew.value && r.api.create) {
       await api.post(r.api.create, payload)
     } else if (!formIsNew.value && r.api.update) {
-      const row = rows.value[formRowIndex.value!]
+      const row = viewRows.value[formRowIndex.value!]
       const id = row?.id ?? row?.[r.cols[0].k]
       // Inject expected_draft_version from the row for optimistic
       // concurrency. This is NOT a form field — the user cannot edit it.
@@ -315,6 +387,7 @@ const confirmExpiry = ref('')
 
 function askRowAction(i: number, actionKey: string) {
   const r = resource.value
+  if (!r) return
   const a = r.rowActions.find((x) => x.k === actionKey)
   if (!a) return
   if (a.form) {
@@ -327,7 +400,7 @@ function askRowAction(i: number, actionKey: string) {
     openRestockModal(i, a)
     return
   }
-  const row = rows.value[i]
+  const row = viewRows.value[i]
   confirmAction.value = a
   confirmRowIndex.value = i
   confirmIsBulk.value = false
@@ -353,6 +426,7 @@ function askRowAction(i: number, actionKey: string) {
 
 function askBulkAction(actionKey: string) {
   const r = resource.value
+  if (!r) return
   const a = (r.bulkActions ?? []).find((x) => x.k === actionKey)
   if (!a) return
   confirmAction.value = a
@@ -437,8 +511,8 @@ function computeRestockPayloadFingerprint(): string {
 
 async function openRestockModal(i: number, a: RowAction) {
   const r = resource.value
-  const row = rows.value[i]
-  if (!row || !r.api?.restock || !r.api?.get) return
+  const row = viewRows.value[i]
+  if (!r || !row || !r.api?.restock || !r.api?.get) return
   restockAction.value = a
   restockRowIndex.value = i
   restockOrderId.value = String(row.id ?? '')
@@ -530,7 +604,7 @@ function buildRestockBody(): Record<string, any> {
 
 async function submitRestock() {
   const r = resource.value
-  if (!r.api?.restock || !restockAction.value) return
+  if (!r?.api?.restock || !restockAction.value) return
   if (!restockCanSubmit.value) return
   // Stable key binding: if this is NOT the first submit, and the payload
   // fingerprint changed since the last submit, rotate the key to avoid
@@ -565,7 +639,7 @@ async function submitRestock() {
 /** Resolve the API path + HTTP method for a row action based on its operationId. */
 function resolveActionEndpoint(a: RowAction | BulkAction): { method: 'PATCH' | 'DELETE' | 'POST' | 'PUT'; path: string } | null {
   const r = resource.value
-  if (!r.api) return null
+  if (!r?.api) return null
   if (a.op === r.ops.status && r.api.status) return { method: 'PATCH', path: r.api.status }
   if (a.op === r.ops.returnStatus && r.api.returnStatus) return { method: 'PATCH', path: r.api.returnStatus }
   if (a.op === r.ops.publish && r.api.publish) return { method: 'POST', path: r.api.publish }
@@ -578,12 +652,13 @@ function resolveActionEndpoint(a: RowAction | BulkAction): { method: 'PATCH' | '
 }
 
 function rowIdOf(row: Record<string, any>): string {
-  return String(row.id ?? row[resource.value.cols[0].k] ?? '')
+  return String(row.id ?? row[resource.value?.cols[0].k ?? ''] ?? '')
 }
 
 /** Build the request body for a status/return-status PATCH. */
 function buildStatusBody(a: RowAction | BulkAction, row: Record<string, any>): Record<string, any> {
   const r = resource.value
+  if (!r) return {}
   // Order status & return-status endpoints expect { expected_version, new_status }
   if ((a.op === r.ops.status || a.op === r.ops.returnStatus) && 'expect' in a && a.expect) {
     return {
@@ -604,6 +679,7 @@ function buildStatusBody(a: RowAction | BulkAction, row: Record<string, any>): R
 /** Build the request body for a POST action (approve/publish). */
 function buildPostBody(a: RowAction, row: Record<string, any>): Record<string, any> {
   const r = resource.value
+  if (!r) return {}
   // Approve: send expected_draft_version + expiry_unix from operator input.
   if (a.op === r.ops.approve && 'expect' in a && a.expect) {
     const expiryUnix = datetimeLocalToUnix(confirmExpiry.value)
@@ -634,6 +710,7 @@ async function runConfirm() {
   const a = confirmAction.value
   if (!a) return
   const r = resource.value
+  if (!r) return
 
   if (confirmIsBulk.value) {
     const indices = [...selected.value]
@@ -644,7 +721,7 @@ async function runConfirm() {
       bulkReceipt.value = {
         actionLabel: a.l,
         items: indices.map((i) => ({
-          id: String(rows.value[i]?.[r.cols[0].k] ?? i),
+          id: String(viewRows.value[i]?.[r.cols[0].k] ?? i),
           ok: false,
           msg: '此資源未設定 API 端點，無法執行動作。',
         })),
@@ -656,7 +733,7 @@ async function runConfirm() {
     }
     mutating.value = true
     for (const i of indices) {
-      const row = rows.value[i]
+      const row = viewRows.value[i]
       const id = rowIdOf(row)
       try {
         const path = endpoint.path.replace('{id}', id)
@@ -683,7 +760,7 @@ async function runConfirm() {
 
   // Single row action
   const i = confirmRowIndex.value
-  const row = i !== null ? rows.value[i] : null
+  const row = i !== null ? viewRows.value[i] : null
   const endpoint = resolveActionEndpoint(a)
 
   if (!endpoint || !r.api || !row) {
@@ -729,17 +806,25 @@ async function runConfirm() {
 
 // Bulk actions available to current role
 const availableBulkActions = computed(() =>
-  (resource.value.bulkActions ?? []).filter((a) => auth.can(a.cap)),
+  (resource.value?.bulkActions ?? []).filter((a) => auth.can(a.cap)),
 )
 
-const canCreate = computed(() =>
-  resource.value.createCap && auth.can(resource.value.createCap) && resource.value.ops.create,
+const canCreate = computed(
+  () => !!(resource.value?.createCap && auth.can(resource.value.createCap) && resource.value.ops.create),
 )
 
-const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
+const formIsReadOnly = computed(() => resource.value?.form.readOnly ?? false)
 </script>
 
 <template>
+  <!-- 未知資源：路由有效但 key 不在 RESOURCES — 顯示明確的錯誤而非白屏 -->
+  <section v-if="!resource" class="panel" style="padding:40px;text-align:center">
+    <h1 style="font-size:18px;margin-bottom:8px">找不到資源「{{ resourceKey }}」</h1>
+    <p class="muted" style="margin-bottom:16px">這個資源尚未註冊，或網址有誤。</p>
+    <RouterLink to="/" class="btn ghost">回到儀表板</RouterLink>
+  </section>
+
+  <template v-else>
   <!-- Page header -->
   <div class="pagehd">
     <div>
@@ -786,26 +871,14 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
   <!-- Main panel: filters + bulk + table + footer -->
   <section class="panel">
     <!-- Toolbar / filters -->
-    <div class="toolbar">
-      <template v-if="resource.filters.length">
-        <template v-for="f in resource.filters" :key="f.k">
-          <Select
-            v-if="f.w === 'select'"
-            :options="f.opts ?? []"
-            modelValue=""
-            style="min-width:120px"
-          />
-          <Input
-            v-else
-            :placeholder="f.l"
-            style="min-width:120px"
-          />
-        </template>
-      </template>
-      <span v-else class="muted">這個資源沒有定義篩選器</span>
-      <div style="flex:1" />
-      <span class="muted">每頁 {{ resource.pageSize }} 筆</span>
-    </div>
+    <ResourceFilters
+      v-model="filterVals"
+      :filters="resource.filters"
+      :filter-opts="filterOpts"
+      :page-size="resource.pageSize"
+      :filtered-count="viewRows.length"
+      :total-count="rows.length"
+    />
 
     <!-- Bulk action bar -->
     <div
@@ -852,7 +925,8 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
     <ResourceTable
       v-else
       :resource="resource"
-      :rows="rows"
+      :rows="viewRows"
+      :col-labels="colLabels"
       :selected="selected"
       @toggle-row="toggleRow"
       @toggle-all="toggleAll"
@@ -861,15 +935,8 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
 
     <!-- Footer -->
     <div class="tfoot">
-      <span>顯示 {{ rows.length }} 筆</span>
-      <span>
-        operationId：
-        <span
-          v-for="(opVal, i) in Object.values(resource.ops).filter(Boolean)"
-          :key="i"
-          class="mono"
-        >{{ i > 0 ? '　' : '' }}{{ opVal }}</span>
-      </span>
+      <span v-if="viewRows.length !== rows.length">篩出 {{ viewRows.length }} / {{ rows.length }} 筆</span>
+      <span v-else>顯示 {{ rows.length }} 筆</span>
     </div>
   </section>
 
@@ -923,8 +990,8 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
         <template v-for="fd in sec.fields" :key="fd.k">
           <div :class="['field', fd.span === 2 ? 'span2' : '']">
             <label
-              :for="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' || fd.w === 'variants' ? undefined : 'field-' + fd.k)"
-              :id="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' || fd.w === 'variants' ? 'label-field-' + fd.k : undefined)"
+              :for="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' || fd.w === 'variants' || fd.w === 'switch' ? undefined : 'field-' + fd.k)"
+              :id="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' || fd.w === 'variants' || fd.w === 'switch' ? 'label-field-' + fd.k : undefined)"
             >
               {{ fd.l }}
               <span v-if="fd.req" class="req">*</span>
@@ -949,14 +1016,17 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
               :modelValue="formData[fd.k] ?? ''"
               @update:modelValue="formData[fd.k] = $event"
             />
-            <!-- Switch (rendered as select) -->
-            <Select
-              v-else-if="fd.w === 'switch'"
-              :id="'field-' + fd.k"
-              :options="['true', 'false']"
-              :modelValue="formData[fd.k] ?? 'false'"
-              @update:modelValue="formData[fd.k] = $event"
-            />
+            <!-- Switch (rendered as checkbox) -->
+            <div v-else-if="fd.w === 'switch'" class="switch-row" :aria-labelledby="'label-field-' + fd.k">
+              <Checkbox
+                :checked="formData[fd.k] === 'true'"
+                @update:checked="formData[fd.k] = $event ? 'true' : 'false'"
+              />
+              <span
+                style="cursor:pointer;user-select:none"
+                @click="formData[fd.k] = formData[fd.k] === 'true' ? 'false' : 'true'"
+              >{{ formData[fd.k] === 'true' ? '啟用' : '停用' }}</span>
+            </div>
             <!-- Tags input -->
             <Input
               v-else-if="fd.w === 'tags'"
@@ -1110,9 +1180,17 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
       </Button>
     </template>
   </Modal>
+  </template>
 </template>
 
 <style scoped>
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  font-size: 13.5px;
+}
 .restock-table {
   width: 100%;
   border-collapse: collapse;

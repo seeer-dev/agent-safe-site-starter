@@ -40,6 +40,9 @@ export interface Col {
   k: string;
   l: string;
   r?: ColRender;
+  /** Resolve raw cell values to display labels from an admin list endpoint
+   *  (e.g. category slug -> category name). */
+  optsSource?: { api: string; listKey?: string; value: string; label: string };
 }
 
 export type FilterWidget = 'select' | 'text';
@@ -49,6 +52,8 @@ export interface FilterDef {
   l: string;
   w: FilterWidget;
   opts?: [string, string][];
+  /** For select filters: load options from an admin list endpoint. */
+  optsSource?: { api: string; listKey?: string; value: string; label: string };
 }
 
 export type FieldWidget =
@@ -76,7 +81,7 @@ export interface FieldDef {
   /** When set on a number field, a blank value is sent as JSON null instead of 0. */
   nullable?: boolean;
   span?: number;
-  opts?: string[];
+  opts?: (string | [string, string])[];
   /** For select fields: load options from an admin list endpoint.
    *  `api` returns `{<listKey>: [...]}` or a bare array; each entry's
    *  `value`/`label` keys pick the option value. Takes precedence over `opts`. */

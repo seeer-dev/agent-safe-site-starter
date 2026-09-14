@@ -122,7 +122,7 @@ function goRes(key: string) {
   <div class="pagehd">
     <div>
       <h1>總覽</h1>
-      <div class="sub">質物選物</div>
+      <div class="sub">質選所</div>
     </div>
   </div>
 
