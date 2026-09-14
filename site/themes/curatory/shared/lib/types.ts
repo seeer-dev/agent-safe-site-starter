@@ -52,8 +52,7 @@ export interface ShippingMethodDTO {
   label: string
   available: boolean
   description: string
-  fee: number
-  free_threshold?: number | null
+  // 運費刻意不公開：結帳時由 /api/quote 回傳權威金額。
 }
 
 export interface PaymentMethodDTO {

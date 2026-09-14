@@ -3,12 +3,18 @@
 //   滾動 >10px 切換玻璃擬態；桌面中欄導覽（全部商品/分類下拉/公告/故事）；
 //   右側 search → 訂單查詢 → 深色切換 → 購物車徽標；手機 hamburger + 面板。
 // MPA 差異：導覽為真實 <a href>（no-JS 可用），轉場由全域攔截器播簾幕。
-import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { Menu, Search, Package, Sun, Moon, ShoppingBag, X, ChevronRight, Package2 } from 'lucide-vue-next'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { Loader2, Menu, Search, SearchX, Package, Sun, Moon, ShoppingBag, X, ChevronRight } from 'lucide-vue-next'
+import FadeImage from '@/shared/components/FadeImage.vue'
 import LogoLockup from '@/shared/components/LogoLockup.vue'
+import PriceDisplay from '@/shared/components/PriceDisplay.vue'
+import Skeleton from '@/shared/components/Skeleton.vue'
+import { apiGet } from '@/shared/lib/api'
 import { bootstrap, loadBootstrap, openCartDrawer } from '@/shared/lib/store'
 import { cartCount } from '@/shared/lib/cart'
 import { isDark, toggleTheme } from '@/shared/lib/theme'
+import { navigate } from '@/shared/lib/transition'
+import type { ProductDTO } from '@/shared/lib/types'
 
 const props = defineProps<{ current?: string }>()
 
@@ -57,11 +63,69 @@ function openSearch() {
   setTimeout(() => searchInput.value?.focus(), 80)
 }
 
+// ─── 搜尋彈層（reference search-dialog.tsx）：300ms debounce 即時結果 ──
+const debouncedQuery = ref('')
+const searchResults = ref<ProductDTO[]>([])
+const searchFetching = ref(false)
+let debounceTimer: number | null = null
+let searchSeq = 0
+
+watch(searchQuery, (v) => {
+  if (debounceTimer) window.clearTimeout(debounceTimer)
+  debounceTimer = window.setTimeout(() => {
+    debouncedQuery.value = v.trim()
+  }, 300)
+})
+
+watch(debouncedQuery, async (q) => {
+  if (!q) {
+    searchResults.value = []
+    return
+  }
+  const seq = ++searchSeq
+  searchFetching.value = true
+  try {
+    const res = await apiGet<{ products: ProductDTO[] }>(`/api/products?q=${encodeURIComponent(q)}&sort=popular`)
+    if (seq === searchSeq) searchResults.value = res.products ?? []
+  } catch {
+    if (seq === searchSeq) searchResults.value = []
+  } finally {
+    if (seq === searchSeq) searchFetching.value = false
+  }
+})
+
+watch(searchOpen, (open) => {
+  if (!open) {
+    searchQuery.value = ''
+    debouncedQuery.value = ''
+    searchResults.value = []
+  }
+})
+
+function openProduct(p: ProductDTO) {
+  searchOpen.value = false
+  navigate(`/products/${p.slug}/`)
+}
+
 function submitSearch() {
+  const first = searchResults.value[0]
+  if (first) {
+    openProduct(first)
+    return
+  }
   const q = searchQuery.value.trim()
   if (!q) return
   searchOpen.value = false
-  window.location.href = `/shop/?q=${encodeURIComponent(q)}`
+  navigate(`/shop/?q=${encodeURIComponent(q)}`)
+}
+
+function goShop() {
+  searchOpen.value = false
+  navigate('/shop/')
+}
+
+function categoryName(p: ProductDTO) {
+  return categories.value.find((c) => c.slug === p.category)?.name ?? '嚴選商品'
 }
 
 function openCart() {
@@ -244,11 +308,11 @@ onUnmounted(() => {
       </div>
     </Transition>
 
-    <!-- 搜尋彈層（簡化版 — 即時結果在 /shop/ 頁面呈現） -->
+    <!-- 搜尋彈層 — 300ms debounce 即時結果（reference search-dialog.tsx） -->
     <Transition name="search">
-      <div v-if="searchOpen" class="fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[12vh]">
+      <div v-if="searchOpen" class="fixed inset-0 z-[70] flex items-start justify-center px-4 pt-[12vh]" role="dialog" aria-modal="true" aria-label="商品搜尋">
         <div class="absolute inset-0 bg-ink/40" @click="searchOpen = false" />
-        <div class="relative w-full max-w-xl overflow-hidden rounded-2xl border bg-popover shadow-xl">
+        <div class="relative max-h-[76vh] w-full max-w-xl overflow-hidden rounded-2xl border bg-popover shadow-xl">
           <div class="flex items-center gap-3 border-b px-4 py-3.5">
             <Search class="size-4 shrink-0 text-muted-foreground" />
             <input
@@ -262,12 +326,55 @@ onUnmounted(() => {
               @keydown.enter="submitSearch"
               @keydown.esc="searchOpen = false"
             />
-            <button v-if="searchQuery" type="button" class="shrink-0 text-xs text-muted-foreground hover:text-foreground" @click="searchQuery = ''">清除</button>
+            <Loader2 v-if="searchFetching" class="size-4 shrink-0 animate-spin text-muted-foreground" />
+            <button v-else-if="searchQuery" type="button" class="shrink-0 text-xs text-muted-foreground hover:text-foreground" @click="searchQuery = ''">清除</button>
             <kbd class="hidden shrink-0 rounded border bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground sm:block">ESC</kbd>
           </div>
-          <div class="px-5 py-5 text-center text-sm text-muted-foreground">
-            <Package2 class="mx-auto mb-2 size-5 text-muted-foreground/50" />
-            輸入關鍵字後按 Enter 前往商品搜尋結果
+
+          <div class="scrollbar-thin max-h-[60vh] overflow-y-auto">
+            <!-- 未輸入 -->
+            <div v-if="!debouncedQuery" class="px-6 py-10 text-center">
+              <p class="text-sm text-muted-foreground">輸入關鍵字，立即探索店內嚴選商品</p>
+              <p class="mt-1 text-xs text-muted-foreground/70">小提示：試試「馬克杯」「亞麻」「蠟燭」</p>
+            </div>
+            <!-- 載入中 -->
+            <div v-else-if="searchFetching && searchResults.length === 0" class="space-y-3 p-4">
+              <div v-for="i in 4" :key="i" class="flex items-center gap-3">
+                <Skeleton class="h-14 w-12 rounded-lg" />
+                <div class="flex-1 space-y-2">
+                  <Skeleton class="h-4 w-2/3" />
+                  <Skeleton class="h-3 w-16" />
+                </div>
+              </div>
+            </div>
+            <!-- 無結果 -->
+            <div v-else-if="searchResults.length === 0" class="px-6 py-10 text-center">
+              <SearchX class="mx-auto size-6 text-muted-foreground/50" />
+              <p class="mt-3 text-sm font-medium">找不到「{{ debouncedQuery }}」的結果</p>
+              <p class="mt-1 text-xs text-muted-foreground">換個關鍵字試試，或到全部商品逛逛</p>
+              <button type="button" class="link-underline mt-4 text-sm text-primary" @click="goShop">前往全部商品</button>
+            </div>
+            <!-- 結果 -->
+            <ul v-else class="divide-y">
+              <li v-for="p in searchResults.slice(0, 8)" :key="p.id">
+                <button type="button" class="flex w-full items-center gap-3.5 px-4 py-3 text-left transition-colors hover:bg-muted/50" @click="openProduct(p)">
+                  <div class="h-14 w-12 shrink-0 overflow-hidden rounded-lg bg-muted/40">
+                    <FadeImage :src="p.images?.[0] ?? p.image ?? ''" :alt="p.name" class="h-full w-full object-cover" />
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <p class="clamp-1 text-sm font-medium">{{ p.name }}</p>
+                    <p class="mt-0.5 text-[11px] text-muted-foreground">
+                      {{ categoryName(p) }}{{ p.stock <= 0 ? '・已售完' : '' }}
+                    </p>
+                  </div>
+                  <PriceDisplay :price="p.price" :original-price="p.original_price" size="sm" class="shrink-0" />
+                </button>
+              </li>
+            </ul>
+          </div>
+
+          <div class="border-t px-4 py-2.5 text-[10px] tracking-wider text-muted-foreground/70">
+            按下 Enter 開啟第一個結果<template v-if="debouncedQuery">・共 {{ searchResults.length }} 筆相關商品</template>
           </div>
         </div>
       </div>

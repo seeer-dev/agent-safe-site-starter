@@ -197,18 +197,15 @@ func (s Service) UpdateShippingMethod(ctx context.Context, principal auth.Princi
 }
 
 // PublicShippingMethod is the public-facing shipping method descriptor.
-// ID is the stable method key (not the opaque admin id). Fee and
-// FreeThreshold are informational for checkout display — the quote and
-// order endpoints always recompute authoritative totals server-side.
-// Only enabled admin-managed rows are returned; available is always
-// true for those rows.
+// ID is the stable method key (not the opaque admin id). Fees are never
+// included — the quote and order endpoints recompute authoritative totals
+// server-side. Only enabled admin-managed rows are returned; available is
+// always true for those rows.
 type PublicShippingMethod struct {
-	ID            string `json:"id"`
-	Label         string `json:"label"`
-	Available     bool   `json:"available"`
-	Description   string `json:"description"`
-	Fee           int    `json:"fee"`
-	FreeThreshold *int   `json:"free_threshold,omitempty"`
+	ID          string `json:"id"`
+	Label       string `json:"label"`
+	Available   bool   `json:"available"`
+	Description string `json:"description"`
 }
 
 // ListPublicShippingMethods returns enabled admin-managed shipping methods.
@@ -226,12 +223,10 @@ func (s Service) ListPublicShippingMethods(ctx context.Context) ([]PublicShippin
 			continue
 		}
 		out = append(out, PublicShippingMethod{
-			ID:            m.Method,
-			Label:         m.Label,
-			Available:     true,
-			Description:   m.Description,
-			Fee:           m.Fee,
-			FreeThreshold: m.FreeThreshold,
+			ID:          m.Method,
+			Label:       m.Label,
+			Available:   true,
+			Description: m.Description,
 		})
 	}
 	return out, nil

@@ -4,7 +4,7 @@
 
 import { reactive } from 'vue'
 import { apiGet } from './api'
-import type { BootstrapData, ShippingMethodDTO } from './types'
+import type { BootstrapData } from './types'
 
 // ─── Bootstrap 資料 ─────────────────────────────────────────
 
@@ -68,18 +68,19 @@ export const checkoutStore = reactive<{ coupon: AppliedCoupon | null }>({
   coupon: null,
 })
 
-// ─── 運費計算（顯示用；結帳金額一律以 quote 為準） ────────────
+// ─── 免運門檻（顯示用；運費金額一律以 /api/quote 為準） ──────────
+// 公開 shipping payload 刻意不含費率 — 前端只能判斷「是否達免運門檻」。
 
-export function computeShippingFee(
-  method: ShippingMethodDTO | null | undefined,
-  subtotal: number,
-  freeShippingCoupon = false,
-): number {
-  if (!method) return 0
-  if (freeShippingCoupon) return 0
-  const threshold = method.free_threshold
-  if (threshold != null && threshold > 0 && subtotal >= threshold) return 0
-  return method.fee
+export function freeShippingThreshold(): number {
+  const v = bootstrap.data?.settings?.freeShippingThreshold
+  const n = typeof v === 'number' ? v : parseInt(String(v ?? '0'), 10)
+  return Number.isFinite(n) && n > 0 ? n : 0
+}
+
+export function shippingIsFree(subtotal: number, freeShippingCoupon = false): boolean {
+  if (freeShippingCoupon) return true
+  const threshold = freeShippingThreshold()
+  return threshold > 0 && subtotal >= threshold
 }
 
 // ─── 最近查詢的訂單（localStorage） ─────────────────────────

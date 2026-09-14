@@ -3,6 +3,7 @@ package commerce
 import (
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/example/ai-site-starter/server/internal/auth"
@@ -125,6 +126,9 @@ func (h Handler) ListPublishedProducts(w http.ResponseWriter, r *http.Request) {
 		}
 		httpx.Error(w, http.StatusInternalServerError, "failed to list products")
 		return
+	}
+	if products == nil {
+		products = []Product{}
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{"products": products})
 }
@@ -876,7 +880,29 @@ func (h Handler) ListProductComments(w http.ResponseWriter, r *http.Request) {
 		httpx.Error(w, http.StatusInternalServerError, "failed to list comments")
 		return
 	}
-	httpx.JSON(w, http.StatusOK, map[string]any{"comments": comments})
+	if comments == nil {
+		comments = []ProductComment{}
+	}
+	// Rating summary (count/avg/dist) computed server-side so the
+	// storefront renders the same aggregate the reference UI expects.
+	dist := map[string]int{"1": 0, "2": 0, "3": 0, "4": 0, "5": 0}
+	sum := 0
+	rated := 0
+	for _, c := range comments {
+		if c.Rating != nil && *c.Rating >= 1 && *c.Rating <= 5 {
+			dist[strconv.Itoa(*c.Rating)]++
+			sum += *c.Rating
+			rated++
+		}
+	}
+	avg := 0.0
+	if rated > 0 {
+		avg = float64(sum) / float64(rated)
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"comments": comments,
+		"summary":  map[string]any{"count": len(comments), "avg": avg, "dist": dist},
+	})
 }
 
 // SubmitProductComment accepts a visitor review for the product
