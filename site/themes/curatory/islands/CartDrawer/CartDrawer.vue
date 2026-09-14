@@ -65,8 +65,8 @@ function onRemove(key: string, name: string) {
       </div>
 
       <template v-else>
-        <!-- 商品列表 -->
-        <div class="scrollbar-thin max-h-[52vh] flex-1 overflow-y-auto px-5 py-4">
+        <!-- 商品列表：flex-1 撐滿剩餘空間、內部滾動，footer 恆釘底 -->
+        <div class="scrollbar-thin min-h-0 flex-1 overflow-y-auto px-5 py-4">
           <TransitionGroup name="cart-item" tag="ul" class="space-y-5">
             <li v-for="item in items" :key="item.key" class="flex gap-4">
               <a

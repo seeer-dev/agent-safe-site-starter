@@ -320,3 +320,15 @@ against the page. Shop/category control bars normalized to `top-16`
 (the `top-14` mobile offset tucked 8px under the h-16 header).
 Verified at scrollY=700: header pinned top:0 h:65, controls pinned
 top:64 beneath it.
+
+## Toast/drawer collision + drawer footer (2026-09-14)
+
+- Toaster moved from bottom-right to top-center (matches reference
+  sonner position="top-center") so the "已加入購物車" toast no longer
+  collides with the right-hand cart drawer; added a per-toast close
+  button (reference closeButton) backed by a new dismissToast().
+- CartDrawer list had `max-h-[52vh]` — with few items the footer
+  floated mid-drawer. List is now `flex-1 min-h-0` (internal scroll) so
+  the free-shipping bar + subtotal + 前往結帳/查看購物車 footer pins to
+  the drawer bottom. Verified: footer bottom == viewport height, toast
+  container at top:16 centered.

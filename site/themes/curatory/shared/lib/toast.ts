@@ -16,10 +16,12 @@ export const toasts = reactive<Toast[]>([])
 function push(kind: Toast['kind'], title: string, opts?: { description?: string }) {
   const id = nextId++
   toasts.push({ id, kind, title, description: opts?.description })
-  window.setTimeout(() => {
-    const i = toasts.findIndex((t) => t.id === id)
-    if (i >= 0) toasts.splice(i, 1)
-  }, 3600)
+  window.setTimeout(() => dismissToast(id), 3600)
+}
+
+export function dismissToast(id: number) {
+  const i = toasts.findIndex((t) => t.id === id)
+  if (i >= 0) toasts.splice(i, 1)
 }
 
 export const toast = {
