@@ -129,6 +129,25 @@ completion, admin, and final verification slices remain.
   sitecontent endpoints; backend gained `PUT /api/admin/articles` as an
   alias of the slug-keyed upsert so the generic edit form works.
   `npm run typecheck` + `npm run build` + `npm test` (195 tests) PASS.
+- **S07 fix**: sqlite TEXT columns cannot scan into `json.RawMessage`
+  under modernc — `sitecontent.GetStoreSettings` now scans into string
+  first. Store-settings round trip verified live: GET row → PUT draft
+  (version bump) → POST publish → published JSON appears in
+  `/api/storefront/bootstrap`.
+- **S08 seed (done)**: `server/tools/dev` gained theme-aware seeds —
+  `seedProductsForTheme`/`seedPaymentMethodsForTheme` preserve the
+  minimal-cart baseline while curatory gets 8 products (3 featured, 2
+  with variants, 1 draft, 1 sold-out), 4 payment methods (LINE Pay +
+  fees), and `seedCuratory` fills categories (5), shipping methods
+  (宅配/7-11/全家 with fee+free-threshold), promos (WELCOME10 percent +
+  FREESHIP freeshipping w/ min_subtotal), 3 published news articles
+  (1 pinned), 4 comments (3 approved incl. admin reply, 1 pending),
+  5 lifecycle notification templates, and published store settings
+  (質選所 / NT$1,500 免運門檻 / announcement banner). Each block is
+  independently idempotent. Fresh-DB dev run seeded all of it and
+  rendered 3 articles + 7 published products + 5 categories + 7 static
+  pages; island mounts verified in dist (/products/stoneware-mug/
+  mounts ProductDetail + ProductComments).
 
 ## Evidence log
 
