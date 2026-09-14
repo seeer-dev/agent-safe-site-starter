@@ -2,7 +2,7 @@
 
 Change ID: curatory-storefront-port
 Revision: 2
-Status: Applying
+Status: Verifying
 
 Implementation in progress. Slices S01 (data plane), S02 (API surface),
 S03 (theme foundation), S04 (home/shop/product pages) are implemented;
