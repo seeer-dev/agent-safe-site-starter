@@ -279,6 +279,93 @@
   border: 1px solid color-mix(in oklab, var(--gold) 30%, var(--border));
 }
 
+/* 浮動迷你商品卡 — 對應 reference framer y:[0,-7,0] 4.2s 循環 */
+.animate-float {
+  animation: float-y 4.2s ease-in-out infinite;
+}
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-float {
+    animation: none;
+  }
+}
+
+/* 文章正文（body_html 由後端渲染輸出，需樣式化內部標籤） */
+.prose-curatory {
+  color: color-mix(in oklab, var(--foreground) 90%, transparent);
+}
+.prose-curatory p {
+  margin: 0 0 1.25em;
+}
+.prose-curatory p:last-child {
+  margin-bottom: 0;
+}
+.prose-curatory h2,
+.prose-curatory h3,
+.prose-curatory h4 {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--foreground);
+  margin: 1.8em 0 0.8em;
+}
+.prose-curatory h2 {
+  font-size: 1.4em;
+}
+.prose-curatory h3 {
+  font-size: 1.2em;
+}
+.prose-curatory h4 {
+  font-size: 1.05em;
+}
+.prose-curatory ul,
+.prose-curatory ol {
+  margin: 0 0 1.25em;
+  padding-left: 1.4em;
+}
+.prose-curatory ul {
+  list-style: disc;
+}
+.prose-curatory ol {
+  list-style: decimal;
+}
+.prose-curatory li {
+  margin: 0.35em 0;
+}
+.prose-curatory a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.prose-curatory blockquote {
+  border-left: 3px solid var(--gold);
+  padding-left: 1em;
+  margin: 1.5em 0;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+.prose-curatory img {
+  border-radius: var(--radius);
+  margin: 1.5em 0;
+}
+.prose-curatory hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 2em 0;
+}
+.prose-curatory strong {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
 /* ─── Scroll reveal（v-reveal 指令，對應 reference 的 whileInView） ─── */
 .reveal-init {
   opacity: 0;

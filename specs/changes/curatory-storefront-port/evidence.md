@@ -96,6 +96,19 @@ completion, admin, and final verification slices remain.
   per spec decision). `npm run typecheck` + `npm run build` PASS;
   `go run ./server/tools/render` emits /cart /checkout /order /track
   with correct island mounts in generated `dist/`.
+  Smoke-tested live: quote (930×2 +80 ship +15 pay fee = 1955) → order
+  created (TW-…, access_token, timeline) → guest GET 400 w/o token /
+  200 PII-masked w/ token.
+- **S06 (done)**: home/about/news/article templates already ported in
+  S03–S04 verified against reference sections (hero+stats+float card,
+  value props, featured/categories/story/latest/news-preview/newsletter
+  on home; story+values+stats+CTA on about; pinned-first news list).
+  Added missing CSS: `.animate-float` (hero mini-card 4.2s float),
+  `.prose-curatory` (article body_html tag styling). article.html
+  fidelity fix: 公告/置頂 badges + calendar icon + dual footer CTAs
+  (回公告列表 / 順道逛逛商店). Newsletter form + scroll-top wired via
+  delegated listeners in islands/bootstrap.ts; content store orders
+  articles pinned-DESC then publish_at DESC.
 
 ## Evidence log
 
