@@ -10,6 +10,7 @@ Normative specification: [`spec.md`](spec.md)
 
 - `specs/changes/curatory-storefront-port/**`
 - `site/themes/curatory/**`
+- `site/assets/images/**`
 - `server/internal/modules/commerce/**`
 - `server/internal/modules/content/**`
 - `server/internal/modules/sitecontent/**`

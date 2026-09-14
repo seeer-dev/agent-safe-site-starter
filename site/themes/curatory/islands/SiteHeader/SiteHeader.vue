@@ -4,7 +4,7 @@
 //   右側 search → 訂單查詢 → 深色切換 → 購物車徽標；手機 hamburger + 面板。
 // MPA 差異：導覽為真實 <a href>（no-JS 可用），轉場由全域攔截器播簾幕。
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { Loader2, Menu, Search, SearchX, Package, Sun, Moon, ShoppingBag, X, ChevronRight } from 'lucide-vue-next'
+import { Loader2, Menu, Search, SearchX, Sun, Moon, ShoppingBag, X, ChevronDown } from 'lucide-vue-next'
 import FadeImage from '@/shared/components/FadeImage.vue'
 import LogoLockup from '@/shared/components/LogoLockup.vue'
 import PriceDisplay from '@/shared/components/PriceDisplay.vue'
@@ -35,8 +35,9 @@ const settings = computed(() => bootstrap.data?.settings)
 const path = computed(() => props.current ?? window.location.pathname)
 const NAV = [
   { href: '/shop/', label: '全部商品', active: (p: string) => p.startsWith('/shop') || p.startsWith('/products') || p.startsWith('/categories') },
-  { href: '/news/', label: '最新消息', active: (p: string) => p.startsWith('/news') || p.startsWith('/articles') },
+  { href: '/news/', label: '最新公告', active: (p: string) => p.startsWith('/news') || p.startsWith('/articles') },
   { href: '/about/', label: '品牌故事', active: (p: string) => p.startsWith('/about') },
+  { href: '/track/', label: '訂單查詢', active: (p: string) => p.startsWith('/track') || p.startsWith('/order') },
 ]
 const isActive = (n: (typeof NAV)[number]) => n.active(path.value)
 
@@ -173,13 +174,14 @@ onUnmounted(() => {
       </a>
 
       <!-- 桌面導覽 -->
-      <nav class="hidden items-center gap-1 md:flex" aria-label="主選單">
+      <nav class="hidden items-center gap-7 md:flex" aria-label="主選單">
         <a
-          v-for="n in NAV.slice(0, 1)"
+          v-for="n in NAV"
           :key="n.href"
           :href="n.href"
-          class="rounded-full px-3.5 py-2 text-sm transition-colors hover:text-primary"
-          :class="isActive(n) ? 'font-medium text-primary' : 'text-foreground/80'"
+          class="link-underline py-1 text-sm tracking-wide transition-colors"
+          :class="isActive(n) ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'"
+          :aria-current="isActive(n) ? 'page' : undefined"
         >{{ n.label }}</a>
 
         <!-- 分類下拉 -->
@@ -187,12 +189,12 @@ onUnmounted(() => {
           <button
             ref="catBtn"
             type="button"
-            class="flex items-center gap-1 rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary"
-            :class="{ 'font-medium text-primary': path.startsWith('/categories') }"
+            class="flex items-center gap-1 py-1 text-sm tracking-wide outline-none transition-colors"
+            :class="path.startsWith('/categories') ? 'font-medium text-foreground' : 'text-muted-foreground hover:text-foreground'"
             @click="catMenuOpen = !catMenuOpen"
           >
-            商品分類
-            <ChevronRight class="size-3.5 transition-transform" :class="catMenuOpen ? 'rotate-90' : 'rotate-0'" />
+            分類探索
+            <ChevronDown class="size-3.5 opacity-60 transition-transform" :class="catMenuOpen ? 'rotate-180' : ''" />
           </button>
           <Transition name="menu">
             <div
@@ -208,17 +210,15 @@ onUnmounted(() => {
                 @click="catMenuOpen = false"
               >{{ c.name }}</a>
               <p v-if="categories.length === 0" class="px-3 py-2 text-xs text-muted-foreground">尚無分類</p>
+              <hr class="my-1 border-border" />
+              <a
+                href="/shop/"
+                class="block rounded-lg px-3 py-2 text-sm text-primary transition-colors hover:bg-muted"
+                @click="catMenuOpen = false"
+              >查看全部商品</a>
             </div>
           </Transition>
         </div>
-
-        <a
-          v-for="n in NAV.slice(1)"
-          :key="n.href"
-          :href="n.href"
-          class="rounded-full px-3.5 py-2 text-sm transition-colors hover:text-primary"
-          :class="isActive(n) ? 'font-medium text-primary' : 'text-foreground/80'"
-        >{{ n.label }}</a>
       </nav>
 
       <!-- 右側操作 -->
@@ -231,14 +231,6 @@ onUnmounted(() => {
         >
           <Search class="size-[18px]" />
         </button>
-        <a
-          href="/track/"
-          class="hidden size-10 items-center justify-center rounded-full hover:bg-muted sm:inline-flex"
-          :class="path.startsWith('/track') ? 'text-primary' : ''"
-          aria-label="訂單查詢"
-        >
-          <Package class="size-[18px]" />
-        </a>
         <button
           type="button"
           class="inline-flex size-10 items-center justify-center rounded-full hover:bg-muted"

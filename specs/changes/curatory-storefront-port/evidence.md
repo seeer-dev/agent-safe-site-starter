@@ -194,3 +194,28 @@ completion, admin, and final verification slices remain.
   reference source and rendered output; no automated visual-diff tooling
   exists in this repo. A human pass over the running site vs the
   reference is recommended for pixel-level sign-off.
+
+## Post-verification refinement pass
+
+User walkthrough feedback items addressed after Verifying entry:
+
+- Seeded verified media (media_assets + media_objects) so all 12
+  products/categories render real reference images under
+  /assets/images/; home/about templates switched from /images/ to
+  /assets/images/.
+- Desktop nav aligned with reference: 最新公告 label, 訂單查詢 as a text
+  item, 分類探索 dropdown containing 查看全部商品; static partials updated
+  to match.
+- PageLoader exit now matches the reference InitialLoader: inner content
+  fades out and lifts -16px while the panel slides up; logo mark 88px;
+  CURATORY tracking optically centered with pl compensation.
+- Fixed curtain lifecycle: theme-init now removes `curtain-reveal` after
+  the lift animation (DOMContentLoaded-attached animationend filtered to
+  the curtain element, plus a timeout fallback); navigate() also strips a
+  stale class before cover. Previously the forwards-filled lift kept the
+  curtain at -100%, silently disabling the cover phase of every
+  subsequent navigation on the same page.
+- navigate() prefetches the target URL during cover to shorten the
+  pre-paint gap.
+- Home stat formats freeShippingThreshold with thousands separators
+  (1,500) via new `thousands` template func.

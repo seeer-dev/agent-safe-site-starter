@@ -1,11 +1,13 @@
 package render
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -333,6 +335,40 @@ var templateFuncs = template.FuncMap{
 			return ""
 		}
 		return time.Unix(unix, 0).Format("2006/01/02")
+	},
+	// thousands formats a number with zh-TW thousands separators (1,500),
+	// matching the storefront's formatNTD(amount, false). Accepts the
+	// numeric types that appear in the store-settings JSON map.
+	"thousands": func(v any) string {
+		var n int64
+		switch t := v.(type) {
+		case int64:
+			n = t
+		case float64:
+			n = int64(t)
+		case json.Number:
+			n, _ = t.Int64()
+		case string:
+			p, err := strconv.ParseInt(t, 10, 64)
+			if err != nil {
+				return t
+			}
+			n = p
+		default:
+			return fmt.Sprint(v)
+		}
+		s := fmt.Sprintf("%d", n)
+		if len(s) <= 3 {
+			return s
+		}
+		var b strings.Builder
+		for i, c := range s {
+			if i > 0 && (len(s)-i)%3 == 0 {
+				b.WriteByte(',')
+			}
+			b.WriteRune(c)
+		}
+		return b.String()
 	},
 }
 

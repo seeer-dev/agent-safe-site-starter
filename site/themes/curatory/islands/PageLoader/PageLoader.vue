@@ -43,7 +43,9 @@ onMounted(() => {
       :class="{ 'loader-leaving': leaving }"
       aria-label="載入中"
     >
-      <LogoLoading />
+      <div class="loader-inner" :class="{ 'loader-inner-out': leaving }">
+        <LogoLoading />
+      </div>
     </div>
   </Teleport>
 </template>
@@ -55,9 +57,22 @@ onMounted(() => {
 .page-loader.loader-leaving {
   transform: translateY(-100%);
 }
+/* 對應 reference：揭幕時內容先淡出並上移，不跟著簾幕一起飛走 */
+.loader-inner {
+  transition:
+    opacity 0.26s ease-out,
+    transform 0.26s ease-out;
+}
+.loader-inner.loader-inner-out {
+  opacity: 0;
+  transform: translateY(-16px);
+}
 @media (prefers-reduced-motion: reduce) {
   .page-loader {
     transition-duration: 0.05s;
+  }
+  .loader-inner {
+    transition-duration: 0.01s;
   }
 }
 </style>

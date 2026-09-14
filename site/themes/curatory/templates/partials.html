@@ -24,7 +24,15 @@
 {{/* 頁面轉場簾幕（對應 reference 墨色轉場層）。theme-init.js 偵測到
      轉場標記時 <html> 會有 curtain-reveal，此 div 自動播揭幕。 */}}
 <div id="page-curtain" aria-hidden="true">
-  <span class="curtain-brand font-serif text-xl tracking-[0.4em]">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
+  <div class="curtain-brand">
+    <svg width="40" height="40" viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="36" r="33" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
+      <path d="M 36 15.5 A 20.5 20.5 0 1 1 23.5 20.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
+      <circle cx="23.5" cy="20.5" r="1.5" fill="currentColor" />
+      <text x="36" y="38" text-anchor="middle" dominant-baseline="central" font-size="24" style="font-family: var(--font-noto-serif), serif; font-weight: 500; letter-spacing: 0.02em" fill="currentColor">質</text>
+    </svg>
+    <span class="curtain-brand-en">{{with index .Settings "storeNameEn"}}{{.}}{{else}}CURATORY{{end}}</span>
+  </div>
 </div>
 
 <div data-vue-island="PageLoader"></div>
@@ -48,11 +56,11 @@
       <a href="/" class="flex items-center gap-2.5" aria-label="回到首頁">
         <span class="font-serif text-lg font-semibold tracking-[0.24em]">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
       </a>
-      <nav class="hidden items-center gap-1 md:flex" aria-label="主選單">
-        <a href="/shop/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">全部商品</a>
-        <a href="/news/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">最新消息</a>
-        <a href="/about/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">品牌故事</a>
-        <a href="/track/" class="rounded-full px-3.5 py-2 text-sm text-foreground/80 transition-colors hover:text-primary">訂單查詢</a>
+      <nav class="hidden items-center gap-7 md:flex" aria-label="主選單">
+        <a href="/shop/" class="link-underline py-1 text-sm tracking-wide text-muted-foreground transition-colors hover:text-foreground">全部商品</a>
+        <a href="/news/" class="link-underline py-1 text-sm tracking-wide text-muted-foreground transition-colors hover:text-foreground">最新公告</a>
+        <a href="/about/" class="link-underline py-1 text-sm tracking-wide text-muted-foreground transition-colors hover:text-foreground">品牌故事</a>
+        <a href="/track/" class="link-underline py-1 text-sm tracking-wide text-muted-foreground transition-colors hover:text-foreground">訂單查詢</a>
       </nav>
       <div class="flex items-center gap-2">
         <a href="/cart/" class="inline-flex h-10 items-center rounded-full border px-4 text-sm transition-colors hover:bg-muted">購物車</a>

@@ -1,16 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"image"
+	_ "image/jpeg"
+	_ "image/png"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -21,6 +27,7 @@ import (
 	"github.com/example/ai-site-starter/server/internal/migrate"
 	"github.com/example/ai-site-starter/server/internal/modules/commerce"
 	"github.com/example/ai-site-starter/server/internal/modules/content"
+	"github.com/example/ai-site-starter/server/internal/modules/media"
 	"github.com/example/ai-site-starter/server/internal/modules/sitecontent"
 	"github.com/example/ai-site-starter/server/internal/modules/staff"
 	"github.com/example/ai-site-starter/server/internal/platform/database"
@@ -96,6 +103,14 @@ func main() {
 	// ----- Commerce seed ----------------------------------------------------
 	commerceStore := commerce.NewSQLStore(db, dialect)
 	commerceService := commerce.NewService(commerceStore)
+	if siteTheme == "curatory" {
+		// 註冊種子圖為已驗證 media objects，讓商品圖走與 API 相同的
+		// verified-key 邊界（產品圖不接受裸 URL）。
+		seedCuratoryMedia(ctx, db)
+		commerceService = commerceService.WithMediaVerifier(devMediaVerifier{
+			registry: media.NewSQLRegistryStore(db, dialect),
+		})
+	}
 	existingProducts, err := commerceService.ListProducts(ctx, commerce.ProductFilter{})
 	if err != nil {
 		log.Fatal(err)
@@ -105,6 +120,15 @@ func main() {
 		for _, p := range products {
 			if _, err := commerceService.CreateProduct(ctx, devPrincipal, p); err != nil {
 				log.Fatalf("seed product %s: %v", p.SKU, err)
+			}
+		}
+		if siteTheme == "curatory" {
+			// sold_count 由訂單狀態機衍生、不接受輸入；種子用 SQL 直接補，
+			// 讓「熱銷」排序與已售數顯示有真實資料可看。
+			for sku, sold := range curatorySeedSoldCount {
+				if _, err := db.ExecContext(ctx, `UPDATE products SET sold_count = ? WHERE sku = ?`, sold, sku); err != nil {
+					log.Fatalf("seed sold_count %s: %v", sku, err)
+				}
 			}
 		}
 		log.Printf("seed: %d commerce products", len(products))
@@ -250,38 +274,111 @@ func main() {
 // storefront (featured flags, long descriptions, variants).
 func seedProductsForTheme(siteTheme string) []commerce.ProductInput {
 	if siteTheme == "curatory" {
+		// 鏡像 reference storefront 的 12 件商品：名稱、價格、特價
+		// （salePrice→price/original_price）、精選旗標、規格與種子圖。
+		// 圖片以 verified media key 關聯（seed/images/pXX.png），
+		// sold_count 於建立後由 curatorySeedSoldCount 補上。
+		img := func(name string) []commerce.ProductImageInput {
+			return []commerce.ProductImageInput{{Key: "images/" + name}}
+		}
 		return []commerce.ProductInput{
-			{SKU: "CUR-TEA-01", Name: "手作粗陶馬克杯", Slug: "stoneware-mug", Category: "tea-ware", Status: "active", IsFeatured: true, Price: 880, OriginalPrice: 1080, Stock: 32, Tag: "職人手作", Material: "粗陶", Origin: "鶯歌",
-				Description:     "手拉坯粗陶馬克杯，霧面釉色，每一只的釉痕都不相同。",
-				LongDescription: "以鶯歌在地陶土手拉坯成形，1300°C 高溫燒製。杯緣修得內斂，握感厚實；霧面釉在光線下呈現深淺不一的土色層次。容量約 280ml，適合手沖咖啡與台灣茶。",
+			{SKU: "CUR-TAB-01", Name: "手作釉彩馬克杯・霧灰", Slug: "glazed-mug-grey", Category: "tableware", Status: "active", IsFeatured: true, Price: 480, Stock: 37, Tag: "手工釉燒", Material: "陶瓷", Origin: "苗栗",
+				Description:     "匠人以還原燒製成的霧灰釉色，每只的流釉紋理皆不相同，是獨一無二的一只杯。",
+				LongDescription: "來自苗栗陶窯的手作器皿，採用天然礦物釉料，以 1230°C 高溫還原燒製。霧灰釉面帶有細膩的結晶斑點，握於掌心溫潤厚實。容量約 350ml，適合早晨的第一杯咖啡。",
+				ProductImages:   img("p01.png"),
 				Variants: []commerce.ProductVariantInput{
-					{Name: "米白", SKU: "CUR-TEA-01-A", PriceDelta: 0, Stock: 18},
-					{Name: "墨黑", SKU: "CUR-TEA-01-B", PriceDelta: 50, Stock: 14},
+					{Name: "霧灰", SKU: "CUR-TAB-01-A", Stock: 16},
+					{Name: "陶白", SKU: "CUR-TAB-01-B", Stock: 14},
+					{Name: "赭紅", SKU: "CUR-TAB-01-C", PriceDelta: 30, Stock: 7},
 				}},
-			{SKU: "CUR-TEA-02", Name: "柴燒小茶壺", Slug: "woodfired-teapot", Category: "tea-ware", Status: "active", IsFeatured: true, Price: 2680, Stock: 6, Tag: "限量", Material: "陶", Origin: "台中",
-				Description:     "柴燒落灰自然成釉，壺身火痕流動。",
-				LongDescription: "五天四夜柴窯燒成，落灰於壺肩形成天然灰釉。容量約 180ml，適合一至二人沖泡。出水流暢、斷水利落。"},
-			{SKU: "CUR-APP-01", Name: "植物染亞麻襯衫", Slug: "plant-dyed-linen-shirt", Category: "apparel", Status: "active", IsFeatured: true, Price: 2280, OriginalPrice: 2680, Stock: 15, Tag: "植物染", Material: "亞麻", Origin: "台灣",
-				Description:     "以薯榔與藍染染製的亞麻襯衫，色澤會隨時間變化。",
-				LongDescription: "選用歐洲亞麻布，由台灣染整職人以植物染工序製成。植物染的特性是色落不均、越穿越柔。寬鬆剪裁，男女皆可。",
+			{SKU: "CUR-HOM-01", Name: "亞麻工作圍裙・自然米", Slug: "linen-work-apron", Category: "home-living", Status: "active", IsFeatured: true, Price: 890, Stock: 26, Tag: "天然亞麻", Material: "亞麻", Origin: "台灣",
+				Description:     "未染色的天然亞麻布料，越洗越柔軟。大口袋設計，料理、植栽、手作皆宜。",
+				LongDescription: "選用歐洲進口一級亞麻，平紋織造保留布面肌理。自然米色未經染色化學處理，隨使用時間產生獨特皺褶與柔軟度。胸前雙口袋可置放工具與手機。",
+				ProductImages:   img("p02.png"),
 				Variants: []commerce.ProductVariantInput{
-					{Name: "薯榔褐 M", SKU: "CUR-APP-01-M", PriceDelta: 0, Stock: 8},
-					{Name: "薯榔褐 L", SKU: "CUR-APP-01-L", PriceDelta: 0, Stock: 7},
+					{Name: "S / 自然米", SKU: "CUR-HOM-01-S", Stock: 9},
+					{Name: "M / 自然米", SKU: "CUR-HOM-01-M", Stock: 11},
+					{Name: "L / 燕麥褐", SKU: "CUR-HOM-01-L", Stock: 6},
 				}},
-			{SKU: "CUR-STA-01", Name: "手工線裝筆記本", Slug: "thread-bound-notebook", Category: "stationery", Status: "active", Price: 320, Stock: 64, Material: "紙", Origin: "台灣",
-				Description:     "傳統四目線裝，內頁為台灣產手工抄紙。",
-				LongDescription: "封面採用再生紙漿壓紋，內頁 80 頁空白手抄紙。線裝可 180 度攤平，適合鋼筆書寫。"},
-			{SKU: "CUR-TEA-03", Name: "杉林溪高山烏龍", Slug: "high-mountain-oolong", Category: "pantry", Status: "active", Price: 680, Stock: 40, Tag: "茶", Material: "茶葉", Origin: "南投",
-				Description:     "海拔 1600 公尺茶園手採，輕發酵清香型。",
-				LongDescription: "杉林溪茶區春茶，輕發酵輕焙火。湯色蜜綠、帶天然花香與冷礦韻。每罐 150g 散茶。"},
-			{SKU: "CUR-ACC-01", Name: "植鞣革長夾", Slug: "vegetable-tanned-wallet", Category: "apparel", Status: "active", Price: 1480, Stock: 0, Tag: "手工", Material: "植鞣牛皮", Origin: "台南",
-				Description:     "台南皮件工坊手縫長夾，養成後呈深琥珀色。",
-				LongDescription: "義大利植鞣協會認證牛皮，黃銅五金。八卡層、雙鈔票夾層與拉鍊零錢袋。植鞣革會隨使用產生獨特色澤。"},
-			{SKU: "CUR-HOME-01", Name: "竹編托盤", Slug: "bamboo-tray", Category: "home-goods", Status: "active", Price: 540, Stock: 21, Material: "孟宗竹", Origin: "南投",
-				Description:     "南投竹藝職人編製，收邊紮實。",
-				LongDescription: "孟宗竹剖篾後手工編製，表面無漆僅上天然護木油。直徑 28cm，可作茶盤或早餐托盤。"},
-			{SKU: "CUR-STA-02", Name: "黃銅書鎮", Slug: "brass-paperweight", Category: "stationery", Status: "draft", Price: 760, Stock: 9, Material: "黃銅", Origin: "台灣",
-				Description: "CNC 車製實心黃銅，底部貼軟木。"},
+			{SKU: "CUR-TAB-02", Name: "胡桃木端盤托盤", Slug: "walnut-serving-tray", Category: "tableware", Status: "active", IsFeatured: true, Price: 1280, Stock: 15, Tag: "北美胡桃木", Material: "胡桃木", Origin: "北美",
+				Description:     "一體成型的北美黑胡桃木，邊緣手工導圓，木紋如山水流轉，端上桌就是風景。",
+				LongDescription: "精選 FSC 認證北美黑胡桃木實木，由木工職人以傳統榫接工法製成。表面塗裝食品級天然木蠟油。尺寸約 35 × 22 cm。",
+				ProductImages:   img("p03.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "原木色（單件）", SKU: "CUR-TAB-02-A", Stock: 15},
+				}},
+			{SKU: "CUR-FRA-01", Name: "雪松森林大豆蠟燭", Slug: "cedar-forest-candle", Category: "fragrance", Status: "active", IsFeatured: true, Price: 520, OriginalPrice: 650, Stock: 59, Tag: "大豆蠟", Material: "大豆蠟", Origin: "台灣",
+				Description:     "前調雪松、中調岩蘭草、後調琥珀。純淨大豆蠟搭配棉芯，燃燒時光像走進一場森林晨霧。",
+				LongDescription: "100% 美國進口大豆蠟，不含石蠟與人工添加，搭配無鉛棉芯，燃燒乾淨不黑壁。180g 可燃燒約 35-40 小時。",
+				ProductImages:   img("p04.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "雪松森林 180g", SKU: "CUR-FRA-01-180", Stock: 38},
+					{Name: "雪松森林 90g（旅行款）", SKU: "CUR-FRA-01-90", PriceDelta: -180, Stock: 21},
+				}},
+			{SKU: "CUR-TAB-03", Name: "手工吹製玻璃水瓶組", Slug: "glass-carafe-set", Category: "tableware", Status: "active", Price: 1480, Stock: 11, Tag: "手工吹製", Material: "玻璃", Origin: "新竹",
+				Description:     "師傅以口吹製成的水瓶與兩只杯，氣泡與微不規則是手作的指紋，注水入杯，光線都變得溫柔。",
+				LongDescription: "由新竹玻璃工坊師傅手工吹製，每件都帶有自然氣泡與流動紋理。壺身 1000ml，杯 280ml，一組三件。耐熱玻璃材質。",
+				ProductImages:   img("p05.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "一壺二杯組", SKU: "CUR-TAB-03-A", Stock: 11},
+				}},
+			{SKU: "CUR-TEX-01", Name: "羊毛編織圍巾・焦糖", Slug: "wool-scarf-caramel", Category: "textiles", Status: "active", IsFeatured: true, Price: 1980, Stock: 17, Tag: "純新羊毛", Material: "羊毛", Origin: "台灣",
+				Description:     "以粗紡純新羊毛手工框織，焦糖般的暖色與厚實手感，是冬天裡最可靠的擁抱。",
+				LongDescription: "採用 100% 純新羊毛（Merino blend），以古董織框一條條手工編織而成，鬚邊收尾。尺寸 180 × 35cm（不含鬚）。",
+				ProductImages:   img("p06.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "焦糖棕", SKU: "CUR-TEX-01-A", Stock: 9},
+					{Name: "燕麥米", SKU: "CUR-TEX-01-B", Stock: 5},
+					{Name: "墨黑", SKU: "CUR-TEX-01-C", Stock: 0},
+				}},
+			{SKU: "CUR-STA-01", Name: "植鞣皮革筆記本・深棕", Slug: "leather-journal-brown", Category: "stationery", Status: "active", Price: 1180, Stock: 23, Tag: "植鞣革", Material: "植鞣牛皮", Origin: "義大利",
+				Description:     "義大利植鞣牛皮隨年月養出光澤，內頁用罄可替換，一本可以用很多年的筆記本。",
+				LongDescription: "選用義大利 Tuscan 植鞣革，未經塗飾，會隨使用產生獨特蜜色包漿。A5 尺寸，六孔活頁設計，內頁用畢可單獨添購替換。",
+				ProductImages:   img("p07.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "深棕 / 橫線", SKU: "CUR-STA-01-A", Stock: 11},
+					{Name: "深棕 / 空白", SKU: "CUR-STA-01-B", Stock: 8},
+					{Name: "原色 / 橫線", SKU: "CUR-STA-01-C", Stock: 4},
+				}},
+			{SKU: "CUR-TAB-04", Name: "抹茶茶碗與茶筅組", Slug: "matcha-bowl-set", Category: "tableware", Status: "active", Price: 980, Stock: 20, Tag: "日本職人", Material: "陶瓷", Origin: "日本",
+				Description:     "日本職人手拉胚的苔綠色茶碗，搭配百年竹細工老舖的茶筅，在家也能好好點一碗抹茶。",
+				LongDescription: "茶碗為日本有田燒職人手拉胚製作，釉色苔綠帶窯變流紋；茶筅出自京都百年竹細工舖，白竹 100 本立規格。含茶碗、茶筅、竹茶杓。",
+				ProductImages:   img("p08.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "標準組合", SKU: "CUR-TAB-04-A", Stock: 14},
+					{Name: "加購茶罐（+ 茶筅收納）", SKU: "CUR-TAB-04-B", PriceDelta: 350, Stock: 6},
+				}},
+			{SKU: "CUR-STA-02", Name: "黃銅鋼筆與筆架組", Slug: "brass-fountain-pen", Category: "stationery", Status: "active", Price: 1560, Stock: 10, Tag: "實心黃銅", Material: "黃銅", Origin: "台灣",
+				Description:     "實心黃銅車製的筆身，德國 SCHMIDT 鍍銠筆尖。書寫的手感與重量，都是剛剛好的專注。",
+				LongDescription: "筆身以實心黃銅 CNC 車製，重量 34g，重心前移適合長時間書寫。德國 SCHMIDT 鍍銠不鏽鋼 F 尖，隨附黃銅筆架與墨水管。",
+				ProductImages:   img("p09.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "黃銅原色", SKU: "CUR-STA-02-A", Stock: 7},
+					{Name: "墨黑鍍層", SKU: "CUR-STA-02-B", Stock: 3},
+				}},
+			{SKU: "CUR-HOM-02", Name: "有機棉麻抱枕套", Slug: "cotton-linen-cushion", Category: "home-living", Status: "active", Price: 590, OriginalPrice: 720, Stock: 32, Tag: "GOTS 有機棉", Material: "棉麻", Origin: "台灣",
+				Description:     "GOTS 認證有機棉與亞麻混紡，燕麥色織紋低調溫柔，讓沙發立刻有家的樣子。",
+				LongDescription: "70% GOTS 有機棉、30% 亞麻混紡，雙面同布織造，隱形拉鏈設計。尺寸 45 × 45cm（不含枕心）。",
+				ProductImages:   img("p10.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "燕麥色", SKU: "CUR-HOM-02-A", Stock: 18},
+					{Name: "陶灰色", SKU: "CUR-HOM-02-B", Stock: 14},
+				}},
+			{SKU: "CUR-TAB-05", Name: "手沖陶瓷濾杯組", Slug: "pour-over-dripper-set", Category: "tableware", Status: "active", Price: 1080, Stock: 15, Tag: "經典 V60 型", Material: "陶瓷", Origin: "台灣",
+				Description:     "暖褐釉色的陶瓷濾杯與耐熱玻璃下壺，加上胡桃木托環，晨間手沖的完整儀式。",
+				LongDescription: "濾杯為 V60 型螺旋肋槽陶瓷（1-2 人份，搭配 01 濾紙），釉色暖褐手浸釉。下壺為耐熱玻璃 400ml，附胡桃木隔熱托環。",
+				ProductImages:   img("p11.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "濾杯 + 玻璃壺 + 木環", SKU: "CUR-TAB-05-A", Stock: 15},
+				}},
+			{SKU: "CUR-FRA-02", Name: "白瓷擴香瓶・木質調", Slug: "porcelain-diffuser-wood", Category: "fragrance", Status: "active", Price: 860, Stock: 26, Tag: "天然藤枝", Material: "白瓷", Origin: "台灣",
+				Description:     "白瓷瓶身配 8 支天然藤枝，無火安全的持續香氣。木質調基底，安靜地替空間上色。",
+				LongDescription: "霧面白瓷瓶身（100ml），含 8 支義大利天然藤枝與精油補充瓶。香調：雪松 + 檀香 + 一絲柑橘。持香約 2-3 個月。",
+				ProductImages:   img("p12.png"),
+				Variants: []commerce.ProductVariantInput{
+					{Name: "木質調 100ml", SKU: "CUR-FRA-02-A", Stock: 14},
+					{Name: "柑苔調 100ml", SKU: "CUR-FRA-02-B", Stock: 12},
+				}},
 		}
 	}
 	return []commerce.ProductInput{
@@ -291,6 +388,117 @@ func seedProductsForTheme(siteTheme string) []commerce.ProductInput {
 		{SKU: "SKU-STA-04", Name: "線裝筆記本", Slug: "thread-bound-notebook", Description: "傳統線裝筆記本，書寫流暢。", Category: "stationery", Status: "active", Material: "紙", Origin: "台灣", Price: 260, Stock: 88, Tag: ""},
 		{SKU: "SKU-APP-05", Name: "寬版工作褲", Slug: "wide-work-pants", Description: "寬版剪裁工作褲，舒適耐穿。", Category: "apparel", Status: "draft", Material: "棉", Origin: "台灣", Price: 2280, Stock: 11, Tag: "新品"},
 		{SKU: "SKU-HOME-06", Name: "手抄紙燈罩", Slug: "paper-lampshade", Description: "埔里手抄紙燈罩，溫暖柔光。", Category: "home", Status: "active", Material: "紙", Origin: "埔里", Price: 1540, Stock: 5, Tag: ""},
+	}
+}
+
+// curatorySeedSoldCount mirrors the reference storefront's sold counts.
+// sold_count is derived by the order state machine and not accepted as
+// input, so the seed back-fills it with SQL after product creation.
+var curatorySeedSoldCount = map[string]int{
+	"CUR-TAB-01": 133,
+	"CUR-HOM-01": 76,
+	"CUR-TAB-02": 54,
+	"CUR-FRA-01": 211,
+	"CUR-TAB-03": 44,
+	"CUR-TEX-01": 68,
+	"CUR-STA-01": 90,
+	"CUR-TAB-04": 45,
+	"CUR-STA-02": 31,
+	"CUR-HOM-02": 120,
+	"CUR-TAB-05": 53,
+	"CUR-FRA-02": 98,
+}
+
+// devMediaVerifier mirrors bootstrap's mediaVerifierAdapter: it checks
+// the media registry so seed products associate images through the same
+// verified-key boundary the API enforces (product images never take raw
+// URLs).
+type devMediaVerifier struct {
+	registry media.RegistryStore
+}
+
+func (v devMediaVerifier) VerifyKey(ctx context.Context, userID, objectKey string) error {
+	obj, err := v.registry.GetByObjectKey(ctx, objectKey)
+	if err != nil {
+		if errors.Is(err, media.ErrObjectNotFound) {
+			return commerce.ErrUnverifiedMedia
+		}
+		return fmt.Errorf("media verifier: registry lookup: %w", err)
+	}
+	if obj.UploadedByUserID != userID {
+		return commerce.ErrUnverifiedMedia
+	}
+	return nil
+}
+
+// seedCuratoryMedia registers the bundled product photos as verified media
+// objects owned by the dev principal. Files live in site/assets/images and
+// are copied to dist/assets/images; product image keys are
+// "images/<file>" so URLs resolve as {R2_PUBLIC_BASE_URL}/images/<file>.
+// Idempotent: skips when media_objects already has rows.
+func seedCuratoryMedia(ctx context.Context, db *sql.DB) {
+	var count int
+	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM media_assets`).Scan(&count); err != nil {
+		log.Printf("seed media: count failed: %v", err)
+		return
+	}
+	if count > 0 {
+		return
+	}
+	entries, err := os.ReadDir(filepath.Join("site", "assets", "images"))
+	if err != nil {
+		log.Printf("seed media: %v (run from repo root)", err)
+		return
+	}
+	seeded := 0
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".png") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join("site", "assets", "images", name))
+		if err != nil {
+			continue
+		}
+		cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
+		if err != nil {
+			log.Printf("seed media %s: decode: %v", name, err)
+			continue
+		}
+		now := time.Now().Unix()
+		id := "seed-" + strings.TrimSuffix(name, ".png")
+		// media_assets 是 active 狀態的資產表；media_objects 是 source 列。
+		// GetByObjectKey 需要兩表 JOIN 同時命中才算已驗證。
+		// unassociated_since_unix=0：已與商品圖關聯，不進 GC 佇列。
+		tx, err := db.BeginTx(ctx, nil)
+		if err != nil {
+			continue
+		}
+		_, err = tx.ExecContext(ctx,
+			`INSERT INTO media_assets
+			 (object_key, state, content_type, bytes, width, height, uploaded_by_user_id, verified_unix, reservation_token, reserved_unix, unassociated_since_unix)
+			 VALUES (?, 'active', ?, ?, ?, ?, ?, ?, '', 0, 0)`,
+			"images/"+name, "image/"+format, len(data), cfg.Width, cfg.Height, devPrincipal.UserID, now)
+		if err == nil {
+			_, err = tx.ExecContext(ctx,
+				`INSERT INTO media_objects
+				 (id, object_key, source_upload_key, content_type, bytes, width, height, uploaded_by_user_id, verified_unix)
+				 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				id, "images/"+name, "seed-upload/"+name, "image/"+format, len(data), cfg.Width, cfg.Height, devPrincipal.UserID, now)
+		}
+		if err != nil {
+			_ = tx.Rollback()
+			log.Printf("seed media %s: %v", name, err)
+			continue
+		}
+		if err := tx.Commit(); err != nil {
+			log.Printf("seed media %s: commit: %v", name, err)
+			continue
+		}
+		seeded++
+	}
+	if seeded > 0 {
+		log.Printf("seed: %d media objects", seeded)
 	}
 }
 
@@ -321,11 +529,11 @@ func seedCuratory(ctx context.Context, commerceService commerce.Service, sitecon
 	// Categories -----------------------------------------------------------
 	if cats, err := commerceService.ListCategories(ctx); err == nil && len(cats) == 0 {
 		categories := []commerce.CategoryInput{
-			{Slug: "tea-ware", Name: "茶器物", Description: "陶、瓷、漆器——讓一杯茶變得更好的器物。", IsActive: true},
-			{Slug: "apparel", Name: "職人衣著", Description: "植物染、亞麻、手縫皮件。", IsActive: true},
-			{Slug: "stationery", Name: "生活文具", Description: "紙、筆與桌上小物。", IsActive: true},
-			{Slug: "pantry", Name: "日常飲食", Description: "台灣茶與發酵風味。", IsActive: true},
-			{Slug: "home-goods", Name: "居家器物", Description: "竹編、木作與生活道具。", IsActive: true},
+			{Slug: "tableware", Name: "餐廚食器", Description: "陶、瓷、木與玻璃——讓餐桌成為風景的器物。", Image: "/assets/images/cat-table.png", SortOrder: 1, IsActive: true},
+			{Slug: "fragrance", Name: "香氛療癒", Description: "蠟燭、擴香與空間氣味。", Image: "/assets/images/cat-fragrance.png", SortOrder: 2, IsActive: true},
+			{Slug: "stationery", Name: "文具書房", Description: "筆、紙與桌上的好工作夥伴。", Image: "/assets/images/cat-stationery.png", SortOrder: 3, IsActive: true},
+			{Slug: "textiles", Name: "服飾織品", Description: "羊毛、亞麻與職人織作。", Image: "/assets/images/cat-textile.png", SortOrder: 4, IsActive: true},
+			{Slug: "home-living", Name: "家居生活", Description: "讓家更像我們的樣子。", Image: "/assets/images/cat-home.png", SortOrder: 5, IsActive: true},
 		}
 		for _, c := range categories {
 			if _, err := commerceService.CreateCategory(ctx, devPrincipal, c); err != nil {
@@ -398,13 +606,13 @@ func seedCuratory(ctx context.Context, commerceService commerce.Service, sitecon
 		draft := []byte(`{
 			"storeName": "質選所",
 			"storeNameEn": "CURATORY",
-			"tagline": "為生活選一件好物",
-			"promoBanner": "全館滿 NT$1,500 免運 · 新朋友輸入 WELCOME10 享九折",
+			"tagline": "為日常，嚴選美好",
+			"promoBanner": "開幕慶限定・全站滿 NT$1,500 即享免運",
 			"promoBannerEnabled": true,
 			"freeShippingThreshold": 1500,
 			"lowStockThreshold": 5,
 			"notificationMaster": true,
-			"contactEmail": "hello@curatory.example",
+			"contactEmail": "service@curatory.tw",
 			"contactPhone": "02-2345-6789"
 		}`)
 		updated, err := sitecontentService.UpdateStoreSettingsDraft(ctx, devPrincipal, sitecontent.StoreSettingsInput{

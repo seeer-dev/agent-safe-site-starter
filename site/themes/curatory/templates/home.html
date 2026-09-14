@@ -43,13 +43,13 @@
           </div>
           <div class="px-1 first:pl-0">
             <dt class="text-[11px] tracking-wider text-muted-foreground">免運門檻</dt>
-            <dd class="mt-1.5 font-serif text-xl font-semibold tabular-nums sm:text-2xl">{{with index .Settings "freeShippingThreshold"}}NT$ {{.}}{{else}}—{{end}}</dd>
+            <dd class="mt-1.5 font-serif text-xl font-semibold tabular-nums sm:text-2xl">{{with index .Settings "freeShippingThreshold"}}{{thousands .}}{{else}}—{{end}}</dd>
           </div>
         </dl>
       </div>
 
       <div class="relative" data-reveal data-reveal-delay="0.25">
-        <img src="/images/hero.png" alt="{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}嚴選商品情境" class="aspect-[4/3] w-full rounded-2xl object-cover shadow-[0_32px_64px_-32px_rgba(60,35,25,0.35)] lg:aspect-[5/6] lg:rounded-3xl" onerror="this.style.display='none'">
+        <img src="/assets/images/hero.png" alt="{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}嚴選商品情境" class="aspect-[4/3] w-full rounded-2xl object-cover shadow-[0_32px_64px_-32px_rgba(60,35,25,0.35)] lg:aspect-[5/6] lg:rounded-3xl" onerror="this.style.display='none'">
         {{if gt (len .Featured) 0}}
         {{with index .Featured 0}}
         <a href="/products/{{.Slug}}/"
@@ -163,7 +163,7 @@
   <section class="bg-ink text-cream">
     <div class="mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2 lg:gap-16 lg:px-8">
       <div data-reveal>
-        <img src="/images/about.png" alt="編輯走訪工坊" loading="lazy" class="aspect-[4/3] w-full rounded-2xl object-cover opacity-95" onerror="this.style.display='none'">
+        <img src="/assets/images/about.png" alt="編輯走訪工坊" loading="lazy" class="aspect-[4/3] w-full rounded-2xl object-cover opacity-95" onerror="this.style.display='none'">
       </div>
       <div data-reveal data-reveal-delay="0.12">
         <p class="text-[11px] font-medium uppercase tracking-[0.35em] text-gold">Our Story</p>

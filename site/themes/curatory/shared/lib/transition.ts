@@ -23,7 +23,15 @@ export function navigate(path: string) {
     /* private mode — transition flag optional */
   }
   if (curtain) {
+    // 防禦：上一頁 reveal 的 forwards 填充若仍在，先清掉再播 cover。
+    document.documentElement.classList.remove('curtain-reveal')
     curtain.classList.add('curtain-cover')
+    // 覆蓋期間預取目標頁，縮短新頁到達前的停頓。
+    try {
+      void fetch(path, { credentials: 'same-origin' }).catch(() => undefined)
+    } catch {
+      /* prefetch is best-effort */
+    }
     window.setTimeout(() => {
       window.location.href = path
     }, 420)

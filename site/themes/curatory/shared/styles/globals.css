@@ -414,8 +414,23 @@
   transition: transform 0.34s cubic-bezier(0.76, 0, 0.24, 1);
 }
 #page-curtain .curtain-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  color: var(--cream);
   opacity: 0;
   transition: opacity 0.22s ease-out 0.14s;
+}
+#page-curtain .curtain-brand-en {
+  font-family: var(--font-display), sans-serif;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.5em;
+  /* letter-spacing 會在最後一字元後留白，補左 padding 維持視覺置中 */
+  padding-left: 0.5em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--cream) 40%, transparent);
 }
 #page-curtain.curtain-cover .curtain-brand {
   opacity: 1;
