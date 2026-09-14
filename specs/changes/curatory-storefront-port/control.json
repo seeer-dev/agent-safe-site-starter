@@ -61,47 +61,243 @@
   ],
   "strict_evidence": true,
   "evidence_requirements": {
-    "AC-004": ["walkthrough"],
-    "AC-005": ["walkthrough"],
-    "AC-009": ["walkthrough"],
-    "AC-010": ["security-review"],
-    "AC-011": ["walkthrough"],
-    "AC-013": ["security-review"],
-    "AC-015": ["walkthrough"],
-    "AC-016": ["consumer-reachability"],
-    "AC-017": ["consumer-reachability"]
+    "AC-004": [
+      "walkthrough"
+    ],
+    "AC-005": [
+      "walkthrough"
+    ],
+    "AC-009": [
+      "walkthrough"
+    ],
+    "AC-010": [
+      "security-review"
+    ],
+    "AC-011": [
+      "walkthrough"
+    ],
+    "AC-013": [
+      "security-review"
+    ],
+    "AC-015": [
+      "walkthrough"
+    ],
+    "AC-016": [
+      "consumer-reachability"
+    ],
+    "AC-017": [
+      "consumer-reachability"
+    ]
   },
   "evidence": {
-    "REQ-001": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-002": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-003": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-004": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-005": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-006": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-007": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-008": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-009": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-010": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-011": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "REQ-012": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-001": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-002": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-003": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-004": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-005": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-006": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-007": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-008": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-009": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-010": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-011": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-012": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-013": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-014": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-015": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-016": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-017": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-018": { "status": "pending", "proof": "", "observed_revision": 2 },
-    "AC-019": { "status": "pending", "proof": "", "observed_revision": 2 }
+    "REQ-001": {
+      "status": "passed",
+      "proof": "SITE_THEME=curatory render emits the ported theme; minimal-cart path untouched",
+      "observed_revision": 2
+    },
+    "REQ-002": {
+      "status": "passed",
+      "proof": "7 static pages + product/category/news routes in dist/; no-JS baselines present",
+      "observed_revision": 2
+    },
+    "REQ-003": {
+      "status": "passed",
+      "proof": "tokens/components/interactions ported from reference (see S03-S06 notes)",
+      "observed_revision": 2
+    },
+    "REQ-004": {
+      "status": "passed",
+      "proof": "categories + variants + featured + sold_count live (S01/S02 + seed)",
+      "observed_revision": 2
+    },
+    "REQ-005": {
+      "status": "passed",
+      "proof": "CheckoutPage wizard + server-authoritative quote/order (smoke-verified)",
+      "observed_revision": 2
+    },
+    "REQ-006": {
+      "status": "passed",
+      "proof": "TW- order number + access token + timeline + template notifications",
+      "observed_revision": 2
+    },
+    "REQ-007": {
+      "status": "passed",
+      "proof": "news renders governed articles, pinned-first (verified in dist/news)",
+      "observed_revision": 2
+    },
+    "REQ-008": {
+      "status": "passed",
+      "proof": "comments pending->approved moderation; admin reply supported",
+      "observed_revision": 2
+    },
+    "REQ-009": {
+      "status": "passed",
+      "proof": "percent/fixed/freeshipping + min_subtotal + usage_limit + validate endpoint",
+      "observed_revision": 2
+    },
+    "REQ-010": {
+      "status": "passed",
+      "proof": "admin resources cover all storefront entities (S07)",
+      "observed_revision": 2
+    },
+    "REQ-011": {
+      "status": "passed",
+      "proof": "/api/storefront/bootstrap verified live with seeded settings",
+      "observed_revision": 2
+    },
+    "REQ-012": {
+      "status": "passed",
+      "proof": "paired migrations (18 matching) + openapi.yaml updated + verify pass",
+      "observed_revision": 2
+    },
+    "AC-001": {
+      "status": "passed",
+      "proof": "go run ./server/tools/render -> dist/ with curatory pages; SITE_THEME=minimal-cart still renders original theme",
+      "observed_revision": 2
+    },
+    "AC-002": {
+      "status": "passed",
+      "proof": "dist/*.html contain static nav/content/footer with islands mounted via data-vue-island (verified mounts on /, /products/stoneware-mug/)",
+      "observed_revision": 2
+    },
+    "AC-003": {
+      "status": "passed",
+      "proof": "product/news/category/order deep links are pre-rendered pages; order requires token as specced",
+      "observed_revision": 2
+    },
+    "AC-004": {
+      "status": "passed",
+      "proof": "section-by-section comparison against reference during S03-S06; deviations: SPA->MPA navigation, added no-JS baselines, search upgraded to live results (see receipts/ac-004-walkthrough.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/ac-004-walkthrough.md"
+        }
+      ]
+    },
+    "AC-005": {
+      "status": "passed",
+      "proof": "loader/transitions/reveal/fade-in/skeleton/toast/cart-persistence ported; prefers-reduced-motion handled in globals.css and bootstrap.ts (see receipts/ac-005-walkthrough.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/ac-005-walkthrough.md"
+        }
+      ]
+    },
+    "AC-006": {
+      "status": "passed",
+      "proof": "smoke: variant CUR-TEA-01-B -> 930 = 880+50; order line resolves variant sku server-side",
+      "observed_revision": 2
+    },
+    "AC-007": {
+      "status": "passed",
+      "proof": "?category/featured/q/sort filters verified; shop page chips/sort/search functional",
+      "observed_revision": 2
+    },
+    "AC-008": {
+      "status": "passed",
+      "proof": "quote 930x2 -186 +80 +15 = 1769; order persisted server totals (smoke)",
+      "observed_revision": 2
+    },
+    "AC-009": {
+      "status": "passed",
+      "proof": "city/district cascade + CVS picker; order stores city/district/cvs/invoice/note fields (smoke order) (see receipts/ac-009-walkthrough.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/ac-009-walkthrough.md"
+        }
+      ]
+    },
+    "AC-010": {
+      "status": "passed",
+      "proof": "guest GET /api/orders/{id}: 400 without token, 200 PII-masked with token (smoke) (see receipts/ac-010-security-review.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/ac-010-security-review.md"
+        }
+      ]
+    },
+    "AC-011": {
+      "status": "passed",
+      "proof": "seeded-templates order -> notification-logs row status=sent with rendered subject/body; order/track pages render real timeline (see receipts/ac-011-walkthrough.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/ac-011-walkthrough.md"
+        }
+      ]
+    },
+    "AC-012": {
+      "status": "passed",
+      "proof": "news list pinned-first then published_at desc; only published articles render (3 seeded, 1 pinned observed first)",
+      "observed_revision": 2
+    },
+    "AC-013": {
+      "status": "passed",
+      "proof": "seeded pending comment absent from public comments API; approved ones render with reply (see receipts/ac-013-security-review.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/ac-013-security-review.md"
+        }
+      ]
+    },
+    "AC-014": {
+      "status": "passed",
+      "proof": "WELCOME10/FREESHIP validate + quote integration verified; used_count increments in order tx",
+      "observed_revision": 2
+    },
+    "AC-015": {
+      "status": "passed",
+      "proof": "admin screens for categories/products+variants/orders/promos/articles/comments/payment/shipping/notifications/store-settings exist and are capability-gated (see receipts/ac-015-walkthrough.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/ac-015-walkthrough.md"
+        }
+      ]
+    },
+    "AC-016": {
+      "status": "passed",
+      "proof": "Dashboard consumes /admin/stats (revenue, pending_comments) + orders/products/comments lists; DashboardPage test asserts 6 KPI values (see receipts/ac-016-consumer-reachability.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/ac-016-consumer-reachability.md"
+        }
+      ]
+    },
+    "AC-017": {
+      "status": "passed",
+      "proof": "bootstrap returns settings/categories/methods/announcements; unpublished settings excluded (draft/publish isolation verified) (see receipts/ac-017-consumer-reachability.md)",
+      "observed_revision": 2,
+      "receipts": [
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/ac-017-consumer-reachability.md"
+        }
+      ]
+    },
+    "AC-018": {
+      "status": "blocked",
+      "proof": "migration-parity gate passes (18 paired); live PostgreSQL apply not exercised: no PG instance in this environment",
+      "observed_revision": 2
+    },
+    "AC-019": {
+      "status": "passed",
+      "proof": "speccheck ok (32 specs); verify chain green incl. go test -count=10 on commerce/staff/media",
+      "observed_revision": 2
+    }
   }
 }
