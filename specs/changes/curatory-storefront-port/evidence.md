@@ -109,6 +109,26 @@ completion, admin, and final verification slices remain.
   (回公告列表 / 順道逛逛商店). Newsletter form + scroll-top wired via
   delegated listeners in islands/bootstrap.ts; content store orders
   articles pinned-DESC then publish_at DESC.
+- **S07 in progress**: admin SPA wired for the new resources — resource
+  registry registers categories/comments/notification-templates/
+  notification-logs/articles; nav entries added in `profile.ts` with
+  icons (Sidebar ICON_MAP extended); `FieldWidget` gained `variants`
+  rendered by new `VariantsEditor` sub-table (name/sku/price_delta/
+  stock/sort_order, add/remove, read-only mode, aria-labelledby);
+  `FieldDef.optsSource` loads select options from an admin list endpoint
+  (product category → /admin/categories); `RowAction` gained
+  `reasonField`/`reasonOptional`/`reasonLabel` so comment moderation
+  sends `{status, reply}` under the correct key; `ConfirmDialog` accepts
+  optional reasons. Existing resources extended: products (is_featured,
+  long_description, sold_count col, dynamic category select, variants
+  section), promos (freeshipping type, min_subtotal, usage_limit,
+  used_count), payment-methods (fee field + col), orders (completed
+  transition button + recipient/CVS/invoice/coupon/fee detail fields).
+  New `StoreSettingsPage` at `/settings` edits the governed
+  store_settings draft (version-checked save, publish action) via
+  sitecontent endpoints; backend gained `PUT /api/admin/articles` as an
+  alias of the slug-keyed upsert so the generic edit form works.
+  `npm run typecheck` + `npm run build` + `npm test` (195 tests) PASS.
 
 ## Evidence log
 

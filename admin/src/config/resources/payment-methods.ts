@@ -22,6 +22,7 @@ export const paymentMethodsResource: ResourceDef = {
   cols: [
     { k: 'method', l: '付款方式', r: 'mono' },
     { k: 'provider_label', l: '服務商' },
+    { k: 'fee', l: '手續費', r: 'number' },
     { k: 'environment', l: '環境', r: 'badge' },
     { k: 'readiness_status', l: 'Readiness', r: 'badge' },
     { k: 'enabled', l: '啟用', r: 'badge' },
@@ -39,6 +40,7 @@ export const paymentMethodsResource: ResourceDef = {
         fields: [
           { k: 'method', l: '付款方式', w: 'text', req: true, ro: true },
           { k: 'provider_label', l: '服務商', w: 'text', req: true },
+          { k: 'fee', l: '手續費（NT$，計入結帳）', w: 'number' },
           { k: 'environment', l: '環境', w: 'select', opts: ['sandbox', 'production'], req: true },
           { k: 'readiness_status', l: 'Readiness', w: 'select', opts: ['pending_setup', 'ready'], req: true },
           { k: 'enabled', l: '啟用', w: 'switch' },

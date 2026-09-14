@@ -50,15 +50,18 @@ func (s SQLStore) GetStoreSettings(ctx context.Context) (StoreSettings, error) {
 		return StoreSettings{}, err
 	}
 	var out StoreSettings
+	var draft, published string
 	query := database.Bind(s.dialect, `SELECT id, draft_json, published_json,
 		draft_updated_unix, published_unix, version, updated_unix
 		FROM store_settings WHERE id = ?`)
 	err := s.db.QueryRowContext(ctx, query, settingsRowID).Scan(
-		&out.ID, &out.Draft, &out.Published,
+		&out.ID, &draft, &published,
 		&out.DraftUpdatedAt, &out.PublishedAt, &out.Version, &out.UpdatedUnix)
 	if err != nil {
 		return StoreSettings{}, fmt.Errorf("load store settings: %w", err)
 	}
+	out.Draft = json.RawMessage(draft)
+	out.Published = json.RawMessage(published)
 	return out, nil
 }
 

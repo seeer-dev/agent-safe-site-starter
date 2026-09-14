@@ -33,6 +33,11 @@ const props = withDefaults(defineProps<{
   body?: ConfirmBody | null
   meta?: ConfirmMeta | null
   requireReason?: boolean
+  /** Show the reason input without making it required (e.g. optional
+   *  admin reply on comment moderation). */
+  reasonOptional?: boolean
+  /** Label for the reason textarea (default 原因). */
+  reasonLabel?: string
   confirmLabel?: string
   reason?: string
   expiry?: string
@@ -41,6 +46,8 @@ const props = withDefaults(defineProps<{
   body: null,
   meta: null,
   requireReason: false,
+  reasonOptional: false,
+  reasonLabel: '原因',
   confirmLabel: '確認',
   reason: '',
   expiry: '',
@@ -147,11 +154,11 @@ watch(() => props.open, async (isOpen) => {
         失敗：{{ meta.error }}
       </div>
     </div>
-    <div v-if="requireReason" class="field">
-      <label>原因</label>
+    <div v-if="requireReason || reasonOptional" class="field">
+      <label>{{ reasonLabel }} <span v-if="requireReason" style="color:var(--danger)">*</span><span v-else class="muted" style="font-weight:400">（選填）</span></label>
       <Textarea
         :model-value="reason"
-        placeholder="請輸入原因..."
+        placeholder="請輸入..."
         @update:model-value="onReasonUpdate"
       />
     </div>

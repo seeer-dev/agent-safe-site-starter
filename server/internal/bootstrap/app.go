@@ -139,8 +139,11 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 		})
 	})
 
-	// Admin content endpoints
+	// Admin content endpoints. Articles are slug-keyed upserts; PUT aliases
+	// the same handler so the admin SPA's generic create/edit form (POST on
+	// create, PUT on edit) both reach the upsert.
 	mux.HandleFunc("POST /api/admin/articles", contentHandler.Publish)
+	mux.HandleFunc("PUT /api/admin/articles", contentHandler.Publish)
 
 	// Storefront bootstrap: one round trip for settings, categories,
 	// site-content blocks, and customer-usable payment/shipping methods.

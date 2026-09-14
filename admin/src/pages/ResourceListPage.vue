@@ -8,6 +8,7 @@ import Select from '@/components/ui/Select.vue'
 import Textarea from '@/components/ui/Textarea.vue'
 import Modal from '@/components/ui/Modal.vue'
 import MediaUploader from '@/components/MediaUploader.vue'
+import VariantsEditor from '@/components/VariantsEditor.vue'
 import ConfirmDialog, { type ConfirmBody, type ConfirmMeta } from '@/components/ui/ConfirmDialog.vue'
 import { RES } from '@/config/resources'
 import { MACHINES } from '@/config/machines'
@@ -107,6 +108,16 @@ function seedFieldValue(fd: FieldDef, value: unknown): unknown {
       alt_text: e.alt_text || '',
     }))
   }
+  if (fd.w === 'variants') {
+    if (!Array.isArray(value)) return []
+    return (value as Record<string, unknown>[]).map((v) => ({
+      name: v.name ?? '',
+      sku: v.sku ?? '',
+      price_delta: v.price_delta ?? 0,
+      stock: v.stock ?? 0,
+      sort_order: v.sort_order ?? 0,
+    }))
+  }
   if (fd.w === 'switch') return value === true || value === 1 || value === 'true' ? 'true' : 'false'
   if (fd.w === 'datetime') return unixToDatetimeLocal(value)
   if (fd.w === 'number') return value == null ? '' : String(value)
@@ -121,7 +132,16 @@ function buildFormPayload(): Record<string, unknown> {
       if (fd.req && (value == null || value === '' || (Array.isArray(value) && value.length === 0))) {
         throw new Error(`${fd.l} 為必填欄位`)
       }
-      if (fd.w === 'switch') {
+      if (fd.w === 'variants') {
+        const entries = Array.isArray(value) ? value : []
+        payload[fd.k] = entries.map((v: Record<string, unknown>, i: number) => ({
+          name: String(v.name ?? '').trim(),
+          sku: String(v.sku ?? '').trim(),
+          price_delta: Number(v.price_delta ?? 0),
+          stock: Number(v.stock ?? 0),
+          sort_order: Number(v.sort_order ?? i),
+        }))
+      } else if (fd.w === 'switch') {
         payload[fd.k] = value === true || value === 'true'
       } else if (fd.w === 'number') {
         if ((value === '' || value == null) && fd.nullable) {
@@ -156,6 +176,26 @@ function buildFormPayload(): Record<string, unknown> {
   return payload
 }
 
+const dynamicOpts = ref<Record<string, string[]>>({})
+
+async function loadDynamicOpts() {
+  for (const sec of resource.value.form.sections) {
+    for (const fd of sec.fields) {
+      if (!fd.optsSource || dynamicOpts.value[fd.k]) continue
+      try {
+        const res = await api.get<any>(fd.optsSource.api)
+        const list = Array.isArray(res) ? res : (res?.[fd.optsSource.listKey ?? 'items'] ?? Object.values(res ?? {}).find(Array.isArray) ?? [])
+        dynamicOpts.value = {
+          ...dynamicOpts.value,
+          [fd.k]: (list as any[]).map((e) => String(e[fd.optsSource!.value] ?? '')).filter(Boolean),
+        }
+      } catch {
+        dynamicOpts.value = { ...dynamicOpts.value, [fd.k]: [] }
+      }
+    }
+  }
+}
+
 function openForm(i: number | null) {
   formTriggerEl.value = (document.activeElement as HTMLElement) || null
   formRowIndex.value = i
@@ -170,6 +210,7 @@ function openForm(i: number | null) {
   }
   formInitial.value = JSON.stringify(formData)
   formOpen.value = true
+  loadDynamicOpts()
 }
 
 /** Focus the first editable field inside the form modal, or the modal
@@ -265,6 +306,8 @@ const confirmTitle = ref('')
 const confirmBody = ref<ConfirmBody | null>(null)
 const confirmMeta = ref<ConfirmMeta | null>(null)
 const confirmRequireReason = ref(false)
+const confirmReasonOptional = ref(false)
+const confirmReasonLabel = ref('原因')
 const confirmVariant = ref<'pri' | 'danger'>('pri')
 const confirmIsBulk = ref(false)
 const confirmReason = ref('')
@@ -300,6 +343,8 @@ function askRowAction(i: number, actionKey: string) {
     expiryInput: a.expiryInput ?? false,
   }
   confirmRequireReason.value = !!a.reason
+  confirmReasonOptional.value = !!(a as RowAction).reasonOptional
+  confirmReasonLabel.value = (a as RowAction).reasonLabel ?? '原因'
   confirmVariant.value = a.variant === 'danger' ? 'danger' : 'pri'
   confirmReason.value = ''
   confirmExpiry.value = ''
@@ -547,8 +592,13 @@ function buildStatusBody(a: RowAction | BulkAction, row: Record<string, any>): R
       note: confirmReason.value.trim(),
     }
   }
-  // Product/member status endpoints expect { status }
-  return { ...(a.payload ?? {}) }
+  // Generic PATCH body: action payload plus the confirm-dialog reason
+  // under a configurable key (comments moderation sends `reply`).
+  const body: Record<string, any> = { ...(a.payload ?? {}) }
+  if ('reasonField' in a && a.reasonField) {
+    body[a.reasonField] = confirmReason.value.trim()
+  }
+  return body
 }
 
 /** Build the request body for a POST action (approve/publish). */
@@ -873,8 +923,8 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
         <template v-for="fd in sec.fields" :key="fd.k">
           <div :class="['field', fd.span === 2 ? 'span2' : '']">
             <label
-              :for="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' ? undefined : 'field-' + fd.k)"
-              :id="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' ? 'label-field-' + fd.k : undefined)"
+              :for="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' || fd.w === 'variants' ? undefined : 'field-' + fd.k)"
+              :id="isFieldReadOnly(fd) ? undefined : (fd.w === 'media-uploader' || fd.w === 'variants' ? 'label-field-' + fd.k : undefined)"
             >
               {{ fd.l }}
               <span v-if="fd.req" class="req">*</span>
@@ -895,7 +945,7 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
             <Select
               v-else-if="fd.w === 'select'"
               :id="'field-' + fd.k"
-              :options="fd.opts ?? []"
+              :options="dynamicOpts[fd.k] ?? fd.opts ?? []"
               :modelValue="formData[fd.k] ?? ''"
               @update:modelValue="formData[fd.k] = $event"
             />
@@ -914,6 +964,13 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
               :modelValue="formData[fd.k] ?? ''"
               placeholder="以逗號分隔"
               @update:modelValue="formData[fd.k] = $event"
+            />
+            <!-- Variants sub-table -->
+            <VariantsEditor
+              v-else-if="fd.w === 'variants'"
+              v-model="formData[fd.k]"
+              :readOnly="formIsReadOnly"
+              :labelledby="'label-field-' + fd.k"
             />
             <!-- Media uploader (product_images) -->
             <MediaUploader
@@ -956,6 +1013,8 @@ const formIsReadOnly = computed(() => resource.value.form.readOnly ?? false)
     :body="confirmBody"
     :meta="confirmMeta"
     :requireReason="confirmRequireReason"
+    :reasonOptional="confirmReasonOptional"
+    :reasonLabel="confirmReasonLabel"
     :reason="confirmReason"
     :expiry="confirmExpiry"
     confirmLabel="確認"

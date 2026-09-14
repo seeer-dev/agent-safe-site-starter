@@ -7,6 +7,11 @@ import { contentResource } from './content';
 import { paymentMethodsResource } from './payment-methods';
 import { shippingMethodsResource } from './shipping-methods';
 import { staffResource } from './staff';
+import { categoriesResource } from './categories';
+import { commentsResource } from './comments';
+import { notificationTemplatesResource } from './notification-templates';
+import { notificationLogsResource } from './notification-logs';
+import { articlesResource } from './articles';
 
 export const RES: Record<string, ResourceDef> = {
   'minimal-cart-products': productsResource,
@@ -17,4 +22,9 @@ export const RES: Record<string, ResourceDef> = {
   'tw-commerce.methods': paymentMethodsResource,
   'minimal-cart-shipping': shippingMethodsResource,
   staff: staffResource,
+  categories: categoriesResource,
+  comments: commentsResource,
+  'notification-templates': notificationTemplatesResource,
+  'notification-logs': notificationLogsResource,
+  articles: articlesResource,
 };

@@ -25,7 +25,7 @@ export interface RouteDef {
   label: string;
   icon: string;
   section: SectionKey;
-  component: 'MinimalCartDashboardPage' | 'ResourceListPage';
+  component: 'MinimalCartDashboardPage' | 'ResourceListPage' | 'StoreSettingsPage';
   caps: Capability[];
   /** Optional sub-menu children. When present the nav item renders as a
    *  collapsible parent with inline children (expanded) and a hover flyout
@@ -60,7 +60,10 @@ export type FieldWidget =
   | 'image'
   | 'tags'
   | 'datetime'
-  | 'media-uploader';
+  | 'media-uploader'
+  /** Editable sub-table of product variants: rows of
+   *  {name, sku, price_delta, stock, sort_order}. */
+  | 'variants';
 
 export interface FieldDef {
   k: string;
@@ -74,6 +77,10 @@ export interface FieldDef {
   nullable?: boolean;
   span?: number;
   opts?: string[];
+  /** For select fields: load options from an admin list endpoint.
+   *  `api` returns `{<listKey>: [...]}` or a bare array; each entry's
+   *  `value`/`label` keys pick the option value. Takes precedence over `opts`. */
+  optsSource?: { api: string; listKey?: string; value: string; label: string };
   help?: string;
 }
 
@@ -108,6 +115,13 @@ export interface RowAction {
   showWhen?: string;
   confirm?: string;
   reason?: boolean;
+  /** When set, the confirm-dialog reason input is sent under this JSON
+   *  key instead of `note` (e.g. comment moderation sends `reply`). */
+  reasonField?: string;
+  /** Show the reason textarea without requiring a value. */
+  reasonOptional?: boolean;
+  /** Custom label for the reason textarea (default 原因). */
+  reasonLabel?: string;
   expect?: string;
   /** If true, the confirm dialog shows a required datetime-local input
    *  whose value is converted to expiry_unix and sent with the request. */

@@ -4,7 +4,8 @@ import { useRoute } from 'vue-router'
 import { ChevronRight } from 'lucide-vue-next'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, TicketPercent,
-  FileText, CreditCard, UserCog, HelpCircle,
+  FileText, CreditCard, UserCog, HelpCircle, FolderTree,
+  MessageSquareText, Newspaper, Truck, Mail, MailCheck, Store,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { PROFILE, SECTION_LABEL } from '@/config/profile'
@@ -19,7 +20,8 @@ const emit = defineEmits<{
 
 const ICON_MAP: Record<string, any> = {
   LayoutDashboard, Package, ShoppingBag, Users, TicketPercent,
-  FileText, CreditCard, UserCog,
+  FileText, CreditCard, UserCog, FolderTree, MessageSquareText,
+  Newspaper, Truck, Mail, MailCheck, Store,
 }
 
 const grouped = computed(() => {
@@ -45,11 +47,13 @@ function toggleChildren(item: RouteDef) {
 
 function hrefFor(key: string): string {
   if (key === 'dashboard') return '/'
+  if (key === 'store-settings') return '/settings'
   return `/res/${key}`
 }
 
 function isActive(key: string): boolean {
   if (key === 'dashboard') return route.name === 'dashboard'
+  if (key === 'store-settings') return route.name === 'store-settings'
   return route.path === `/res/${key}`
 }
 
