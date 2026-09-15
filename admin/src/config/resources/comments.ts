@@ -22,9 +22,10 @@ export const commentsResource: ResourceDef = {
     replied_at: formatUnix(raw.replied_unix),
     created_at: formatUnix(raw.created_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'product_id', l: '商品', r: 'mono' },
-    { k: 'nickname', l: '暱稱' },
+    { k: 'product_id', pin: 'left', l: '商品', r: 'mono' },
+    { k: 'nickname', l: '暱稱', sortable: true },
     { k: 'rating_label', l: '評分' },
     { k: 'content', l: '內容' },
     { k: 'status', l: '狀態', r: 'badge' },

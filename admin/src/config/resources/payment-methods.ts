@@ -19,8 +19,9 @@ export const paymentMethodsResource: ResourceDef = {
     enabled: String(raw.enabled),
     updated_at: formatUnix(raw.updated_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'method', l: '付款方式', r: 'mono' },
+    { k: 'method', pin: 'left', l: '付款方式', r: 'mono' },
     { k: 'provider_label', l: '服務商' },
     { k: 'fee', l: '手續費', r: 'number' },
     { k: 'environment', l: '環境', r: 'badge' },

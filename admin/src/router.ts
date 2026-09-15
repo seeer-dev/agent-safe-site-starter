@@ -21,6 +21,12 @@ const routes: RouteRecordRaw[] = [
     meta: { caps: ['content.read'] },
   },
   {
+    path: '/roles',
+    name: 'roles',
+    component: () => import('@/pages/RolesPage.vue'),
+    meta: { caps: ['staff.read'] },
+  },
+  {
     path: '/states',
     name: 'states',
     component: () => import('@/pages/StatesPage.vue'),

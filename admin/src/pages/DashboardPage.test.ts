@@ -109,4 +109,42 @@ describe('DashboardPage loaded KPI and module content', () => {
     expect(wrapper.find('.pagehd + template').exists()).toBe(false)
     expect(wrapper.find('template').exists()).toBe(false)
   })
+
+  it('KPI cards click through to their resource', async () => {
+    const wrapper = await mountDashboard()
+    const router = (wrapper.vm as any).$router
+    const spy = vi.spyOn(router, 'push')
+    await wrapper.findAll('.kpi')[0].trigger('click') // 待處理訂單
+    expect(spy).toHaveBeenCalledWith('/res/minimal-cart-orders')
+    await wrapper.findAll('.kpi')[3].trigger('click') // 低庫存商品
+    expect(spy).toHaveBeenCalledWith('/res/minimal-cart-products')
+  })
+
+  it('shows skeleton placeholders while data is in flight (no fake values)', async () => {
+    mockedApi.get.mockImplementation(() => new Promise(() => {})) // never resolves
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    const store = useAuthStore()
+    store.status = 'verified'
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: '/', component: DashboardPage }],
+    })
+    await router.push('/')
+    await router.isReady()
+    const wrapper = mount(DashboardPage, { global: { plugins: [pinia, router] } })
+    await nextTick()
+    expect(wrapper.find('.skel').exists()).toBe(true)
+    expect(wrapper.text()).not.toContain('載入中')
+    // No fabricated KPI values while loading
+    expect(wrapper.findAll('.kpi b').map((el) => el.text())).toEqual([])
+  })
+
+  it('shows an explicit error state and no fabricated KPIs when all APIs fail', async () => {
+    mockedApi.get.mockRejectedValue(new Error('network down'))
+    const wrapper = await mountDashboard()
+    expect(wrapper.text()).toContain('載入失敗')
+    // KPI area is empty — nothing fabricated
+    expect(wrapper.findAll('.kpi')).toHaveLength(0)
+  })
 })

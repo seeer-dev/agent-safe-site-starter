@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { Moon, Sun, LogOut } from 'lucide-vue-next'
+import { Moon, Sun, LogOut, Search } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore } from '@/stores/theme'
 import { useLayoutStore } from '@/stores/layout'
@@ -16,6 +16,7 @@ const crumb = computed(() => {
   if (route.name === 'dashboard') return '總覽'
   if (route.name === 'states') return '五狀態'
   if (route.name === 'store-settings') return '商店設定'
+  if (route.name === 'roles') return '角色權限'
   if (route.name === 'resource') {
     const key = String(route.params.resourceKey ?? route.path.replace('/res/', ''))
     return RES[key]?.label ?? '—'
@@ -63,6 +64,15 @@ const crumbPrefix = computed(() => {
 
     <!-- Right: actions -->
     <div class="rolebar">
+      <button
+        class="tbtn"
+        type="button"
+        title="全域搜尋（Ctrl+K / ⌘K）"
+        aria-label="全域搜尋"
+        @click="layout.openPalette()"
+      >
+        <Search style="width:14px;height:14px" />
+      </button>
       <span style="color:var(--green);font-size:12px">已連線</span>
       <span class="muted" style="font-size:12px">{{ auth.role }}</span>
       <button

@@ -29,8 +29,9 @@ export const contentResource: ResourceDef = {
     published_approved_at: formatUnix(raw.published_approved_unix),
     published_approval_expiry_at: formatUnix(raw.published_approval_expiry_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'key', l: 'Key', r: 'mono' },
+    { k: 'key', pin: 'left', l: 'Key', r: 'mono' },
     { k: 'placement', l: '位置', r: 'badge' },
     { k: 'title', l: '標題' },
     { k: 'status', l: '狀態', r: 'badge' },

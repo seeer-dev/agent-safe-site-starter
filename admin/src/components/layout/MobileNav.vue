@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Package, ShoppingBag, Users,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { PROFILE, MOBILE_KEYS } from '@/config/profile'
+import { MOBILE_KEYS, navLeaves, hrefFor, type NavLeaf } from '@/config/profile'
 
 const route = useRoute()
 const auth = useAuthStore()
@@ -14,17 +14,15 @@ const ICON_MAP: Record<string, any> = {
   LayoutDashboard, Package, ShoppingBag, Users,
 }
 
-const items = computed(() =>
-  MOBILE_KEYS
-    .map((k) => PROFILE.find((x) => x.key === k))
-    .filter((r): r is typeof PROFILE[number] => !!r && r.caps.every((c) => auth.can(c)))
-    .slice(0, 4),
-)
-
-function hrefFor(key: string): string {
-  if (key === 'dashboard') return '/'
-  return `/res/${key}`
-}
+// Mobile items resolve against the flattened, capability-gated leaf set —
+// grouped profile children stay reachable on mobile.
+const items = computed(() => {
+  const leaves = navLeaves()
+  return MOBILE_KEYS
+    .map((k) => leaves.find((x) => x.key === k))
+    .filter((r): r is NavLeaf => !!r && r.caps.every((c) => auth.can(c)))
+    .slice(0, 4)
+})
 
 function isActive(key: string): boolean {
   if (key === 'dashboard') return route.name === 'dashboard'

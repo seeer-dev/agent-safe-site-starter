@@ -25,8 +25,9 @@ export const promosResource: ResourceDef = {
     starts_at: formatUnix(raw.starts_unix),
     expires_at: formatUnix(raw.expires_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'code', l: 'Code', r: 'mono' },
+    { k: 'code', pin: 'left', l: 'Code', r: 'mono' },
     { k: 'type', l: '類型', r: 'badge' },
     { k: 'value', l: '數值', r: 'number' },
     { k: 'min_subtotal', l: '低消', r: 'number' },

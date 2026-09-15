@@ -12,9 +12,8 @@ import MediaUploader from '@/components/MediaUploader.vue'
 import VariantsEditor from '@/components/VariantsEditor.vue'
 import ConfirmDialog, { type ConfirmBody, type ConfirmMeta } from '@/components/ui/ConfirmDialog.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
 import { RES } from '@/config/resources'
-import { MACHINES } from '@/config/machines'
-import { LABEL } from '@/config/tones'
 import { useAuthStore } from '@/stores/auth'
 import { api, ApiError } from '@/lib/api-client'
 import type { RowAction, BulkAction, FieldDef } from '@/lib/types'
@@ -842,33 +841,6 @@ const formIsReadOnly = computed(() => resource.value?.form.readOnly ?? false)
     </div>
   </div>
 
-  <!-- State machines (orders only) -->
-  <template v-if="MACHINES[resourceKey]">
-    <section
-      v-for="(m, mi) in MACHINES[resourceKey]"
-      :key="mi"
-      class="panel"
-      style="margin-bottom:12px"
-    >
-      <div class="machine">
-        <b style="margin-right:10px;font-size:14.5px">{{ m.t }}</b>
-        <template v-for="(s, si) in m.flow" :key="s">
-          <span v-if="si" class="ar">→</span>
-          <span :class="['n', { cur: si === 0 }]">{{ LABEL[s] ?? s }}</span>
-        </template>
-        <span class="alt">{{ m.alt }}</span>
-      </div>
-    </section>
-    <div class="note" style="margin-bottom:12px">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" />
-      </svg>
-      <div>
-        <b>兩條狀態機互不干涉。</b>履約走一條、退貨走另一條，各自只在對應狀態出現按鈕。每個轉移都會帶 <code>expected_version</code>——如果列表資料過期（別人先改過），伺服器會擋下來而不是覆寫。
-      </div>
-    </div>
-  </template>
-
   <!-- Main panel: filters + bulk + table + footer -->
   <section class="panel">
     <!-- Toolbar / filters -->
@@ -901,16 +873,8 @@ const formIsReadOnly = computed(() => resource.value?.form.readOnly ?? false)
       <Button size="sm" variant="ghost" @click="selected = new Set()">取消</Button>
     </div>
 
-    <!-- Loading / error states -->
-    <div v-if="loading" class="emptybox">
-      <div class="ic">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 6v6l4 2" /><circle cx="12" cy="12" r="9" />
-        </svg>
-      </div>
-      <b>載入中…</b>
-      <p>正在從 API 取得{{ resource.label }}資料。</p>
-    </div>
+    <!-- Loading / error states — skeleton shows structure, never data -->
+    <Skeleton v-if="loading" variant="table" :rows="6" />
     <div v-else-if="error" class="emptybox">
       <div class="ic" style="color:var(--danger)">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">

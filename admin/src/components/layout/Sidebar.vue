@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChevronRight } from 'lucide-vue-next'
+import { ChevronRight, LogOut } from 'lucide-vue-next'
 import {
   LayoutDashboard, Package, ShoppingBag, Users, TicketPercent,
   FileText, CreditCard, UserCog, HelpCircle, FolderTree,
   MessageSquareText, Newspaper, Truck, Mail, MailCheck, Store,
+  Settings, ShieldCheck,
 } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
-import { PROFILE, SECTION_LABEL } from '@/config/profile'
-import type { SectionKey, RouteDef } from '@/lib/types'
+import { PROFILE, hrefFor } from '@/config/profile'
+import type { RouteDef } from '@/lib/types'
 
 const auth = useAuthStore()
 const route = useRoute()
@@ -21,20 +22,41 @@ const emit = defineEmits<{
 const ICON_MAP: Record<string, any> = {
   LayoutDashboard, Package, ShoppingBag, Users, TicketPercent,
   FileText, CreditCard, UserCog, FolderTree, MessageSquareText,
-  Newspaper, Truck, Mail, MailCheck, Store,
+  Newspaper, Truck, Mail, MailCheck, Store, Settings, ShieldCheck,
 }
 
-const grouped = computed(() => {
-  const groups: Record<SectionKey, typeof PROFILE> = { primary: [], secondary: [], settings: [] }
-  for (const r of PROFILE) {
-    if (!r.caps.every((c) => auth.can(c))) continue
-    groups[r.section].push(r)
+// Recursive capability gating: parent caps gate the whole group; children
+// are filtered individually; a group with zero visible children is dropped.
+const visibleNav = computed(() =>
+  PROFILE
+    .filter((r) => r.caps.every((c) => auth.can(c)))
+    .map((r) =>
+      r.children?.length
+        ? { ...r, children: r.children.filter((c) => c.caps.every((cap) => auth.can(cap))) }
+        : r,
+    )
+    .filter((r) => !r.children || r.children.length > 0),
+)
+
+type NavItem =
+  | { kind: 'divider'; label: string }
+  | { kind: 'entry'; route: RouteDef }
+
+// Emit each divider label once, before the first visible entry carrying it.
+const navItems = computed<NavItem[]>(() => {
+  const items: NavItem[] = []
+  const seen = new Set<string>()
+  for (const r of visibleNav.value) {
+    if (r.dividerBefore && !seen.has(r.dividerBefore)) {
+      seen.add(r.dividerBefore)
+      items.push({ kind: 'divider', label: r.dividerBefore })
+    }
+    items.push({ kind: 'entry', route: r })
   }
-  return groups
+  return items
 })
 
-// Track which parent items have children expanded (expanded sidebar mode only).
-// Currently no PROFILE entry has children, so this stays empty.
+// Track which groups are expanded (expanded sidebar mode only).
 const expandedParents = ref<Set<string>>(new Set())
 
 function toggleChildren(item: RouteDef) {
@@ -45,17 +67,31 @@ function toggleChildren(item: RouteDef) {
   }
 }
 
-function hrefFor(key: string): string {
-  if (key === 'dashboard') return '/'
-  if (key === 'store-settings') return '/settings'
-  return `/res/${key}`
-}
-
 function isActive(key: string): boolean {
   if (key === 'dashboard') return route.name === 'dashboard'
   if (key === 'store-settings') return route.name === 'store-settings'
+  if (key === 'roles') return route.name === 'roles'
   return route.path === `/res/${key}`
 }
+
+// Auto-expand the group containing the active child so the current
+// destination stays visible (mockup parity: navigate() adds _parent).
+watch(
+  () => route.path,
+  () => {
+    for (const r of PROFILE) {
+      if (r.children?.some((c) => isActive(c.key))) {
+        expandedParents.value.add(r.key)
+      }
+    }
+  },
+  { immediate: true },
+)
+
+const userInitial = computed(() => {
+  const base = auth.email || auth.role || ''
+  return base ? base.slice(0, 1).toUpperCase() : '管'
+})
 
 function onNavigate() {
   emit('navigate')
@@ -72,52 +108,52 @@ function onNavigate() {
 
     <!-- Nav -->
     <nav class="nav">
-      <template v-for="sec in (['primary','secondary','settings'] as SectionKey[])" :key="sec">
-        <div v-if="grouped[sec].length" class="group">
-          {{ SECTION_LABEL[sec] }}
-        </div>
-        <template v-for="r in grouped[sec]" :key="r.key">
-          <!-- Parent with children: nav-item-wrapper for flyout support -->
+      <template v-for="item in navItems" :key="item.kind === 'divider' ? `div-${item.label}` : item.route.key">
+        <!-- Labeled divider between module groups and universal base groups -->
+        <div
+          v-if="item.kind === 'divider'"
+          class="divider"
+        ><span>{{ item.label }}</span></div>
+
+        <template v-else>
+          <!-- Group with children: nav-item-wrapper for flyout support -->
           <div
-            v-if="r.children && r.children.length"
+            v-if="item.route.children && item.route.children.length"
             class="nav-item-wrapper"
           >
             <a
               class="nav-item"
-              :class="{ active: isActive(r.key) }"
-              :data-label="r.label"
+              :class="{ active: item.route.children.some((c) => isActive(c.key)) }"
+              :data-label="item.route.label"
               data-has-children="true"
               href="#"
-              @click.prevent="toggleChildren(r)"
+              @click.prevent="toggleChildren(item.route)"
             >
-              <component :is="ICON_MAP[r.icon]" />
-              <span class="nav-label">{{ r.label }}</span>
-              <span
-                v-if="r.key === 'minimal-cart-orders'"
-                class="badge"
-              >6</span>
+              <component :is="ICON_MAP[item.route.icon]" />
+              <span class="nav-label">{{ item.route.label }}</span>
               <ChevronRight
                 class="nav-chevron"
-                :style="{ transform: expandedParents.has(r.key) ? 'rotate(90deg)' : '' }"
+                :style="{ transform: expandedParents.has(item.route.key) ? 'rotate(90deg)' : '' }"
                 style="width:12px;height:12px;flex-shrink:0;color:var(--text-3);transition:transform 200ms ease"
               />
             </a>
             <!-- Inline children (expanded mode) -->
             <div
-              v-show="expandedParents.has(r.key)"
+              v-show="expandedParents.has(item.route.key)"
               class="nav-children"
               style="margin:2px 0 4px 14px;border-left:1px solid var(--border);padding-left:4px"
             >
-              <a
-                v-for="child in r.children"
+              <RouterLink
+                v-for="child in item.route.children"
                 :key="child.key"
                 class="nav-child"
                 :class="{ 'is-current': isActive(child.key) }"
-                :href="hrefFor(child.key)"
+                :to="hrefFor(child.key)"
                 @click="onNavigate"
               >
+                <component :is="ICON_MAP[child.icon ?? item.route.icon]" />
                 {{ child.label }}
-              </a>
+              </RouterLink>
             </div>
             <!-- Flyout bridge (invisible gap filler for hover) -->
             <div class="flyout-bridge" aria-hidden="true" />
@@ -126,42 +162,39 @@ function onNavigate() {
               <div
                 style="margin-bottom:2px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--surface-3);padding:8px 12px;font-size:13px;font-weight:600;color:var(--text)"
               >
-                <component :is="ICON_MAP[r.icon]" :style="{ width: '14px', height: '14px' }" />
-                {{ r.label }}
+                <component :is="ICON_MAP[item.route.icon]" :style="{ width: '14px', height: '14px' }" />
+                {{ item.route.label }}
               </div>
-              <a
-                v-for="child in r.children"
+              <RouterLink
+                v-for="child in item.route.children"
                 :key="child.key"
                 class="nav-child"
                 :class="{ 'is-current': isActive(child.key) }"
-                :href="hrefFor(child.key)"
+                :to="hrefFor(child.key)"
                 @click="onNavigate"
               >
+                <component :is="ICON_MAP[child.icon ?? item.route.icon]" />
                 {{ child.label }}
-              </a>
+              </RouterLink>
             </div>
           </div>
 
           <!-- Flat leaf (no children) -->
           <RouterLink
             v-else
-            :to="hrefFor(r.key)"
-            :class="{ active: isActive(r.key) }"
-            :data-label="r.label"
+            :to="hrefFor(item.route.key)"
+            :class="{ active: isActive(item.route.key) }"
+            :data-label="item.route.label"
             @click="onNavigate"
           >
-            <component :is="ICON_MAP[r.icon]" />
-            <span class="nav-label">{{ r.label }}</span>
-            <span
-              v-if="r.key === 'minimal-cart-orders'"
-              class="badge"
-            >6</span>
+            <component :is="ICON_MAP[item.route.icon]" />
+            <span class="nav-label">{{ item.route.label }}</span>
           </RouterLink>
         </template>
       </template>
     </nav>
 
-    <!-- Footer -->
+    <!-- Footer: states reference + pinned user block -->
     <div class="sidefoot">
       <RouterLink
         to="/states"
@@ -172,6 +205,22 @@ function onNavigate() {
         <HelpCircle />
         <span class="nav-label">五狀態參考</span>
       </RouterLink>
+      <div class="userblock">
+        <div class="avatar">{{ userInitial }}</div>
+        <div class="user-meta nav-label">
+          <b>{{ auth.email || '—' }}</b>
+          <small>{{ auth.role || '—' }}</small>
+        </div>
+        <button
+          class="user-logout"
+          type="button"
+          title="登出"
+          aria-label="登出"
+          @click="auth.logout()"
+        >
+          <LogOut style="width:14px;height:14px" />
+        </button>
+      </div>
     </div>
   </aside>
 </template>

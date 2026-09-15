@@ -5,6 +5,19 @@ export const useLayoutStore = defineStore('layout', () => {
   const sidebarCollapsed = ref(false)
   const contentWidth = ref<'locked' | 'fluid'>('locked')
   const mobileDrawerOpen = ref(false)
+  const paletteOpen = ref(false)
+
+  function openPalette() {
+    paletteOpen.value = true
+  }
+
+  function closePalette() {
+    paletteOpen.value = false
+  }
+
+  function togglePalette() {
+    paletteOpen.value = !paletteOpen.value
+  }
 
   function init() {
     try {
@@ -43,7 +56,11 @@ export const useLayoutStore = defineStore('layout', () => {
     sidebarCollapsed,
     contentWidth,
     mobileDrawerOpen,
+    paletteOpen,
     init,
+    openPalette,
+    closePalette,
+    togglePalette,
     toggleSidebar,
     toggleContentWidth,
     openMobileDrawer,

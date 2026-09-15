@@ -1,0 +1,98 @@
+{
+  "change_id": "admin-ia-port",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved revision 1 on 2026-09-15 by directing the reference mockup into specs/changes/admin-ia-port/reference/ and instructing the change be landed. The owner supplied the mockup as the reference IA and asked to port its grouped sidebar, compact proportions, internal components (skeleton, sorting, dropdowns, tabs, permissions matrix), dashboard polish, and global search into the live admin SPA.",
+  "repository_baseline": "3a196c39ce746d1bf9c078a137fb124f879289ae",
+  "supersedes": [],
+  "applies_to": [
+    "admin/src/components/layout/**",
+    "admin/src/components/ui/**",
+    "admin/src/components/resource/**",
+    "admin/src/config/profile.ts",
+    "admin/src/config/machines.ts",
+    "admin/src/config/resources/**",
+    "admin/src/lib/types.ts",
+    "admin/src/pages/**",
+    "admin/src/router.ts",
+    "admin/src/router.test.ts",
+    "admin/src/stores/layout.ts",
+    "admin/src/styles/globals.css",
+    "admin/influencer-admin-ia.html",
+    "specs/changes/admin-ia-port/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004",
+    "REQ-005",
+    "REQ-006",
+    "REQ-007",
+    "REQ-008"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008",
+    "AC-009"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": ["walkthrough"],
+    "AC-002": ["security-review"],
+    "AC-004": ["walkthrough"],
+    "AC-005": ["walkthrough"],
+    "AC-008": ["walkthrough"],
+    "AC-009": ["walkthrough"]
+  },
+  "evidence": {
+    "REQ-001": { "status": "passed", "observed_revision": 1, "proof": "Grouped profile (children + labeled 通用後台 divider); Sidebar activates existing expand/flyout machinery and auto-expands the active child's group" },
+    "REQ-002": { "status": "passed", "observed_revision": 1, "proof": "visibleNav recursively filters children and drops empty groups across sidebar, flyout, drawer, MobileNav, and palette; route guards stay authoritative (router.test.ts /roles deny)" },
+    "REQ-003": { "status": "passed", "observed_revision": 1, "proof": "Skeleton.vue consumed by ResourceListPage (table variant), DashboardPage, StoreSettingsPage; no fixture/invented rows in loading states (DashboardPage.test.ts)" },
+    "REQ-004": { "status": "passed", "observed_revision": 1, "proof": "Col.sortable opt-in; asc/desc toggle with aria-sort + icon; numeric vs zh-Hant compare; empties last; original indexes emitted; flagged across seven resource configs" },
+    "REQ-005": { "status": "passed", "observed_revision": 1, "proof": "DropdownMenu backs row-action overflow in ResourceTable and select filters in ResourceFilters; Esc/outside-click dismiss; disabled items show reason; danger styling" },
+    "REQ-006": { "status": "passed", "observed_revision": 1, "proof": "Tabs.vue with tablist/tab/tabpanel, aria-selected, roving tabindex, arrow-key nav; consumed by StoreSettingsPage parallel panels" },
+    "REQ-007": { "status": "passed", "observed_revision": 1, "proof": "RolesPage read-only matrix lists every role and capability from config/roles.ts; /roles guarded by staff.read" },
+    "REQ-008": { "status": "passed", "observed_revision": 1, "proof": "KPI cards carry icon/context/click-through with real API values; SearchPalette on Ctrl+K/Cmd+K indexes capability-filtered navLeaves only" },
+    "AC-001": {
+      "status": "passed", "observed_revision": 1,
+      "proof": "Sidebar.test.ts 11 tests + AdminShell.test.ts 3 tests: toggle, auto-expand active child, flyout anchoring, drawer outside .app with navigate-close; walkthrough at receipts/walkthrough.md (incl. post-acceptance flyout/mobile regression fix verified in real Chromium)",
+      "receipts": [{ "kind": "walkthrough", "path": "receipts/walkthrough.md" }]
+    },
+    "AC-002": {
+      "status": "passed", "observed_revision": 1,
+      "proof": "Recursive gating proven in expanded/collapsed/mobile surfaces; fully gated group absent; security review at receipts/security-review.md",
+      "receipts": [{ "kind": "security-review", "path": "receipts/security-review.md" }]
+    },
+    "AC-003": { "status": "passed", "observed_revision": 1, "proof": "Skeleton.test.ts + DashboardPage loading test: skeletons render, no fixture/invented rows, no 載入中 text while in flight" },
+    "AC-004": {
+      "status": "passed", "observed_revision": 1,
+      "proof": "ResourceTable.test.ts sortable block (7 tests): asc/desc toggle + indicator, inert non-sortable, numeric order, empties last, original-index actions; walkthrough at receipts/walkthrough.md",
+      "receipts": [{ "kind": "walkthrough", "path": "receipts/walkthrough.md" }]
+    },
+    "AC-005": {
+      "status": "passed", "observed_revision": 1,
+      "proof": "DropdownMenu.test.ts 7 tests + ResourceTable dropdown block 4 tests: open/act/dismiss, disabled-with-reason, danger; walkthrough at receipts/walkthrough.md",
+      "receipts": [{ "kind": "walkthrough", "path": "receipts/walkthrough.md" }]
+    },
+    "AC-006": { "status": "passed", "observed_revision": 1, "proof": "Tabs.test.ts 4 tests: roles, aria-selected, roving tabindex, arrow-key activation; live consumer StoreSettingsPage" },
+    "AC-007": { "status": "passed", "observed_revision": 1, "proof": "RolesPage.test.ts 4 tests: all roles/capabilities listed, allow/deny truthful, read-only; router.test.ts denies staff.read-less principals" },
+    "AC-008": {
+      "status": "passed", "observed_revision": 1,
+      "proof": "SearchPalette.test.ts 5 tests: only cap-visible destinations indexed, query filter, Enter navigates, Esc/backdrop close; walkthrough at receipts/walkthrough.md",
+      "receipts": [{ "kind": "walkthrough", "path": "receipts/walkthrough.md" }]
+    },
+    "AC-009": {
+      "status": "passed", "observed_revision": 1,
+      "proof": "DashboardPage.test.ts 4 tests: real KPI values + click-through, explicit error with no fabricated KPIs, explicit empty state, skeleton without values; walkthrough at receipts/walkthrough.md",
+      "receipts": [{ "kind": "walkthrough", "path": "receipts/walkthrough.md" }]
+    }
+  }
+}

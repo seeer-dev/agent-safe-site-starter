@@ -436,3 +436,284 @@ describe('cellContent null/undefined/zero rendering for number columns', () => {
     expect(row2Cells[2].text()).toBe('5')
   })
 })
+
+describe('ResourceTable sortable columns', () => {
+  const sortableResource: ResourceDef = {
+    label: '商品',
+    desc: 'test',
+    pageSize: 10,
+    ops: { list: 'list' },
+    cols: [
+      { k: 'name', l: '名稱', sortable: true },
+      { k: 'price', l: '售價', r: 'number', sortable: true },
+      { k: 'sku', l: 'SKU' },
+    ],
+    rowActions: [],
+    rows: [],
+    filters: [],
+    form: { title: '商品', sections: [] },
+  }
+  const rows = [
+    { id: '1', name: '芭樂', price: 30, sku: 'B' },
+    { id: '2', name: '蘋果', price: 10, sku: 'A' },
+    { id: '3', name: '芒果', price: 20, sku: 'C' },
+  ]
+
+  function mountSortable(res: ResourceDef = sortableResource, r: any[] = rows) {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    return mount(ResourceTable, {
+      props: { resource: res, rows: r, selected: new Set<number>() },
+      global: { plugins: [pinia] },
+    })
+  }
+
+  // sortableResource has no bulkActions → no checkbox column:
+  // ths = [name(sort), price(sort), sku(plain), 動作(plain)]; tds = [name, price, sku, actions]
+  function nameCells(wrapper: ReturnType<typeof mount>) {
+    return wrapper.findAll('tbody tr').map((tr) => tr.findAll('td')[0].text())
+  }
+
+  it('renders sort buttons only on sortable columns', () => {
+    const wrapper = mountSortable()
+    const ths = wrapper.findAll('thead th')
+    expect(ths[0].find('.th-sort').exists()).toBe(true)
+    expect(ths[1].find('.th-sort').exists()).toBe(true)
+    expect(ths[2].find('.th-sort').exists()).toBe(false)
+    expect(ths[2].attributes('aria-sort')).toBeUndefined()
+  })
+
+  it('first click sorts ascending, second click descending, indicator reflects direction', async () => {
+    const wrapper = mountSortable()
+    const btn = wrapper.findAll('thead th')[0].find('.th-sort')
+    // zh-Hant collation order is ICU-dependent; compute expectations with the
+    // same comparator and assert asc/desc are exact reverses of each other.
+    const asc = [...rows.map((r) => r.name)].sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+
+    await btn.trigger('click')
+    expect(nameCells(wrapper)).toEqual(asc)
+    expect(wrapper.findAll('thead th')[0].attributes('aria-sort')).toBe('ascending')
+
+    await btn.trigger('click')
+    expect(nameCells(wrapper)).toEqual([...asc].reverse())
+    expect(wrapper.findAll('thead th')[0].attributes('aria-sort')).toBe('descending')
+  })
+
+  it('numeric columns sort numerically', async () => {
+    const wrapper = mountSortable()
+    await wrapper.findAll('thead th')[1].find('.th-sort').trigger('click')
+    const prices = wrapper.findAll('tbody tr').map((tr) => tr.findAll('td')[1].text())
+    expect(prices).toEqual(['NT$10', 'NT$20', 'NT$30'])
+  })
+
+  it('unsorted and other columns keep server order; switching columns resets direction', async () => {
+    const wrapper = mountSortable()
+    expect(nameCells(wrapper)).toEqual(['芭樂', '蘋果', '芒果']) // server order
+
+    await wrapper.findAll('thead th')[0].find('.th-sort').trigger('click') // name asc
+    await wrapper.findAll('thead th')[0].find('.th-sort').trigger('click') // name desc
+    await wrapper.findAll('thead th')[1].find('.th-sort').trigger('click') // price asc
+    expect(wrapper.findAll('thead th')[0].attributes('aria-sort')).toBe('none')
+    expect(wrapper.findAll('thead th')[1].attributes('aria-sort')).toBe('ascending')
+  })
+
+  it('sorting preserves original row indexes for row actions', async () => {
+    const res: ResourceDef = {
+      ...sortableResource,
+      rowActions: [{ k: 'view', l: '檢視' }],
+    }
+    const wrapper = mountSortable(res)
+    await wrapper.findAll('thead th')[0].find('.th-sort').trigger('click')
+    // First displayed row's name determines its original index.
+    const firstName = nameCells(wrapper)[0]
+    const expectedIdx = rows.findIndex((r) => r.name === firstName)
+    await wrapper.findAll('tbody tr')[0].find('button').trigger('click')
+    expect(wrapper.emitted('rowAction')).toEqual([[expectedIdx, 'view']])
+  })
+
+  it('empty values sort after non-empty values regardless of direction', async () => {
+    const r = [
+      { id: '1', name: '乙', price: 1, sku: 'x' },
+      { id: '2', name: '', price: 2, sku: 'y' },
+      { id: '3', name: '甲', price: 3, sku: 'z' },
+    ]
+    const wrapper = mountSortable(sortableResource, r)
+    const btn = wrapper.findAll('thead th')[0].find('.th-sort')
+    const asc = ['乙', '甲'].sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+    await btn.trigger('click')
+    expect(nameCells(wrapper)).toEqual([...asc, ''])
+    await btn.trigger('click')
+    expect(nameCells(wrapper)).toEqual([...[...asc].reverse(), ''])
+  })
+})
+
+describe('ResourceTable dropdown row actions', () => {
+  const menuResource: ResourceDef = {
+    label: '商品',
+    desc: 'test',
+    pageSize: 10,
+    ops: { list: 'list' },
+    cols: [{ k: 'name', l: '名稱' }],
+    rows: [],
+    filters: [],
+    rowActions: [
+      { k: 'edit', l: '編輯', cap: 'twcommerce.update' },
+      { k: 'publish', l: '上架', cap: 'twcommerce.update' },
+      { k: 'archive', l: '封存', cap: 'twcommerce.delete', variant: 'danger' },
+    ],
+    form: { title: '商品', sections: [] },
+  }
+  const rows = [{ id: '1', name: 'T恤' }]
+
+  function mountMenu(caps: string[] = ['twcommerce.update', 'twcommerce.delete']) {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    mockCaps.value = caps
+    return mount(ResourceTable, {
+      props: { resource: menuResource, rows, selected: new Set<number>() },
+      global: { plugins: [pinia] },
+      attachTo: document.body,
+    })
+  }
+
+  it('shows the first action inline and collapses the rest into a 更多 menu', async () => {
+    const wrapper = mountMenu()
+    const cell = wrapper.find('tbody tr td.num:last-child')
+    expect(cell.findAll('button.btn').length).toBe(1)
+    const trigger = cell.find('.ddown-trigger')
+    expect(trigger.exists()).toBe(true)
+
+    await trigger.trigger('click')
+    const items = document.querySelectorAll('.ddown-item')
+    expect(items.length).toBe(2)
+    expect(items[0].textContent).toContain('上架')
+    expect(items[1].textContent).toContain('封存')
+    expect(items[1].classList.contains('danger')).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('selecting a menu item emits rowAction with the original index and key', async () => {
+    const wrapper = mountMenu()
+    await wrapper.find('.ddown-trigger').trigger('click')
+    const items = document.querySelectorAll<HTMLElement>('.ddown-item')
+    items[1].click() // 封存
+    await nextTick()
+    expect(wrapper.emitted('rowAction')).toEqual([[0, 'archive']])
+    wrapper.unmount()
+  })
+
+  it('shows missing-capability actions disabled with a hint and does not emit', async () => {
+    const wrapper = mountMenu(['twcommerce.update']) // missing twcommerce.delete
+    await wrapper.find('.ddown-trigger').trigger('click')
+    const items = document.querySelectorAll<HTMLElement>('.ddown-item')
+    expect(items.length).toBe(2)
+    const archive = items[1] as HTMLButtonElement
+    expect(archive.disabled).toBe(true)
+    expect(archive.textContent).toContain('需要 twcommerce.delete')
+    archive.click()
+    await nextTick()
+    expect(wrapper.emitted('rowAction')).toBeUndefined()
+    wrapper.unmount()
+  })
+
+  it('Escape dismisses the menu without invoking an action', async () => {
+    const wrapper = mountMenu()
+    await wrapper.find('.ddown-trigger').trigger('click')
+    expect(document.querySelector('.ddown-menu')).toBeTruthy()
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
+    await nextTick()
+    expect(document.querySelector('.ddown-menu')).toBeFalsy()
+    expect(wrapper.emitted('rowAction')).toBeUndefined()
+    wrapper.unmount()
+  })
+})
+
+describe('ResourceTable horizontal scroll + pinned columns', () => {
+  beforeEach(() => {
+    mockCaps.value = ['twcommerce.read']
+  })
+
+  const pinnedResource: ResourceDef = {
+    label: '訂單',
+    desc: 'test',
+    pageSize: 10,
+    ops: { list: 'list' },
+    pinActions: true,
+    cols: [
+      { k: 'id', l: '訂單', r: 'mono', pin: 'left' },
+      { k: 'customer', l: '顧客' },
+      { k: 'total', l: '金額', r: 'number' },
+    ],
+    rowActions: [{ k: 'view', l: '檢視' }],
+    bulkActions: [{ k: 'export', l: '匯出', op: 'adminOrdersExport', cap: 'twcommerce.read' }],
+    rows: [],
+    filters: [],
+    form: { title: '訂單', sections: [] },
+  }
+  const pinRows = [
+    { id: 'TW-1', customer: 'A', total: 100 },
+    { id: 'TW-2', customer: 'B', total: 200 },
+  ]
+
+  function mountPinned(res: ResourceDef = pinnedResource) {
+    const pinia = createPinia()
+    setActivePinia(pinia)
+    return mount(ResourceTable, {
+      props: { resource: res, rows: pinRows, selected: new Set<number>() },
+      global: { plugins: [pinia] },
+    })
+  }
+
+  it('wraps the table in a horizontal-scroll container', () => {
+    const wrapper = mountPinned()
+    const wrap = wrapper.get('.rtable-wrap')
+    expect(wrap.find('table').exists()).toBe(true)
+  })
+
+  it('pins the identifier column left and the actions column right', () => {
+    const wrapper = mountPinned()
+    const ths = wrapper.findAll('thead th')
+    // ths = [checkbox(pin), id(pin-l), customer, total, 動作(pin-r)]
+    expect(ths[0].classes()).toContain('pin-l')          // checkbox auto-pins
+    expect(ths[1].classes()).toContain('pin-l')          // id col
+    expect(ths[1].attributes('style')).toContain('left')
+    expect(ths[4].classes()).toContain('pin-r')          // actions
+    expect(ths[4].attributes('style')).toContain('right: 0px')
+    // Middle columns are not pinned.
+    expect(ths[2].classes()).not.toContain('pin-l')
+    expect(ths[2].classes()).not.toContain('pin-r')
+
+    const firstRowTds = wrapper.findAll('tbody tr')[0].findAll('td')
+    expect(firstRowTds[0].classes()).toContain('pin-l')
+    expect(firstRowTds[1].classes()).toContain('pin-l')
+    expect(firstRowTds[4].classes()).toContain('pin-r')
+  })
+
+  it('does not pin the checkbox column when no left-pinned column exists', () => {
+    const res: ResourceDef = {
+      ...pinnedResource,
+      cols: [
+        { k: 'id', l: '訂單', r: 'mono' },
+        { k: 'customer', l: '顧客' },
+      ],
+    }
+    const wrapper = mountPinned(res)
+    const ths = wrapper.findAll('thead th')
+    expect(ths[0].classes()).not.toContain('pin-l')       // checkbox stays static
+    expect(ths[ths.length - 1].classes()).toContain('pin-r') // actions still pinned
+  })
+
+  it('leaves all cells unpinned when the resource declares no pins', () => {
+    const res: ResourceDef = {
+      ...pinnedResource,
+      pinActions: false,
+      cols: [
+        { k: 'id', l: '訂單', r: 'mono' },
+        { k: 'customer', l: '顧客' },
+      ],
+    }
+    const wrapper = mountPinned(res)
+    expect(wrapper.findAll('.pin-l')).toHaveLength(0)
+    expect(wrapper.findAll('.pin-r')).toHaveLength(0)
+  })
+})

@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
+import { ShoppingBag, Truck, RotateCcw, Package, DollarSign, MessageSquareText } from 'lucide-vue-next'
 import Badge from '@/components/ui/Badge.vue'
 import Button from '@/components/ui/Button.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { api } from '@/lib/api-client'
@@ -11,7 +13,7 @@ const auth = useAuthStore()
 
 // KPIs are fetched from the server, not hardcoded. When unverified, no
 // KPI is shown — the dashboard displays a login prompt instead.
-const kpis = ref<{ label: string; value: number; desc: string }[]>([])
+const kpis = ref<{ label: string; value: number; desc: string; icon: any; res: string }[]>([])
 const tasks = ref<{ tone: 'warn' | 'info' | 'danger'; label: string; id: string; desc: string; action: string; res: string }[]>([])
 const loading = ref(false)
 const loadError = ref<string | null>(null)
@@ -30,6 +32,12 @@ async function loadDashboard() {
       api.get<Record<string, any>>('/admin/stats').catch(() => null),
       api.get<Record<string, any>>('/admin/comments').catch(() => null),
     ])
+    // If every request failed, surface an explicit error instead of
+    // rendering a misleading all-zero / empty state.
+    if (!ordersRes && !productsRes && !statsRes && !commentsRes) {
+      throw new Error('無法連線到後台 API')
+    }
+
     const orders = extractArray(ordersRes)
     const products = extractArray(productsRes)
     const comments = extractArray(commentsRes)
@@ -42,12 +50,12 @@ async function loadDashboard() {
     const revenue = typeof statsRes?.revenue === 'number' ? statsRes.revenue : null
 
     kpis.value = [
-      { label: '待處理訂單', value: pending, desc: '履約狀態 pending' },
-      { label: '待出貨', value: processing, desc: '履約狀態 processing' },
-      { label: '退貨待審', value: returnRequested, desc: '退貨狀態 requested' },
-      { label: '低庫存商品', value: lowStock, desc: '庫存 ≤ 5' },
-      ...(revenue != null ? [{ label: '總營收', value: revenue, desc: 'NT$，來自 /admin/stats' }] : []),
-      { label: '待審評論', value: pendingComments, desc: '狀態 pending' },
+      { label: '待處理訂單', value: pending, desc: '履約狀態 pending', icon: ShoppingBag, res: 'minimal-cart-orders' },
+      { label: '待出貨', value: processing, desc: '履約狀態 processing', icon: Truck, res: 'minimal-cart-orders' },
+      { label: '退貨待審', value: returnRequested, desc: '退貨狀態 requested', icon: RotateCcw, res: 'minimal-cart-orders' },
+      { label: '低庫存商品', value: lowStock, desc: '庫存 ≤ 5', icon: Package, res: 'minimal-cart-products' },
+      ...(revenue != null ? [{ label: '總營收', value: revenue, desc: 'NT$，來自 /admin/stats', icon: DollarSign, res: 'minimal-cart-orders' }] : []),
+      { label: '待審評論', value: pendingComments, desc: '狀態 pending', icon: MessageSquareText, res: 'comments' },
     ]
 
     // Build tasks from real orders + low-stock products (no PII when unverified).
@@ -126,17 +134,25 @@ function goRes(key: string) {
     </div>
   </div>
 
-  <!-- KPIs -->
-  <div class="kpis">
-      <div
+  <!-- KPIs — skeleton while in flight, real values only -->
+  <div v-if="loading" class="kpis">
+      <div v-for="i in 4" :key="i" class="kpi">
+        <Skeleton :rows="3" height="12px" />
+      </div>
+    </div>
+  <div v-else class="kpis">
+      <button
         v-for="kpi in kpis"
         :key="kpi.label"
+        type="button"
         class="kpi"
+        @click="goRes(kpi.res)"
       >
         <small>{{ kpi.label }}</small>
         <b>{{ kpi.value }}</b>
         <div class="d">{{ kpi.desc }}</div>
-      </div>
+        <component :is="kpi.icon" class="kpi-ic" aria-hidden="true" />
+      </button>
     </div>
 
     <!-- Two columns: tasks + modules -->
@@ -147,7 +163,7 @@ function goRes(key: string) {
           <h3>需要你處理</h3>
           <a class="more" @click="goRes('minimal-cart-orders')">全部訂單</a>
         </div>
-        <div v-if="loading" class="emptybox"><b>載入中…</b></div>
+        <Skeleton v-if="loading" :rows="4" />
         <div v-else-if="loadError" class="emptybox">
           <b>載入失敗</b>
           <p class="mono">{{ loadError }}</p>

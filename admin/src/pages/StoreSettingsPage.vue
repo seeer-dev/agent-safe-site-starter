@@ -4,6 +4,8 @@ import Panel from '@/components/ui/Panel.vue'
 import Input from '@/components/ui/Input.vue'
 import Checkbox from '@/components/ui/Checkbox.vue'
 import Button from '@/components/ui/Button.vue'
+import Skeleton from '@/components/ui/Skeleton.vue'
+import Tabs from '@/components/ui/Tabs.vue'
 import { api } from '@/lib/api-client'
 
 interface SettingsRow {
@@ -29,6 +31,12 @@ const DEFAULTS = {
 
 const row = ref<SettingsRow | null>(null)
 const form = ref<Record<string, any>>({ ...DEFAULTS })
+const activeTab = ref('info')
+const settingsTabs = [
+  { key: 'info', label: '商店資訊' },
+  { key: 'banner', label: '公告列' },
+  { key: 'thresholds', label: '門檻與通知' },
+]
 const loading = ref(false)
 const saving = ref(false)
 const publishing = ref(false)
@@ -126,36 +134,39 @@ onMounted(load)
     <div v-if="error" class="note danger">{{ error }}</div>
     <div v-if="notice" class="note">{{ notice }}</div>
 
-    <div v-if="loading" class="panel">
-      <div class="emptybox">
-        <b>載入中…</b>
-      </div>
-    </div>
+    <Skeleton v-if="loading" :rows="5" />
     <template v-else>
-      <Panel title="商店資訊">
-        <div class="pbody grid2">
-          <label class="fld"><span>商店名稱</span><Input v-model="form.storeName" /></label>
-          <label class="fld"><span>英文名稱</span><Input v-model="form.storeNameEn" /></label>
-          <label class="fld wide"><span>標語</span><Input v-model="form.tagline" /></label>
-          <label class="fld"><span>聯絡 Email</span><Input v-model="form.contactEmail" /></label>
-          <label class="fld"><span>聯絡電話</span><Input v-model="form.contactPhone" /></label>
-        </div>
-      </Panel>
-
-      <Panel title="公告列">
-        <div class="pbody grid2">
-          <label class="fld wide"><span>公告文字</span><Input v-model="form.promoBanner" /></label>
-          <label class="fld row"><Checkbox v-model:checked="form.promoBannerEnabled" /><span>啟用公告列</span></label>
-        </div>
-      </Panel>
-
-      <Panel title="門檻與通知">
-        <div class="pbody grid2">
-          <label class="fld"><span>免運門檻（NT$）</span><Input :model-value="String(form.freeShippingThreshold)" type="number" @update:model-value="form.freeShippingThreshold = Number($event) || 0" /></label>
-          <label class="fld"><span>低庫存警示（件）</span><Input :model-value="String(form.lowStockThreshold)" type="number" @update:model-value="form.lowStockThreshold = Number($event) || 0" /></label>
-          <label class="fld row"><Checkbox v-model:checked="form.notificationMaster" /><span>啟用訂單通知信</span></label>
-        </div>
-      </Panel>
+      <!-- Settings sections are parallel panels of one draft form. -->
+      <Tabs v-model="activeTab" :tabs="settingsTabs" aria-label="商店設定分區">
+        <template #panel-info>
+          <Panel title="商店資訊">
+            <div class="pbody grid2">
+              <label class="fld"><span>商店名稱</span><Input v-model="form.storeName" /></label>
+              <label class="fld"><span>英文名稱</span><Input v-model="form.storeNameEn" /></label>
+              <label class="fld wide"><span>標語</span><Input v-model="form.tagline" /></label>
+              <label class="fld"><span>聯絡 Email</span><Input v-model="form.contactEmail" /></label>
+              <label class="fld"><span>聯絡電話</span><Input v-model="form.contactPhone" /></label>
+            </div>
+          </Panel>
+        </template>
+        <template #panel-banner>
+          <Panel title="公告列">
+            <div class="pbody grid2">
+              <label class="fld wide"><span>公告文字</span><Input v-model="form.promoBanner" /></label>
+              <label class="fld row"><Checkbox v-model:checked="form.promoBannerEnabled" /><span>啟用公告列</span></label>
+            </div>
+          </Panel>
+        </template>
+        <template #panel-thresholds>
+          <Panel title="門檻與通知">
+            <div class="pbody grid2">
+              <label class="fld"><span>免運門檻（NT$）</span><Input :model-value="String(form.freeShippingThreshold)" type="number" @update:model-value="form.freeShippingThreshold = Number($event) || 0" /></label>
+              <label class="fld"><span>低庫存警示（件）</span><Input :model-value="String(form.lowStockThreshold)" type="number" @update:model-value="form.lowStockThreshold = Number($event) || 0" /></label>
+              <label class="fld row"><Checkbox v-model:checked="form.notificationMaster" /><span>啟用訂單通知信</span></label>
+            </div>
+          </Panel>
+        </template>
+      </Tabs>
 
       <Panel v-if="row" title="版本狀態">
         <div class="pbody meta">

@@ -26,9 +26,10 @@ export const categoriesResource: ResourceDef = {
     is_active_label: raw.is_active ? 'true' : 'false',
     updated_at: formatUnix(raw.updated_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'slug', l: 'Slug', r: 'mono' },
-    { k: 'name', l: '名稱' },
+    { k: 'slug', pin: 'left', l: 'Slug', r: 'mono' },
+    { k: 'name', l: '名稱', sortable: true },
     { k: 'sort_order', l: '排序', r: 'number' },
     { k: 'is_active_label', l: '啟用', r: 'badge' },
     { k: 'updated_at', l: '更新', r: 'datetime' },

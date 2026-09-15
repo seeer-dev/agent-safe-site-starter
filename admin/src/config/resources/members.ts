@@ -15,13 +15,14 @@ export const membersResource: ResourceDef = {
     update: '/admin/members/{id}',
     status: '/admin/members/{id}/status',
   },
+  pinActions: true,
   cols: [
-    { k: 'email', l: 'Email', r: 'mono' },
-    { k: 'name', l: '姓名' },
+    { k: 'email', pin: 'left', l: 'Email', r: 'mono' },
+    { k: 'name', l: '姓名', sortable: true },
     { k: 'status', l: '狀態', r: 'badge' },
     { k: 'tier', l: '等級', r: 'badge' },
-    { k: 'total_orders', l: '訂單', r: 'number' },
-    { k: 'total_spent', l: '累計', r: 'number' },
+    { k: 'total_orders', l: '訂單', r: 'number', sortable: true },
+    { k: 'total_spent', l: '累計', r: 'number', sortable: true },
   ],
   rowActions: [
     { k: 'edit', l: '編輯', cap: 'twcommerce.update', variant: 'sec', form: true },

@@ -26,9 +26,10 @@ export const notificationTemplatesResource: ResourceDef = {
     is_enabled_label: raw.is_enabled ? 'true' : 'false',
     updated_at: formatUnix(raw.updated_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'code', l: '事件代碼', r: 'mono' },
-    { k: 'name', l: '名稱' },
+    { k: 'code', pin: 'left', l: '事件代碼', r: 'mono' },
+    { k: 'name', l: '名稱', sortable: true },
     { k: 'subject', l: '主旨' },
     { k: 'is_enabled_label', l: '啟用', r: 'badge' },
     { k: 'updated_at', l: '更新', r: 'datetime' },

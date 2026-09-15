@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme-style="nippon" data-brand="tokiwa">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>網紅分潤後台 — IA Prototype v4</title>
+
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+  :root{--surface-0:#fdfcf8;--surface-50:#f6f4ee;--surface-100:#efece4;--surface-200:#e0dcd1;--surface-300:#ccc7b8;--surface-400:#9d9889;--surface-500:#6f6b5e;--surface-600:#524f44;--surface-700:#3d3b32;--surface-800:#28271f;--surface-900:#1a1915;--surface-950:#0c0b08;--sidebar-bg:#f9f7f1;--sidebar-border:var(--surface-200);--brand-50:#e6f1eb;--brand-100:#c8e2d3;--brand-200:#92c5a8;--brand-300:#5fa87d;--brand-400:#348a57;--brand-500:#1a6e4a;--brand-600:#155838;--brand-700:#0f4229;--brand-800:#0a2c1b;--brand-900:#05160d;--radius-sm:2px;--radius-md:6px;--radius-lg:8px;--radius-xl:10px;}
+  .dark{--surface-50:#161819;--surface-0:#1d2021;--surface-100:#282828;--surface-200:#3c3836;--surface-300:#504945;--surface-400:#665c54;--surface-500:#7c6f64;--surface-600:#928374;--surface-700:#a89984;--surface-800:#d5c4a1;--surface-900:#ebdbb2;--surface-950:#fbf1c7;--sidebar-bg:#1d2021;--sidebar-border:#161819;--brand-300:color-mix(in srgb,#5fa87d 70%,white 30%);--brand-400:color-mix(in srgb,#348a57 60%,white 40%);--brand-500:color-mix(in srgb,#1a6e4a 55%,white 45%);--brand-600:color-mix(in srgb,#155838 50%,white 50%);--brand-700:color-mix(in srgb,#0f4229 45%,white 55%);}
+  html{font-feature-settings:"cv11","ss01","tnum";}
+  body{font-family:"Inter","Noto Sans TC",system-ui,sans-serif;font-size:15px;line-height:1.55;background-color:var(--surface-50);color:var(--surface-800);}
+  h1,h2,h3,h4{letter-spacing:-0.01em;color:var(--surface-900);}
+  .tabular{font-variant-numeric:tabular-nums;}
+  :focus-visible{outline:2px solid color-mix(in srgb,var(--brand-500) 55%,transparent);outline-offset:1px;}
+  .scrollbar-thin::-webkit-scrollbar{width:6px;height:6px;}
+  .scrollbar-thin::-webkit-scrollbar-thumb{background:var(--surface-300);border-radius:3px;}
+  .scrollbar-thin::-webkit-scrollbar-track{background:transparent;}
+  .nav-active-bar{position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;border-radius:0 2px 2px 0;background:var(--brand-500);}
+  [hidden]{display:none!important;}
+  @keyframes slide-in-right{from{transform:translateX(100%);}to{transform:translateX(0);}}
+  @keyframes slide-up{from{transform:translateY(100%);opacity:.6;}to{transform:translateY(0);opacity:1;}}
+  @keyframes fade-in{from{opacity:0;}to{opacity:1;}}
+  @keyframes scale-in{from{opacity:0;transform:scale(.96);}to{opacity:1;transform:scale(1);}}
+  @keyframes shimmer{0%{background-position:-1000px 0;}100%{background-position:1000px 0;}}
+  @keyframes slide-down{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes grow-bar{from{transform:scaleY(0);}to{transform:scaleY(1);}}
+  @keyframes grow-width{from{width:0;}to{}}
+  .anim-drawer{animation:slide-in-right .25s cubic-bezier(.32,.72,0,1);}
+  .anim-toast{animation:slide-up .3s ease-out;}
+  .anim-fade{animation:fade-in .15s ease-out;}
+  .anim-scale{animation:scale-in .15s ease-out;}
+  .anim-slide-down{animation:slide-down .2s ease-out;}
+  input[type="checkbox"]{accent-color:var(--brand-600);}
+  .skeleton{background:linear-gradient(90deg,var(--surface-100) 25%,var(--surface-200) 50%,var(--surface-100) 75%);background-size:1000px 100%;animation:shimmer 1.8s infinite linear;border-radius:var(--radius-md);}
+  .flyout{position:absolute;left:calc(100% + 8px);top:0;z-index:50;min-width:200px;}
+  #sidebar{transition:width .2s cubic-bezier(.32,.72,0,1);}
+  .bar-grow{animation:grow-width .8s cubic-bezier(.32,.72,0,1);}
+  .vbar{transform-origin:bottom;animation:grow-bar .6s cubic-bezier(.32,.72,0,1);}
+</style>
+
+<script>
+tailwind.config={darkMode:'class',theme:{extend:{fontFamily:{sans:['Inter','Noto Sans TC','system-ui','sans-serif']},colors:{background:'var(--surface-50)',foreground:'var(--surface-800)',card:'var(--surface-0)','card-foreground':'var(--surface-800)',popover:'var(--surface-0)','popover-foreground':'var(--surface-800)',primary:{DEFAULT:'var(--brand-600)',foreground:'#fff'},secondary:{DEFAULT:'var(--surface-100)',foreground:'var(--surface-700)'},muted:{DEFAULT:'var(--surface-100)',foreground:'var(--surface-500)'},accent:{DEFAULT:'var(--brand-50)',foreground:'var(--brand-700)'},destructive:{DEFAULT:'#ce3a4e',foreground:'#fff'},border:'var(--surface-200)',input:'var(--surface-300)',ring:'var(--brand-500)',sidebar:{DEFAULT:'var(--sidebar-bg)',foreground:'var(--surface-700)',primary:'var(--brand-600)','primary-foreground':'#fff',accent:'var(--surface-100)','accent-foreground':'var(--surface-900)',border:'var(--sidebar-border)',ring:'var(--brand-500)'},brand:{50:'var(--brand-50)',100:'var(--brand-100)',200:'var(--brand-200)',300:'var(--brand-300)',400:'var(--brand-400)',500:'var(--brand-500)',600:'var(--brand-600)',700:'var(--brand-700)',800:'var(--brand-800)',900:'var(--brand-900)'},surface:{0:'var(--surface-0)',50:'var(--surface-50)',100:'var(--surface-100)',200:'var(--surface-200)',300:'var(--surface-300)',400:'var(--surface-400)',500:'var(--surface-500)',600:'var(--surface-600)',700:'var(--surface-700)',800:'var(--surface-800)',900:'var(--surface-900)',950:'var(--surface-950)'}},borderRadius:{sm:'2px',md:'6px',lg:'8px',xl:'10px','2xl':'12px'}}}};
+</script>
+</head>
+
+<body class="bg-background text-foreground">
+<div id="app" class="flex h-screen overflow-hidden">
+  <aside id="sidebar" class="flex w-60 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground lg:flex">
+    <div id="sidebarHeader" class="flex h-14 items-center gap-2 border-b border-sidebar-border px-4"><div id="sidebarLogo" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white"><i data-lucide="sparkles" class="h-4 w-4"></i></div><span id="sidebarTitle" class="text-sm font-semibold text-surface-900 whitespace-nowrap overflow-hidden">網紅分潤後台</span></div>
+    <nav id="nav" class="flex-1 overflow-y-auto scrollbar-thin px-2 py-3 text-sm"></nav>
+    <div class="border-t border-sidebar-border p-2"><div class="flex items-center gap-2 rounded-md px-2 py-1.5"><div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700">管</div><div id="userBlock" class="flex-1 leading-tight overflow-hidden"><div class="text-xs font-medium text-surface-900">陳冠廷</div><div class="text-[11px] text-muted-foreground">admin@tokiwa.tw</div></div><button onclick="toast('已登出（demo）','info')" class="shrink-0 text-muted-foreground hover:text-destructive" title="登出"><i data-lucide="log-out" class="h-4 w-4"></i></button></div></div>
+  </aside>
+  <div class="flex flex-1 flex-col overflow-hidden">
+    <header class="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4"><button id="collapseToggle" class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="收合側欄 (⌘B)"><i data-lucide="panel-left-close" class="h-4 w-4"></i></button><button id="cmdkTrigger" class="flex items-center gap-2 rounded-md border border-border bg-surface-50 px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:border-brand-300 dark:bg-surface-100 w-64 max-w-full"><i data-lucide="search" class="h-4 w-4"></i><span class="flex-1 text-left">搜尋或跳轉…</span><kbd class="rounded border border-border bg-surface-100 px-1.5 text-[10px] font-medium dark:bg-surface-200">⌘K</kbd></button><div id="crumb" class="flex items-center gap-1.5 text-sm text-muted-foreground"></div><div class="flex-1"></div><button onclick="toggleDark()" class="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted" title="深色模式"><i data-lucide="moon" class="h-4 w-4" id="darkIcon"></i></button><span class="hidden items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 sm:inline-flex dark:bg-amber-500/15 dark:text-amber-400"><i data-lucide="flask-conical" class="h-3 w-3"></i> Mock</span></header>
+    <main id="outlet" class="flex-1 overflow-y-auto scrollbar-thin bg-background p-6"></main>
+  </div>
+</div>
+<div id="toastContainer" class="fixed bottom-4 right-4 z-[80] flex flex-col gap-2"></div>
+<div id="confirmOverlay" hidden></div>
+<div id="cmdkOverlay" hidden></div>
+<div id="drawerOverlay" hidden></div>
+<div id="formOverlay" hidden></div>
+
+<script>
+/* ============================================================ IA ============================================================ */
+const IA=[
+  {id:'dashboard',label:'儀表板',layer:'overview',icon:'layout-dashboard',render:renderDashboard},
+  {id:'cat-products',label:'選品與商品',layer:'module',icon:'boxes',children:[{id:'products',label:'商品管理',render:renderProducts}]},
+  {id:'cat-campaigns',label:'網紅與檔期',layer:'module',icon:'users',children:[{id:'influencers',label:'網紅名單',render:renderInfluencers},{id:'campaigns',label:'檔期活動',render:renderCampaigns},{id:'campaign-detail',label:'檔期詳情',render:renderCampaignDetail,hidden:true},{id:'campaign-rules',label:'折扣 / 分潤規則',render:renderCampaignRules}]},
+  {id:'cat-orders',label:'訂單與履約',layer:'module',icon:'package',badge:'⭐',children:[{id:'all-orders',label:'全部訂單',render:renderAllOrders},{id:'order-confirm',label:'訂單處理',render:renderOrderConfirm},{id:'attributed',label:'帶貨訂單',badge:'NEW',render:renderAttributed},{id:'fulfillment',label:'出貨準備',render:renderFulfillment},{id:'fulfill-docs',label:'出貨文件',danger:true,render:renderFulfillDocs}]},
+  {id:'cat-commission',label:'分潤與請款',layer:'module',icon:'coins',badge:'⚠',children:[{id:'commission-lines',label:'分潤明細',render:renderCommissionLines},{id:'payouts',label:'請款批次',danger:true,render:renderPayouts}]},
+  {id:'u-divider',label:'通用後台 Base',isDivider:true},
+  {id:'cat-content',label:'內容經營',layer:'universal',icon:'newspaper',children:[{id:'content',label:'文章 / 分類 / 位置 / 標籤',render:renderContent}]},
+  {id:'cat-notif',label:'通知中心',layer:'universal',icon:'bell',children:[{id:'notif-provider',label:'寄送設定',render:renderNotifProvider},{id:'notif-templates',label:'Email 範本',render:renderNotifTemplates},{id:'notif-rules',label:'派送規則',render:renderNotifRules},{id:'notif-test',label:'測試寄信',render:renderNotifTest},{id:'notif-events',label:'事件目錄',render:renderNotifEvents},{id:'notif-attempts',label:'寄送紀錄',render:renderNotifAttempts}]},
+  {id:'cat-system',label:'系統管理',layer:'universal',icon:'shield',children:[{id:'staff',label:'員工管理',render:renderStaff},{id:'roles',label:'角色權限',render:renderRoles},{id:'audits',label:'操作紀錄',render:renderAudits},{id:'settings',label:'站台設定',render:renderSettings}]},
+];
+const LEAF_INDEX={};
+IA.forEach(item=>{if(item.isDivider)return;if(item.children)item.children.forEach(c=>{c._parent=item.id;LEAF_INDEX[c.id]=c;});else LEAF_INDEX[item.id]=item;});
+const VISIBLE_LEAVES=Object.values(LEAF_INDEX).filter(i=>!i.hidden);
+
+/* ============================================================ MOCK ============================================================ */
+const MOCK={
+  kpi:[
+    {label:'本月成交額',value:'NT$ 2,847,600',delta:'+18.4%',up:true,icon:'trending-up',route:'all-orders'},
+    {label:'待確認訂單',value:'23',delta:'5 筆急件',up:false,icon:'clipboard-list',route:'order-confirm'},
+    {label:'待出貨',value:'47',delta:'3 筆逾期',up:false,icon:'truck',route:'fulfillment'},
+    {label:'本月分潤應付',value:'NT$ 284,760',delta:'12 位網紅',up:true,icon:'coins',route:'commission-lines'},
+  ],
+  // 14 天成交趨勢（每日金額，萬元）
+  salesTrend:[
+    {date:'06/25',amt:142},{date:'06/26',amt:168},{date:'06/27',amt:131},{date:'06/28',amt:195},{date:'06/29',amt:210},{date:'06/30',amt:178},
+    {date:'07/01',amt:225},{date:'07/02',amt:198},{date:'07/03',amt:252},{date:'07/04',amt:234},{date:'07/05',amt:268},{date:'07/06',amt:245},{date:'07/07',amt:289},{date:'07/08',amt:312},
+  ],
+  // 活動成交佔比（圓餅）
+  campaignShare:[
+    {name:'夏季保濕大作戰',value:142,orders:38,pct:42,color:'#1a6e4a'},
+    {name:'母親節限定組合',value:88,orders:24,pct:26,color:'#348a57'},
+    {name:'梅雨季急救保養',value:56,orders:18,pct:17,color:'#5fa87d'},
+    {name:'自然流量 / 其他',value:52,orders:14,pct:15,color:'#ccc7b8'},
+  ],
+  // top 網紅（帶貨金額排行）
+  topInfluencers:[
+    {name:'Aura 質感生活',sales:842100,orders:48,rate:'15%',avatar:'A'},
+    {name:'Kelvin 男士理容',sales:698400,orders:42,rate:'18%',avatar:'K'},
+    {name:'Maya 日常美妝',sales:486200,orders:31,rate:'15%',avatar:'M'},
+    {name:'Tina 的保養實驗室',sales:312800,orders:22,rate:'12%',avatar:'T'},
+    {name:'小P的生活選物',sales:124300,orders:9,rate:'10%',avatar:'P'},
+  ],
+  // 待處理工作面板
+  pendingWork:[
+    {label:'訂單確認',count:23,route:'order-confirm',icon:'clipboard-check',tone:'amber'},
+    {label:'帶貨歸因爭議',count:1,route:'attributed',icon:'git-pull-request',tone:'red'},
+    {label:'出貨準備',count:47,route:'fulfillment',icon:'truck',tone:'blue'},
+    {label:'請款待核准',count:1,route:'payouts',icon:'banknote',tone:'brand'},
+  ],
+  products:[
+    {id:'P-2401',name:'常磐保濕精華液 30ml',price:1280,stock:342,sku:'TK-SER-30',status:'active',image:'🧴',desc:'主打玻尿酸＋神經醯胺，夏季保濕主力商品。',cost:420,orderCount:186},
+    {id:'P-2402',name:'深綠胜肽面膜組（5入）',price:980,stock:0,sku:'TK-MASK-5',status:'oos',image:'🧖',desc:'胜肽修護面膜，5入組合包裝。',cost:310,orderCount:94},
+    {id:'P-2403',name:'網紅聯名款保濕乳液',price:1580,stock:128,sku:'TK-LOT-100',status:'active',image:'🧪',desc:'與 Aura 質感生活聯名，100ml。',cost:560,orderCount:72},
+    {id:'P-2404',name:'常磐淨透潔顏 foam',price:680,stock:56,sku:'TK-FOAM-150',status:'low',image:'🫧',desc:'胺基酸潔顏，150ml。',cost:180,orderCount:58},
+    {id:'P-2405',name:'深綠胜肽眼霜 15ml',price:1980,stock:89,sku:'TK-EYE-15',status:'active',image:'👁️',desc:'抗皺眼霜，胜肽＋咖啡因。',cost:680,orderCount:45},
+  ],
+  influencers:[
+    {id:'INF-01',name:'Maya 日常美妝',handle:'@maya.daily',followers:128000,commissionRate:'15%',status:'active',totalSales:486200,campaigns:3,email:'maya@gmail.com',bank:'國泰世華 ****1234',joinedAt:'2025/11/02',discountCode:'MAYA15',orderCount:31,clicks:8920,convRate:'0.35%'},
+    {id:'INF-02',name:'Tina 的保養實驗室',handle:'@tina.skincare',followers:89500,commissionRate:'12%',status:'active',totalSales:312800,campaigns:2,email:'tina@gmail.com',bank:'玉山銀行 ****5678',joinedAt:'2025/12/15',discountCode:'TINA12',orderCount:22,clicks:6410,convRate:'0.34%'},
+    {id:'INF-03',name:'Kelvin 男士理容',handle:'@kelvin.grooming',followers:234000,commissionRate:'18%',status:'active',totalSales:698400,campaigns:4,email:'kelvin@gmail.com',bank:'第一銀行 ****9012',joinedAt:'2025/09/20',discountCode:'KELVIN18',orderCount:42,clicks:15400,convRate:'0.27%'},
+    {id:'INF-04',name:'小P的生活選物',handle:'@lilp.select',followers:67000,commissionRate:'10%',status:'paused',totalSales:124300,campaigns:1,email:'lilp@gmail.com',bank:'—（未設定）',joinedAt:'2026/02/10',discountCode:'LILP10',orderCount:9,clicks:3200,convRate:'0.28%'},
+    {id:'INF-05',name:'Aura 質感生活',handle:'@aura.life',followers:312000,commissionRate:'15%',status:'active',totalSales:842100,campaigns:5,email:'aura@gmail.com',bank:'中信銀行 ****3456',joinedAt:'2025/08/01',discountCode:'AURA15',orderCount:48,clicks:18600,convRate:'0.26%'},
+  ],
+  campaigns:[
+    {id:'C-2026-07',name:'夏季保濕大作戰',period:'2026/06/15 – 2026/07/31',status:'active',budget:500000,spent:312000,products:5,orders:142,revenue:1840000,
+      members:[
+        {influencer:'Aura 質感生活',orders:28,revenue:392000,commission:58800,clicks:4200,convRate:'0.67%',cost:21000,cac:750},
+        {influencer:'Maya 日常美妝',orders:22,revenue:286000,commission:42900,clicks:3100,convRate:'0.71%',cost:18500,cac:841},
+        {influencer:'Kelvin 男士理容',orders:18,revenue:234000,commission:42120,clicks:2800,convRate:'0.64%',cost:22000,cac:1222},
+        {influencer:'Tina 的保養實驗室',orders:14,revenue:182000,commission:21840,clicks:2100,convRate:'0.67%',cost:12000,cac:857},
+        {influencer:'小P的生活選物',orders:6,revenue:78000,commission:7800,clicks:980,convRate:'0.61%',cost:4500,cac:750},
+      ]},
+    {id:'C-2026-08',name:'父親節男士理容檔',period:'2026/08/01 – 2026/08/10',status:'scheduled',budget:200000,spent:0,products:3,orders:0,revenue:0,members:[
+        {influencer:'Kelvin 男士理容',orders:0,revenue:0,commission:0,clicks:0,convRate:'—',cost:0,cac:0},
+        {influencer:'Aura 質感生活',orders:0,revenue:0,commission:0,clicks:0,convRate:'—',cost:0,cac:0},
+    ]},
+    {id:'C-2026-06',name:'梅雨季急救保養',period:'2026/06/01 – 2026/06/30',status:'ended',budget:300000,spent:284000,products:4,orders:98,revenue:1120000,members:[
+        {influencer:'Maya 日常美妝',orders:24,revenue:312000,commission:46800,clicks:3400,convRate:'0.71%',cost:28000,cac:1167},
+        {influencer:'Tina 的保養實驗室',orders:18,revenue:234000,commission:28080,clicks:2600,convRate:'0.69%',cost:22000,cac:1222},
+        {influencer:'Aura 質感生活',orders:16,revenue:208000,commission:31200,clicks:3100,convRate:'0.52%',cost:35000,cac:2188},
+        {influencer:'Kelvin 男士理容',orders:12,revenue:156000,commission:28080,clicks:2200,convRate:'0.55%',cost:18000,cac:1500},
+    ]},
+    {id:'C-2026-05',name:'母親節限定組合',period:'2026/05/01 – 2026/05/12',status:'ended',budget:800000,spent:768000,products:8,orders:312,revenue:3680000,members:[
+        {influencer:'Aura 質感生活',orders:88,revenue:1034000,commission:155100,clicks:12400,convRate:'0.71%',cost:95000,cac:1079},
+        {influencer:'Maya 日常美妝',orders:62,revenue:728000,commission:109200,clicks:8600,convRate:'0.72%',cost:78000,cac:1258},
+        {influencer:'Kelvin 男士理容',orders:54,revenue:634000,commission:114120,clicks:7100,convRate:'0.76%',cost:82000,cac:1519},
+        {influencer:'Tina 的保養實驗室',orders:42,revenue:493000,commission:59160,clicks:5800,convRate:'0.72%',cost:48000,cac:1143},
+        {influencer:'小P的生活選物',orders:18,revenue:211000,commission:21100,clicks:2400,convRate:'0.75%',cost:12000,cac:667},
+    ]},
+  ],
+  campaignRules:[
+    {product:'常磐保濕精華液 30ml',campaign:'夏季保濕大作戰',influencer:'Maya 日常美妝',discount:'85折',commissionType:'百分比',commissionValue:'15%',note:'全網紅通用'},
+    {product:'常磐保濕精華液 30ml',campaign:'夏季保濕大作戰',influencer:'Aura 質感生活',discount:'8折',commissionType:'百分比',commissionValue:'15%',note:'加碼折扣'},
+    {product:'深綠胜肽面膜組（5入）',campaign:'夏季保濕大作戰',influencer:'Kelvin 男士理容',discount:'8折',commissionType:'百分比',commissionValue:'18%',note:'首購再加碼 5%'},
+    {product:'網紅聯名款保濕乳液',campaign:'夏季保濕大作戰',influencer:'Aura 質感生活',discount:'無',commissionType:'固定金額',commissionValue:'NT$ 200/件',note:'聯名款不分潤%'},
+    {product:'常磐淨透潔顏 foam',campaign:'梅雨季急救保養',influencer:'Tina 的保養實驗室',discount:'9折',commissionType:'百分比',commissionValue:'12%',note:'—'},
+    {product:'深綠胜肽眼霜 15ml',campaign:'梅雨季急救保養',influencer:'Maya 日常美妝',discount:'85折',commissionType:'百分比',commissionValue:'15%',note:'—'},
+  ],
+  orders:[
+    {id:'ORD-58291',customer:'陳○如',date:'2026/07/08',total:4280,status:'paid',influencer:'Maya 日常美妝',campaign:'夏季保濕大作戰',items:3,items_detail:[{name:'常磐保濕精華液 30ml',qty:1,price:1280},{name:'深綠胜肽面膜組（5入）',qty:2,price:980},{name:'常磐淨透潔顏 foam',qty:1,price:680}],addr:'台北市大安區***',note:'請附試用包'},
+    {id:'ORD-58290',customer:'林○志',date:'2026/07/08',total:1280,status:'pending',influencer:'Kelvin 男士理容',campaign:'夏季保濕大作戰',items:1,items_detail:[{name:'常磐淨透潔顏 foam',qty:1,price:680},{name:'常磐保濕精華液 30ml',qty:1,price:600}],addr:'新北市板橋區***',note:'',fulfillStage:'pending'},
+    {id:'ORD-58289',customer:'黃○雯',date:'2026/07/07',total:9840,status:'shipped',influencer:'Aura 質感生活',campaign:'夏季保濕大作戰',items:6,items_detail:[{name:'深綠胜肽眼霜 15ml',qty:3,price:1980},{name:'網紅聯名款保濕乳液',qty:2,price:1580},{name:'常磐保濕精華液 30ml',qty:1,price:1280}],addr:'台北市信義區***',note:'送貨時請按電鈴',fulfillStage:'shipped'},
+    {id:'ORD-58288',customer:'張○豪',date:'2026/07/07',total:2560,status:'paid',influencer:'Tina 的保養實驗室',campaign:'夏季保濕大作戰',items:2,items_detail:[{name:'深綠胜肽面膜組（5入）',qty:2,price:980},{name:'常磐淨透潔顏 foam',qty:1,price:680}],addr:'桃園市中壢區***',note:'',fulfillStage:'picking'},
+    {id:'ORD-58287',customer:'李○芬',date:'2026/07/06',total:1860,status:'pending',influencer:'Maya 日常美妝',campaign:'夏季保濕大作戰',items:2,items_detail:[{name:'常磐保濕精華液 30ml',qty:1,price:1280},{name:'常磐淨透潔顏 foam',qty:1,price:680}],addr:'台北市中山區***',note:'統編 12345678'},
+    {id:'ORD-58286',customer:'王○明',date:'2026/07/06',total:6480,status:'cancelled',influencer:'—（自然流量）',campaign:'—',items:4,items_detail:[{name:'網紅聯名款保濕乳液',qty:4,price:1580}],addr:'—',note:'客戶取消'},
+    {id:'ORD-58285',customer:'趙○婷',date:'2026/07/05',total:3120,status:'shipped',influencer:'Aura 質感生活',campaign:'夏季保濕大作戰',items:2,items_detail:[{name:'網紅聯名款保濕乳液',qty:2,price:1580}],addr:'台北市內湖區***',note:'',fulfillStage:'shipped'},
+    {id:'ORD-58284',customer:'周○宏',date:'2026/07/05',total:980,status:'paid',influencer:'小P的生活選物',campaign:'梅雨季急救保養',items:1,items_detail:[{name:'深綠胜肽面膜組（5入）',qty:1,price:980}],addr:'新北市永和區***',note:'',fulfillStage:'packing'},
+  ],
+  attributed:[
+    {orderId:'ORD-58291',customer:'陳○如',total:4280,attributedTo:'Maya 日常美妝',confidence:'high',source:'專屬連結',commission:642,status:'confirmed'},
+    {orderId:'ORD-58290',customer:'林○志',total:1280,attributedTo:'Kelvin 男士理容',confidence:'high',source:'折扣碼 KELVIN18',commission:230,status:'confirmed'},
+    {orderId:'ORD-58289',customer:'黃○雯',total:9840,attributedTo:'Aura 質感生活',confidence:'high',source:'專屬連結',commission:1476,status:'confirmed'},
+    {orderId:'ORD-58288',customer:'張○豪',total:2560,attributedTo:'待確認',confidence:'low',source:'多重來源',commission:null,status:'disputed'},
+    {orderId:'ORD-58286',customer:'王○明',total:6480,attributedTo:'—（自然流量）',confidence:'high',source:'無網紅',commission:0,status:'natural'},
+    {orderId:'ORD-58285',customer:'趙○婷',total:3120,attributedTo:'Aura 質感生活',confidence:'medium',source:'Cookie 追蹤',commission:468,status:'confirmed'},
+  ],
+  commissionLines:[
+    {influencer:'Aura 質感生活',orderId:'ORD-58289',product:'深綠胜肽眼霜 15ml',campaign:'夏季保濕大作戰',saleAmount:5940,rate:'15%',commission:891,status:'pending'},
+    {influencer:'Maya 日常美妝',orderId:'ORD-58291',product:'常磐保濕精華液 30ml',campaign:'夏季保濕大作戰',saleAmount:2560,rate:'15%',commission:384,status:'pending'},
+    {influencer:'Kelvin 男士理容',orderId:'ORD-58290',product:'常磐淨透潔顏 foam',campaign:'夏季保濕大作戰',saleAmount:1280,rate:'18%',commission:230,status:'pending'},
+    {influencer:'Aura 質感生活',orderId:'ORD-58285',product:'網紅聯名款保濕乳液',campaign:'夏季保濕大作戰',saleAmount:3120,rate:'固定',commission:600,status:'pending'},
+    {influencer:'Tina 的保養實驗室',orderId:'ORD-58288',product:'深綠胜肽面膜組（5入）',campaign:'夏季保濕大作戰',saleAmount:2560,rate:'12%',commission:307,status:'locked'},
+    {influencer:'Maya 日常美妝',orderId:'ORD-58284',product:'深綠胜肽面膜組（5入）',campaign:'梅雨季急救保養',saleAmount:980,rate:'15%',commission:147,status:'pending'},
+  ],
+  payouts:[
+    {batchId:'PB-2026-07',period:'2026/07/01 – 07/15',influencer:'Aura 質感生活',amount:84210,lines:12,status:'pending',requestedAt:'2026/07/14',approvedAt:null,paidAt:null,lockedAt:null},
+    {batchId:'PB-2026-06b',period:'2026/06/16 – 06/30',influencer:'Kelvin 男士理容',amount:69840,lines:8,status:'approved',requestedAt:'2026/06/30',approvedAt:'2026/07/02',paidAt:null,lockedAt:'2026/07/02 14:30'},
+    {batchId:'PB-2026-06a',period:'2026/06/01 – 06/15',influencer:'Maya 日常美妝',amount:48620,lines:7,status:'paid',requestedAt:'2026/06/15',approvedAt:'2026/06/17',paidAt:'2026/06/18 10:00',lockedAt:'2026/06/17 09:00'},
+    {batchId:'PB-2026-05b',period:'2026/05/16 – 05/31',influencer:'Aura 質感生活',amount:124300,lines:15,status:'paid',requestedAt:'2026/05/31',approvedAt:'2026/06/02',paidAt:'2026/06/03 15:20',lockedAt:'2026/06/02 11:00'},
+  ],
+  staff:[
+    {id:'S-01',name:'陳冠廷',email:'admin@tokiwa.tw',role:'super_admin',status:'active',lastLogin:'2026/07/08 09:12'},
+    {id:'S-02',name:'林淑芬',email:'ops@tokiwa.tw',role:'ops_manager',status:'active',lastLogin:'2026/07/08 08:45'},
+    {id:'S-03',name:'王麗華',email:'finance@tokiwa.tw',role:'finance',status:'active',lastLogin:'2026/07/07 17:30'},
+    {id:'S-04',name:'趙明賢',email:'cs@tokiwa.tw',role:'cs_staff',status:'active',lastLogin:'2026/07/08 10:02'},
+    {id:'S-05',name:'孫小美',email:'sunset@tokiwa.tw',role:'viewer',status:'disabled',lastLogin:'2026/06/20 14:00'},
+  ],
+  audits:[
+    {time:'2026/07/08 10:32',actor:'林淑芬',category:'訂單',action:'訂單確認',target:'ORD-58291',detail:'確認收款 NT$ 4,280'},
+    {time:'2026/07/08 09:15',actor:'王麗華',category:'分潤',action:'請款核准',target:'PB-2026-06b',detail:'核准 Kelvin 請款 NT$ 69,840'},
+    {time:'2026/07/08 08:50',actor:'陳冠廷',category:'訂單',action:'改判成交來源',target:'ORD-58288',detail:'由「待確認」改判為 Tina 的保養實驗室'},
+    {time:'2026/07/07 16:20',actor:'趙明賢',category:'訂單',action:'出貨文件列印',target:'ORD-58289',detail:'列印揀貨單 + 包裝單'},
+    {time:'2026/07/07 14:05',actor:'林淑芬',category:'商品',action:'商品庫存調整',target:'P-2402',detail:'庫存 0 → 200（補貨）'},
+    {time:'2026/07/07 11:30',actor:'陳冠廷',category:'網紅',action:'網紅資料更新',target:'INF-05',detail:'Aura 質感生活 分潤比例 12% → 15%'},
+    {time:'2026/07/06 15:00',actor:'林淑芬',category:'商品',action:'商品上架',target:'P-2405',detail:'深綠胜肽眼霜 15ml 上架'},
+    {time:'2026/07/06 10:15',actor:'王麗華',category:'分潤',action:'分潤批次建立',target:'PB-2026-06b',detail:'Kelvin 8 筆明細 NT$ 69,840'},
+  ],
+  articles:[{title:'夏季保濕 5 大迷思破解',category:'保養知識',status:'published',views:12400,date:'2026/07/01',author:'林淑芬',summary:'很多人以為夏天只要控油就好，其實冷氣房才是水分殺手…',body:'炎炎夏日，許多人把保養重點放在控油，卻忽略了「缺水」才是肌膚出油的真正元兇。\n\n## 5 大常見迷思\n\n1. **夏天不需要保濕** —— 冷氣房濕度常低於 40%，比冬天還乾。\n2. **出油就要去油** —— 越洗越乾，肌膚反而分泌更多油脂代償。\n3. **面膜天天敷** —— 過度水合會破壞角質屏障。\n4. **只擦化妝水就夠** —— 沒有鎖水（乳液/乳霜），水分蒸發更快。\n5. **SPF 越高越好** —— 係數高不代表防護時間長，補擦才是關鍵。\n\n## 建議的夏季保養順序\n\n清潔 → 化妝水 → 精華液（玻尿酸） → 乳液 → 防曬',tags:['保濕','夏季']},{title:'網紅聯名款開箱實測',category:'商品開箱',status:'published',views:28600,date:'2026/06/20',author:'陳冠廷',summary:'與 Aura 質感生活聯名的保濕乳液，實測 14 天…',body:'這次與 Aura 質感生活聯名的保濕乳液，主打神經醯胺 + 角鯊烷雙重修護。\n\n## 質地\n偏乳霜狀但不厚重，推開後吸收速度中等，大約 30 秒。\n\n## 保濕持久度\n使用皮膚水分測試儀：\n- 使用前：32%\n- 使用後 1 小時：48%\n- 使用後 8 小時：41%\n\n## 總評\n質地適合中性／乾性肌，油性肌夏季可能偏潤。聯名包裝質感佳，送禮合適。',tags:['聯名','開箱']},{title:'父親節送禮指南',category:'節日企劃',status:'draft',views:0,date:'2026/07/05',author:'陳冠廷',summary:'8/8 父親節將至，男士理容保養推薦清單…',body:'（草稿，待補完）',tags:['男士','節日']}],
+  categories:['保養知識','商品開箱','節日企劃','品牌故事','常見問題'],
+  placements:['首頁輪播','商品頁側欄','文章底部推薦','Footer 連結'],
+  tags:['保濕','夏季','聯名','男士','限定','開箱'],
+  notifEvents:[{key:'order.created',desc:'新訂單成立',used:2},{key:'order.paid',desc:'訂單確認收款',used:1},{key:'order.shipped',desc:'訂單已出貨',used:1},{key:'payout.requested',desc:'網紅發起請款',used:2},{key:'payout.approved',desc:'請款已核准',used:1},{key:'commission.monthly',desc:'月度分潤結算通知',used:1}],
+  notifTemplates:[{key:'tpl-order-created',name:'新訂單通知 — 客戶',subject:'您的訂單 {{order_id}} 已成立',updatedAt:'2026/06/01'},{key:'tpl-payout-request',name:'請款通知 — 管理端',subject:'{{influencer}} 發起請款 NT$ {{amount}}',updatedAt:'2026/05/15'},{key:'tpl-shipped',name:'出貨通知 — 客戶',subject:'訂單 {{order_id}} 已出貨',updatedAt:'2026/06/10'}],
+  notifRules:[{event:'order.created',template:'新訂單通知 — 客戶',recipient:'customer',enabled:true},{event:'payout.requested',template:'請款通知 — 管理端',recipient:'admin',enabled:true},{event:'order.shipped',template:'出貨通知 — 客戶',recipient:'customer',enabled:true},{event:'commission.monthly',template:'（未設定）',recipient:'influencer',enabled:false}],
+  notifAttempts:[{time:'2026/07/08 09:12',to:'customer@example.com',template:'新訂單通知',status:'delivered'},{time:'2026/07/08 08:45',to:'admin@tokiwa.tw',template:'請款通知',status:'delivered'},{time:'2026/07/07 17:30',to:'customer@example.com',template:'出貨通知',status:'failed',error:'Connection timeout'},{time:'2026/07/07 14:00',to:'maya@gmail.com',template:'請款通知',status:'delivered'}],
+  permModules:[{key:'products',label:'商品管理',icon:'boxes'},{key:'campaigns',label:'網紅 / 檔期',icon:'users'},{key:'orders',label:'訂單 / 履約',icon:'package'},{key:'commissions',label:'分潤 / 請款',icon:'coins'},{key:'content',label:'內容經營',icon:'newspaper'},{key:'notifications',label:'通知中心',icon:'bell'},{key:'staff_roles',label:'員工 / 角色',icon:'shield'}],
+  permLevels:[{key:'none',label:'無',cls:'bg-surface-50 text-surface-400 dark:bg-surface-100',abbr:'✕'},{key:'read',label:'唯讀',cls:'bg-surface-100 text-surface-600 dark:bg-surface-200',abbr:'R'},{key:'own',label:'自己的',cls:'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',abbr:'O'},{key:'all',label:'全部',cls:'bg-brand-100 text-brand-700 dark:bg-brand-500/20 dark:text-brand-300',abbr:'A'},{key:'manage',label:'管理',cls:'bg-brand-600 text-white',abbr:'M'}],
+  permMatrix:{super_admin:{products:'manage',campaigns:'manage',orders:'manage',commissions:'manage',content:'manage',notifications:'manage',staff_roles:'manage'},ops_manager:{products:'manage',campaigns:'manage',orders:'manage',commissions:'read',content:'manage',notifications:'manage',staff_roles:'read'},finance:{products:'none',campaigns:'read',orders:'read',commissions:'manage',content:'none',notifications:'none',staff_roles:'none'},cs_staff:{products:'read',campaigns:'read',orders:'manage',commissions:'none',content:'read',notifications:'read',staff_roles:'none'},viewer:{products:'read',campaigns:'read',orders:'read',commissions:'read',content:'read',notifications:'read',staff_roles:'none'}},
+  permRoles:[{key:'super_admin',label:'超級管理員',desc:'全系統管理權限，含核准高風險操作'},{key:'ops_manager',label:'營運主管',desc:'商品 / 檔期 / 訂單全權，分潤僅檢視'},{key:'finance',label:'財務',desc:'分潤請款全權，其餘不開放'},{key:'cs_staff',label:'客服',desc:'訂單履約全權，其餘僅檢視'},{key:'viewer',label:'僅檢視',desc:'全模組唯讀'}],
+  permTemplates:[{key:'ops_manager',label:'營運主管範本'},{key:'finance',label:'財務範本'},{key:'cs_staff',label:'客服範本'},{key:'viewer',label:'僅檢視範本'}],
+};
+
+/* ============================================================ 狀態 ============================================================ */
+let currentRoute='dashboard',selectedRows=new Set();
+let detailCampaignId=null; // 當前檢視詳情的檔期 id
+let sidebarCollapsed=localStorage.getItem('ia.sidebarCollapsed')==='true';
+let expandedCats=new Set(JSON.parse(localStorage.getItem('ia.expandedCats')||'["cat-orders","cat-commission"]'));
+let orderFilters={campaign:new Set(),influencer:new Set(),status:new Set()};
+let ruleFilters={campaign:new Set(),product:new Set(),influencer:new Set()};
+let commFilters={product:new Set(),campaign:new Set(),influencer:new Set()};
+let auditFilters={action:new Set(),actor:new Set(),category:new Set()};
+let auditSort='desc';
+let orderSort={col:'date',dir:'desc'};
+
+/* ============================================================ 工具 ============================================================ */
+function $(s){return document.querySelector(s);}function $$(s){return document.querySelectorAll(s);}function el(t,c,h){const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;}function icon(n,c='h-4 w-4'){return `<i data-lucide="${n}" class="${c}"></i>`;}function money(n){return n==null?'—':'NT$ '+n.toLocaleString('zh-TW');}function refreshIcons(){if(window.lucide)window.lucide.createIcons();}
+function statusBadge(s){const m={active:['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300','啟用'],oos:['bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400','缺貨'],low:['bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400','低庫存'],pending:['bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400','待處理'],paid:['bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400','已付款'],shipped:['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300','已出貨'],cancelled:['bg-surface-200 text-surface-500 dark:bg-surface-700 dark:text-surface-400','已取消'],scheduled:['bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400','待開跑'],ended:['bg-surface-200 text-surface-500 dark:bg-surface-700 dark:text-surface-400','已結束'],paused:['bg-surface-200 text-surface-500 dark:bg-surface-700 dark:text-surface-400','暫停'],confirmed:['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300','已確認'],disputed:['bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400','爭議中'],natural:['bg-surface-200 text-surface-500 dark:bg-surface-700 dark:text-surface-400','自然流量'],locked:['bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400','已鎖定'],approved:['bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400','已核准'],disabled:['bg-surface-200 text-surface-500 dark:bg-surface-700 dark:text-surface-400','停用'],draft:['bg-surface-200 text-surface-500 dark:bg-surface-700 dark:text-surface-400','草稿'],published:['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300','已發布'],delivered:['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300','已送達'],failed:['bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400','失敗']};const[c,l]=m[s]||['bg-surface-200 text-surface-500',s];return `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${c}">${l}</span>`;}
+
+/* ============================================================ TOAST / 確認框 ============================================================ */
+function toast(msg,type='success',opts={}){const ic={success:'check-circle',error:'x-circle',info:'info',warning:'alert-triangle'};const cl={success:'border-brand-200 dark:border-brand-500/30',error:'border-red-200 dark:border-red-500/30',info:'border-blue-200 dark:border-blue-500/30',warning:'border-amber-200 dark:border-amber-500/30'};const icl={success:'text-brand-600 dark:text-brand-400',error:'text-red-600 dark:text-red-400',info:'text-blue-600 dark:text-blue-400',warning:'text-amber-600 dark:text-amber-400'};const t=el('div',`anim-toast flex items-start gap-3 rounded-lg border bg-card pl-3 pr-4 py-3 shadow-lg ${cl[type]} min-w-[300px] max-w-md`);t.innerHTML=`${icon(ic[type]+' '+icl[type],'h-5 w-5 shrink-0 mt-0.5')}<div class="flex-1 text-sm"><div class="font-medium">${msg}</div>${opts.detail?`<div class="mt-0.5 text-xs text-muted-foreground">${opts.detail}</div>`:''}</div>`;$('#toastContainer').appendChild(t);refreshIcons();setTimeout(()=>{t.style.transition='opacity .3s, transform .3s';t.style.opacity='0';t.style.transform='translateY(10px)';setTimeout(()=>t.remove(),300);},opts.duration||3500);}
+function confirmDialog({title,message,detail,confirmLabel='確認',danger=true,onConfirm}){const ov=$('#confirmOverlay');ov.hidden=false;ov.className='anim-fade fixed inset-0 z-[75] flex items-center justify-center bg-black/40 p-4';ov.innerHTML=`<div class="anim-scale w-full max-w-sm rounded-xl border border-border bg-card p-5 shadow-xl"><div class="mb-2 flex items-center gap-2">${danger?`<div class="flex h-8 w-8 items-center justify-center rounded-full bg-red-100 dark:bg-red-500/15">${icon('alert-triangle','h-4 w-4 text-red-600 dark:text-red-400')}</div>`:''}<h3 class="text-base font-semibold">${title}</h3></div><p class="mb-1 text-sm text-muted-foreground">${message}</p>${detail?`<p class="mb-4 rounded-md bg-surface-50 p-2.5 text-xs text-muted-foreground dark:bg-surface-100">${detail}</p>`:'<div class="mb-4"></div>'}<div class="flex justify-end gap-2"><button class="cancel-btn inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-200">取消</button><button class="ok-btn inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium ${danger?'bg-destructive text-white hover:opacity-90':'bg-brand-600 text-white hover:bg-brand-700'}">${confirmLabel}</button></div></div>`;refreshIcons();const close=()=>{ov.hidden=true;ov.innerHTML='';};ov.querySelector('.cancel-btn').addEventListener('click',close);ov.querySelector('.ok-btn').addEventListener('click',()=>{close();onConfirm&&onConfirm();});ov.addEventListener('click',e=>{if(e.target===ov)close();},{once:true});}
+
+/* 圖片上傳處理（demo：讀成 data URL 顯示預覽） */
+function handleImgUpload(key,input){const file=input.files[0];if(!file)return;const reader=new FileReader();reader.onload=e=>{const prev=document.getElementById('imgPreview-'+key);if(prev){prev.innerHTML=`<img src="${e.target.result}" class="h-full w-full rounded-lg object-cover">`;}const txt=document.querySelector(`[name="${key}"]`);if(txt)txt.value='[uploaded]';toast('圖片已上傳','success',{detail:file.name,duration:2000});};reader.readAsDataURL(file);}
+
+/* ============================================================ 表單 Modal ============================================================ */
+function formDialog({title,subtitle,fields,values,confirmLabel='儲存',onSave,size='md',allowFullscreen=false}){const ov=$('#formOverlay');ov.hidden=false;ov.className='anim-fade fixed inset-0 z-[78] flex items-center justify-center bg-black/40 p-4';const V=values||{};const rf=f=>{const val=V[f.key]??f.default??'';if(f.type==='switch')return `<label class="flex items-center justify-between rounded-md border border-border px-3 py-2"><div><div class="text-sm font-medium">${f.label}${f.required?' <span class="text-destructive">*</span>':''}</div>${f.help?`<div class="text-xs text-muted-foreground">${f.help}</div>`:''}</div><button type="button" class="switch-toggle relative h-6 w-11 rounded-full transition-colors ${val?'bg-brand-600':'bg-surface-300 dark:bg-surface-600'}" data-key="${f.key}"><span class="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${val?'translate-x-[22px]':'translate-x-0.5'}"></span></button></label>`;if(f.type==='select')return `<div><label class="mb-1 block text-sm font-medium">${f.label}${f.required?' <span class="text-destructive">*</span>':''}</label><select name="${f.key}" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">${f.options.map(o=>`<option value="${o.value??o}" ${(o.value??o)==val?'selected':''}>${o.label??o}</option>`).join('')}</select></div>`;if(f.type==='textarea')return `<div><label class="mb-1 block text-sm font-medium">${f.label}${f.required?' <span class="text-destructive">*</span>':''}</label><textarea name="${f.key}" rows="${f.rows||3}" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="${f.placeholder||''}">${val}</textarea></div>`;
+  if(f.type==='image'){const emoji=val||'📦';return `<div><label class="mb-1 block text-sm font-medium">${f.label}</label><div class="flex items-center gap-3"><div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border-2 border-dashed border-input bg-surface-50 text-3xl dark:bg-surface-100" id="imgPreview-${f.key}">${emoji}</div><div class="flex-1 space-y-1.5"><button type="button" onclick="document.getElementById('file-${f.key}').click()" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200"><i data-lucide="upload" class="h-3.5 w-3.5"></i>上傳圖片</button><input type="file" id="file-${f.key}" accept="image/*" class="hidden" onchange="handleImgUpload('${f.key}',this)"><div class="flex items-center gap-1"><span class="text-[11px] text-muted-foreground">或選 emoji：</span><input type="text" name="${f.key}" value="${val||''}" maxlength="4" class="w-14 rounded border border-input bg-background px-2 py-1 text-sm text-center" placeholder="🧴" oninput="document.getElementById('imgPreview-${f.key}').textContent=this.value||'📦'"></div></div></div></div>`;}return `<div><label class="mb-1 block text-sm font-medium">${f.label}${f.required?' <span class="text-destructive">*</span>':''}</label><input type="${f.type||'text'}" name="${f.key}" value="${val}" ${f.min!=null?`min="${f.min}"`:''} ${f.max!=null?`max="${f.max}"`:''} ${f.step?`step="${f.step}"`:''} class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="${f.placeholder||''}"></div>`;};const sizeCls={sm:'max-w-md',md:'max-w-lg',lg:'max-w-2xl',xl:'max-w-4xl'};ov.innerHTML=`<div id="formModal" class="anim-scale w-full ${sizeCls[size]||sizeCls.md} max-h-[90vh] overflow-y-auto scrollbar-thin rounded-xl border border-border bg-card shadow-xl"><header class="sticky top-0 flex items-center justify-between gap-2 border-b border-border bg-card px-5 py-4"><div class="min-w-0"><h3 class="text-base font-semibold">${title}</h3>${subtitle?`<p class="mt-0.5 truncate text-xs text-muted-foreground">${subtitle}</p>`:''}</div><div class="flex shrink-0 items-center gap-1">${allowFullscreen?`<button id="fsToggle" class="rounded-md p-1 text-muted-foreground hover:bg-muted" title="全螢幕">${icon('maximize-2','h-4 w-4')}</button>`:''}<button class="close-btn rounded-md p-1 text-muted-foreground hover:bg-muted">${icon('x','h-5 w-5')}</button></div></header><form id="formContent" class="space-y-4 p-5">${fields.map(rf).join('')}</form><footer class="sticky bottom-0 flex justify-end gap-2 border-t border-border bg-card px-5 py-3"><button class="cancel-btn inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-200">取消</button><button class="save-btn inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('save','h-4 w-4')}<span class="save-label">${confirmLabel}</span></button></footer></div>`;refreshIcons();const close=()=>{ov.hidden=true;ov.innerHTML='';};ov.querySelector('.close-btn').addEventListener('click',close);ov.querySelector('.cancel-btn').addEventListener('click',close);ov.addEventListener('click',e=>{if(e.target===ov)close();},{once:true});if(allowFullscreen){const modal=$('#formModal');const fsBtn=$('#fsToggle');let fs=false;fsBtn.addEventListener('click',()=>{fs=!fs;const normCls=(sizeCls[size]||sizeCls.md)+' max-h-[90vh] overflow-y-auto scrollbar-thin rounded-xl border border-border bg-card shadow-xl';modal.className=fs?'anim-scale w-full max-w-none h-screen max-h-none rounded-none overflow-y-auto scrollbar-thin border border-border bg-card shadow-xl':'anim-scale w-full '+normCls;ov.className=fs?'anim-fade fixed inset-0 z-[78] bg-card':'anim-fade fixed inset-0 z-[78] flex items-center justify-center bg-black/40 p-4';fsBtn.innerHTML=icon(fs?'minimize-2':'maximize-2','h-4 w-4');refreshIcons();});}ov.querySelectorAll('.switch-toggle').forEach(b=>b.addEventListener('click',()=>{const on=!b.classList.contains('bg-brand-600');b.classList.toggle('bg-brand-600',on);b.classList.toggle('bg-surface-300',!on);b.classList.toggle('dark:bg-surface-600',!on);b.querySelector('span').className=`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${on?'translate-x-[22px]':'translate-x-0.5'}`;}));ov.querySelector('.save-btn').addEventListener('click',()=>{const form=$('#formContent');const data={};fields.forEach(f=>{if(f.type==='switch'){const b=ov.querySelector(`[data-key="${f.key}"]`);data[f.key]=b.classList.contains('bg-brand-600');}else{const e2=form.querySelector(`[name="${f.key}"]`);data[f.key]=f.type==='number'?Number(e2.value):e2.value;}});const btn=ov.querySelector('.save-btn');const label=btn.querySelector('.save-label');btn.disabled=true;btn.classList.add('opacity-70','cursor-wait');label.innerHTML=`<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> 儲存中…`;setTimeout(()=>{close();onSave&&onSave(data);},700);});}
+
+/* ============================================================ Drawer ============================================================ */
+function openDrawer({title,subtitle,bodyHtml,footerHtml=''}){closeDrawer();const ov=$('#drawerOverlay');ov.hidden=false;ov.className='fixed inset-0 z-[65]';ov.innerHTML=`<div class="anim-fade absolute inset-0 bg-black/30" onclick="closeDrawer()"></div><aside class="anim-drawer absolute right-0 top-0 flex h-full w-full max-w-lg flex-col border-l border-border bg-card shadow-2xl"><header class="flex items-start justify-between gap-3 border-b border-border p-5"><div class="min-w-0"><h2 class="truncate text-base font-semibold text-surface-900 dark:text-surface-50">${title}</h2>${subtitle?`<p class="mt-0.5 truncate text-xs text-muted-foreground">${subtitle}</p>`:''}</div><button onclick="closeDrawer()" class="shrink-0 rounded-md p-1 text-muted-foreground hover:bg-muted">${icon('x','h-5 w-5')}</button></header><div class="flex-1 overflow-y-auto scrollbar-thin p-5">${bodyHtml}</div>${footerHtml?`<footer class="border-t border-border p-4">${footerHtml}</footer>`:''}</aside>`;refreshIcons();}
+function closeDrawer(){const ov=$('#drawerOverlay');ov.hidden=true;ov.innerHTML='';}
+
+/* ============================================================ 指令面板 ============================================================ */
+function openCmdK(){closeCmdK();const ov=$('#cmdkOverlay');ov.hidden=false;ov.className='anim-fade fixed inset-0 z-[85] flex items-start justify-center pt-[15vh]';ov.innerHTML=`<div class="absolute inset-0 bg-black/30" onclick="closeCmdK()"></div><div class="anim-scale relative w-full max-w-lg rounded-xl border border-border bg-card shadow-2xl"><div class="flex items-center gap-2 border-b border-border px-4 py-3">${icon('search','h-4 w-4 text-muted-foreground')}<input id="cmdkInput" class="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground" placeholder="搜尋頁面或執行動作…" autocomplete="off"><kbd class="rounded border border-border bg-surface-100 px-1.5 text-[10px] dark:bg-surface-200">ESC</kbd></div><div id="cmdkResults" class="max-h-[50vh] overflow-y-auto scrollbar-thin p-2"></div></div>`;const input=$('#cmdkInput');input.focus();input.addEventListener('input',()=>renderCmdKResults(input.value));input.addEventListener('keydown',e=>{if(e.key==='Escape')closeCmdK();if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();navCmdK(e.key==='ArrowDown'?1:-1);}if(e.key==='Enter'){const s=$$('#cmdkResults [data-cmdk-item]')[cmdkActiveIdx];if(s)s.click();}});renderCmdKResults('');refreshIcons();}
+let cmdkActiveIdx=0;function closeCmdK(){const ov=$('#cmdkOverlay');ov.hidden=true;ov.innerHTML='';cmdkActiveIdx=0;}function navCmdK(d){const items=$$('#cmdkResults [data-cmdk-item]');if(!items.length)return;items.forEach(i=>i.classList.remove('bg-brand-50','dark:bg-brand-500/10'));cmdkActiveIdx=(cmdkActiveIdx+d+items.length)%items.length;items[cmdkActiveIdx].classList.add('bg-brand-50','dark:bg-brand-500/10');items[cmdkActiveIdx].scrollIntoView({block:'nearest'});}
+function renderCmdKResults(q){q=q.toLowerCase().trim();const navItems=VISIBLE_LEAVES.filter(i=>!q||i.label.toLowerCase().includes(q));const actions=[{label:'新增商品',icon:'plus-circle',route:'products'},{label:'建立檔期',icon:'calendar-plus',route:'campaigns'},{label:'新增網紅',icon:'user-plus',route:'influencers'},{label:'新增員工',icon:'user-plus',route:'staff'},{label:'測試寄信',icon:'send',route:'notif-test'}];const mA=actions.filter(a=>!q||a.label.toLowerCase().includes(q));let html='';if(navItems.length){html+=`<div class="mb-1 px-2 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">頁面</div>`;html+=navItems.map(i=>`<button data-cmdk-item class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm hover:bg-brand-50 dark:hover:bg-brand-500/10" onclick="closeCmdK();navigate('${i.id}')">${icon(i.icon||'circle','h-4 w-4 text-muted-foreground')}<span class="flex-1">${i.label}</span></button>`).join('');}if(mA.length){html+=`<div class="mb-1 px-2 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">動作</div>`;html+=mA.map(a=>`<button data-cmdk-item class="flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-sm hover:bg-brand-50 dark:hover:bg-brand-500/10" onclick="closeCmdK();navigate('${a.route}')">${icon(a.icon,'h-4 w-4 text-brand-600 dark:text-brand-400')}<span class="flex-1">${a.label}</span></button>`).join('');}if(!html)html=`<div class="px-3 py-6 text-center text-sm text-muted-foreground">沒有符合的結果</div>`;$('#cmdkResults').innerHTML=html;cmdkActiveIdx=0;const first=$('#cmdkResults [data-cmdk-item]');if(first)first.classList.add('bg-brand-50','dark:bg-brand-500/10');}
+
+/* ============================================================ 多選篩選器 ============================================================ */
+function multiSelectFilter({id,label,options,selectedSet,onChangeFn='onMSFChange',clearFn='clearMSF'}){
+  const count=selectedSet.size;
+  return `<div class="relative" data-msf="${id}">
+    <button onclick="toggleMSF('${id}')" class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors ${count>0?'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300':'border-border bg-card text-muted-foreground hover:bg-surface-100 dark:hover:bg-surface-200'}">
+      ${icon('filter','h-3.5 w-3.5')}${label}${count>0?`<span class="flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-600 px-1 text-[10px] text-white">${count}</span>`:''}${icon('chevron-down','h-3 w-3')}
+    </button>
+    <div id="msf-${id}" class="anim-slide-down absolute left-0 top-full z-40 mt-1 hidden w-56 rounded-lg border border-border bg-card p-1.5 shadow-xl">
+      <div class="mb-1 flex items-center justify-between px-2"><span class="text-[11px] font-semibold uppercase text-muted-foreground">${label}</span><button onclick="${clearFn}('${id}')" class="text-[11px] text-muted-foreground hover:text-foreground">清除</button></div>
+      <div class="max-h-56 overflow-y-auto scrollbar-thin">
+        ${options.map(o=>{const v=o.value??o;const lbl=o.label??o;const checked=selectedSet.has(v);return `<label class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-surface-100 dark:hover:bg-surface-200"><input type="checkbox" class="msf-cb rounded" data-msf-id="${id}" value="${v}" ${checked?'checked':''} onchange="${onChangeFn}('${id}',this)"><span class="flex-1">${lbl}</span></label>`;}).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+function toggleMSF(id){const panel=$(`#msf-${id}`);const isOpen=!panel.hidden;$$('[id^="msf-"]').forEach(p=>p.hidden=true);panel.hidden=isOpen;}
+function onMSFChange(id,cb){const set=id==='msfCampaign'?orderFilters.campaign:id==='msfInf'?orderFilters.influencer:orderFilters.status;if(cb.checked)set.add(cb.value);else set.delete(cb.value);navigate('all-orders');}
+function clearMSF(id){const set=id==='msfCampaign'?orderFilters.campaign:id==='msfInf'?orderFilters.influencer:orderFilters.status;set.clear();navigate('all-orders');}
+// 點外部關閉
+document.addEventListener('click',e=>{if(!e.target.closest('[data-msf]'))$$('[id^="msf-"]').forEach(p=>p.hidden=true);});
+
+/* ============================================================ Sidebar ============================================================ */
+function renderNav(){const nav=$('#nav');nav.innerHTML='';const c=sidebarCollapsed;nav.classList.toggle('px-2',!c);nav.classList.toggle('px-1',c);nav.classList.toggle('space-y-0.5',!c);nav.classList.toggle('space-y-1',c);IA.forEach(item=>{if(item.isDivider){if(c){const d=el('div','flex justify-center py-2');d.innerHTML=`<div class="h-px w-6 bg-sidebar-border"></div>`;nav.appendChild(d);}else{const d=el('div','px-3 pt-4 pb-1');d.innerHTML=`<span class="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">${item.label}</span>`;nav.appendChild(d);}return;}if(!item.children){nav.appendChild(c?makeCollapsedItem(item):makeLeafNav(item));return;}if(c){const wrap=el('div','group relative');const btn=el('button',`relative flex w-full items-center justify-center rounded-md py-2 transition-colors ${isCatActive(item)?'bg-sidebar-accent text-brand-600 dark:text-brand-400':'text-muted-foreground hover:bg-sidebar-accent/50'}`);btn.innerHTML=icon(item.icon,'h-5 w-5');btn.title=item.label;const fly=el('div','flyout hidden group-hover:block');fly.innerHTML=`<div class="anim-slide-down rounded-lg border border-border bg-card p-1.5 shadow-xl"><div class="px-2 py-1 text-[11px] font-semibold text-muted-foreground">${item.label}</div>${item.children.map(ch=>`<button class="flex w-full items-center gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] ${currentRoute===ch.id?'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300 font-medium':'text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200'}" onclick="navigate('${ch.id}')"><span class="flex-1 whitespace-nowrap">${ch.label}</span></button>`).join('')}</div>`;wrap.appendChild(btn);wrap.appendChild(fly);nav.appendChild(wrap);}else{const wrap=el('div');const expanded=expandedCats.has(item.id);const catBtn=el('button',`group flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-[13px] font-medium transition-colors ${isCatActive(item)?'text-brand-700 dark:text-brand-300':'text-surface-700 dark:text-surface-300'} hover:bg-sidebar-accent/50`);catBtn.innerHTML=`${icon(item.icon,`h-4 w-4 shrink-0 ${isCatActive(item)?'text-brand-600 dark:text-brand-400':'text-muted-foreground'}`)}<span class="flex-1 truncate">${item.label}</span>${item.badge?`<span class="text-xs">${item.badge}</span>`:''}${icon('chevron-right',`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${expanded?'rotate-90':''}`)}`;catBtn.addEventListener('click',()=>{if(expandedCats.has(item.id))expandedCats.delete(item.id);else expandedCats.add(item.id);saveExpanded();renderNav();});wrap.appendChild(catBtn);if(expanded){const cw=el('div','anim-fade mt-0.5 mb-1 ml-[14px] border-l border-sidebar-border pl-1 space-y-px');item.children.forEach(ch=>{const active=currentRoute===ch.id;const cb=el('button',`group/sub flex w-full items-center gap-2 rounded-md py-1.5 pl-2.5 pr-2 text-left text-[13px] transition-all min-h-[32px] ${active?'font-medium text-brand-700 bg-brand-50 dark:text-brand-300 dark:bg-brand-500/15':'text-surface-600 hover:text-surface-800 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-200'}`);let badge='';if(ch.badge)badge+=`<span class="rounded bg-brand-600 px-1 py-0.5 text-[9px] font-bold text-white">${ch.badge}</span>`;if(ch.danger)badge+=`<span class="text-amber-500">${icon('alert-triangle','h-3 w-3')}</span>`;cb.innerHTML=`<span class="flex-1 truncate">${ch.label}</span>${badge}`;cb.addEventListener('click',()=>navigate(ch.id));cw.appendChild(cb);});wrap.appendChild(cw);}nav.appendChild(wrap);}});refreshIcons();}
+function isCatActive(cat){return cat.children&&cat.children.some(c=>c.id===currentRoute);}
+function makeLeafNav(item){const active=currentRoute===item.id;const a=el('button','group relative flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-[13px] transition-colors');if(active){a.classList.add('bg-sidebar-accent','text-sidebar-accent-foreground','font-medium');a.innerHTML+=`<span class="nav-active-bar"></span>`;}else a.classList.add('text-sidebar-foreground/80','hover:bg-sidebar-accent/50');a.innerHTML+=`${icon(item.icon,`h-4 w-4 shrink-0 ${active?'text-brand-600 dark:text-brand-400':'text-muted-foreground'}`)}<span class="flex-1 truncate">${item.label}</span>`;a.addEventListener('click',()=>navigate(item.id));return a;}
+function makeCollapsedItem(item){const active=currentRoute===item.id;const wrap=el('div','group relative');const btn=el('button',`relative flex w-full items-center justify-center rounded-md py-2 transition-colors ${active?'bg-brand-50 text-brand-600 dark:bg-brand-500/15 dark:text-brand-400':'text-muted-foreground hover:bg-sidebar-accent/50'}`);btn.innerHTML=icon(item.icon,'h-5 w-5');btn.title=item.label;if(active)btn.innerHTML+=`<span class="absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-r bg-brand-500"></span>`;const fly=el('div','flyout hidden group-hover:block');fly.innerHTML=`<div class="anim-slide-down rounded-lg border border-border bg-card px-3 py-1.5 text-[13px] font-medium shadow-xl whitespace-nowrap ${active?'text-brand-700 dark:text-brand-300':'text-surface-700 dark:text-surface-300'}">${item.label}</div>`;wrap.appendChild(btn);wrap.appendChild(fly);btn.addEventListener('click',()=>navigate(item.id));return wrap;}
+function toggleCollapse(){sidebarCollapsed=!sidebarCollapsed;localStorage.setItem('ia.sidebarCollapsed',sidebarCollapsed);applySidebarState();renderNav();}
+function applySidebarState(){
+  const sb=$('#sidebar');const c=sidebarCollapsed;
+  sb.classList.toggle('w-60',!c);sb.classList.toggle('w-14',c);
+  // 收起時：sidebar 允許 overflow 可見（flyout 飄出）；展開時隱藏溢出
+  sb.classList.toggle('overflow-x-hidden',!c);sb.classList.toggle('overflow-visible',c);
+  // sidebar header：收起時隱藏 logo+標題、置中 header
+  $('#sidebarLogo').classList.toggle('hidden',c);
+  $('#sidebarTitle').classList.toggle('hidden',c);
+  $('#sidebarHeader').classList.toggle('justify-center',c);
+  $('#sidebarHeader').classList.toggle('px-4',!c);
+  if(c)$('#sidebarHeader').classList.remove('px-4');
+  // user block：收起時隱藏文字
+  $('#userBlock').classList.toggle('hidden',c);
+  // topbar 按鈕 icon：收起時顯示「展開」箭頭
+  const btn=$('#collapseToggle');
+  if(btn){btn.firstElementChild.setAttribute('data-lucide',c?'panel-left-open':'panel-left-close');btn.title=c?'展開側欄 (⌘B)':'收合側欄 (⌘B)';}
+  refreshIcons();
+}
+function saveExpanded(){localStorage.setItem('ia.expandedCats',JSON.stringify([...expandedCats]));}
+
+/* ============================================================ 路由 + Skeleton ============================================================ */
+function navigate(routeId){const item=LEAF_INDEX[routeId];if(!item||!item.render)return;closeDrawer();const outlet=$('#outlet');outlet.innerHTML=renderSkeleton();outlet.scrollTop=0;if(item._parent)expandedCats.add(item._parent);saveExpanded();currentRoute=routeId;selectedRows.clear();setTimeout(()=>{outlet.innerHTML='';outlet.appendChild(item.render());renderNav();renderCrumb(item);outlet.scrollTop=0;refreshIcons();},280);}
+function renderSkeleton(){return `<div class="space-y-4"><div class="flex items-start justify-between"><div class="space-y-2"><div class="skeleton h-6 w-48"></div><div class="skeleton h-4 w-72"></div></div><div class="skeleton h-8 w-28"></div></div><div class="grid grid-cols-4 gap-4">${Array(4).fill(0).map(()=>`<div class="rounded-lg border border-border bg-card p-4 space-y-2"><div class="skeleton h-3 w-20"></div><div class="skeleton h-6 w-24"></div><div class="skeleton h-3 w-16"></div></div>`).join('')}</div><div class="rounded-lg border border-border bg-card overflow-hidden">${Array(6).fill(0).map(()=>`<div class="flex items-center gap-4 border-t border-border px-4 py-3"><div class="skeleton h-4 w-24"></div><div class="skeleton h-4 flex-1 max-w-[200px]"></div><div class="skeleton h-4 w-20"></div><div class="skeleton h-4 w-16"></div><div class="skeleton h-6 w-16 rounded-full"></div></div>`).join('')}</div></div>`;}
+function renderCrumb(item){const c=$('#crumb');c.innerHTML='';const home=el('span','hover:text-foreground cursor-pointer','網紅分潤後台');home.addEventListener('click',()=>navigate('dashboard'));c.appendChild(home);if(item._parent){const p=IA.find(i=>i.id===item._parent);c.appendChild(el('span','','/'));c.appendChild(el('span','text-surface-400',p.label));}c.appendChild(el('span','','/'));c.appendChild(el('span','font-medium text-foreground',item.label));}
+
+/* ============================================================ 共用元件 ============================================================ */
+function pageHeader(t,s,a=''){return `<div class="mb-5 flex items-start justify-between gap-4"><div><h1 class="text-xl font-semibold text-surface-900 dark:text-surface-50">${t}</h1>${s?`<p class="mt-0.5 text-sm text-muted-foreground">${s}</p>`:''}</div>${a?`<div class="flex items-center gap-2">${a}</div>`:''}</div>`;}
+function btn(l,v='secondary',i='',x=''){const vs={primary:'bg-brand-600 text-white hover:bg-brand-700',secondary:'bg-surface-100 text-surface-700 hover:bg-surface-200 dark:bg-surface-200 dark:hover:bg-surface-300',ghost:'text-surface-600 hover:bg-surface-100 dark:text-surface-400 dark:hover:bg-surface-200',danger:'bg-destructive text-white hover:opacity-90',outline:'border border-border bg-card text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200'};return `<button class="inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors ${vs[v]} ${x}">${i?icon(i):''}${l}</button>`;}
+function card(c='',h=''){return `<div class="rounded-lg border border-border bg-card ${c}">${h}</div>`;}
+function table(h,r){return `<div class="overflow-x-auto scrollbar-thin"><table class="w-full border-collapse text-sm"><thead><tr>${h.map(x=>typeof x==='string'?`<th class="whitespace-nowrap px-4 py-2.5 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">${x}</th>`:x).join('')}</tr></thead><tbody>${r.map(x=>`<tr class="border-t border-border hover:bg-surface-50 dark:hover:bg-surface-100/50">${x}</tr>`).join('')}</tbody></table></div>`;}
+function filterChips(cs){return `<div class="mb-3 flex flex-wrap gap-1.5">${cs.map((c,i)=>`<button class="rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${i===0?'border-brand-500 bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300':'border-border bg-card text-muted-foreground hover:bg-surface-100 dark:hover:bg-surface-200'}">${c}</button>`).join('')}</div>`;}
+function emptyState(i,t,d,a='',f=''){return `<div class="flex flex-col items-center justify-center py-16 text-center"><div class="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-surface-100 text-muted-foreground dark:bg-surface-200">${icon(i,'h-6 w-6')}</div><h3 class="text-sm font-medium text-surface-900 dark:text-surface-50">${t}</h3><p class="mt-1 text-sm text-muted-foreground">${d}</p>${a?`<button onclick="${f}" class="mt-4">${btn(a,'primary',i)}</button>`:''}</div>`;}
+function sortableHeader(label,col){const active=orderSort.col===col;const dir=active?orderSort.dir:'';return `<th class="whitespace-nowrap px-4 py-2.5 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><button onclick="setSort('${col}')" class="inline-flex items-center gap-1 hover:text-foreground ${active?'text-brand-600 dark:text-brand-400':''}">${label}${active?icon(dir==='asc'?'chevron-up':'chevron-down','h-3 w-3'):icon('chevrons-up-down','h-3 w-3 opacity-30')}</button></th>`;}
+function setSort(col){if(orderSort.col===col)orderSort.dir=orderSort.dir==='asc'?'desc':'asc';else{orderSort.col=col;orderSort.dir='desc';}navigate('all-orders');}
+
+/* 批次 */
+function toggleRow(id,c){if(c)selectedRows.add(id);else selectedRows.delete(id);updateBulkBar();}
+function toggleSelectAll(cb,pfx){$$('.row-cb').forEach(c=>{const id=c.dataset.id;if(id.startsWith(pfx)){c.checked=cb.checked;if(cb.checked)selectedRows.add(id);else selectedRows.delete(id);}});updateBulkBar();}
+function updateBulkBar(){const b=$('#bulkBar');if(!b)return;b.querySelector('[data-count]').textContent=selectedRows.size;b.hidden=selectedRows.size===0;}
+function clearSelection(){selectedRows.clear();navigate(currentRoute);}
+function bulkBar(actions){return `<div id="bulkBar" data-bulk-bar ${selectedRows.size===0?'hidden':''} class="anim-fade fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl border border-border bg-card px-4 py-2.5 shadow-xl"><span class="flex items-center gap-1.5 text-sm font-medium"><span data-count class="flex h-5 w-5 items-center justify-center rounded-full bg-brand-600 text-[11px] text-white">${selectedRows.size}</span>已選取</span><div class="h-5 w-px bg-border"></div>${actions.map(a=>btn(a.label,a.v||'secondary',a.icon,'bulk-action text-xs')).join('')}<button onclick="clearSelection()" class="text-xs text-muted-foreground hover:text-foreground">清除</button></div>`;}
+function wireBulk(){$$('.bulk-action').forEach(b=>b.addEventListener('click',()=>{const label=b.textContent.trim();const cnt=selectedRows.size;confirmDialog({title:`${label}？`,message:`即將對選取的 ${cnt} 個項目執行「${label}」。`,confirmLabel:label,danger:label.includes('下架')||label.includes('停用'),onConfirm:()=>{toast(`已完成 ${cnt} 項${label}`,'success');clearSelection();}});}));}
+
+/* 列操作（上下移、編輯、刪除、隱藏）— 用於有序列的表格 */
+// custom actions: [{icon,label,onclick,tone}] —— tone: brand|amber|blue|danger|ghost
+function rowActions({onUp,onDown,onEdit,onDelete,onHide,hidden=false,custom=[]}){
+  const toneCls={brand:'hover:text-brand-600',amber:'hover:text-amber-600',blue:'hover:text-blue-600',danger:'hover:text-destructive',ghost:'hover:text-foreground'};
+  const iconBtn=({icon:i,label,onclick,tone='ghost'})=>`<button onclick="${onclick||''}" class="rounded p-1 text-muted-foreground hover:bg-surface-100 dark:hover:bg-surface-200 ${toneCls[tone]||''}" title="${label}">${icon(i,'h-3.5 w-3.5')}</button>`;
+  return `<div class="flex items-center gap-0.5">
+    ${onUp?iconBtn({icon:'arrow-up',label:'上移',onclick:onUp}):''}
+    ${onDown?iconBtn({icon:'arrow-down',label:'下移',onclick:onDown}):''}
+    ${custom.map(iconBtn).join('')}
+    ${onEdit?iconBtn({icon:'pencil',label:'編輯',onclick:onEdit,tone:'brand'}):''}
+    ${onDelete?iconBtn({icon:'trash-2',label:'刪除',onclick:onDelete,tone:'danger'}):''}
+    ${onHide!=null?iconBtn({icon:hidden?'eye-off':'eye',label:hidden?'顯示':'隱藏',onclick:onHide}):''}
+  </div>`;
+}
+
+/* ============================================================ Charts (pure CSS/SVG) ============================================================ */
+function barChart(data,opts={}){
+  const max=Math.max(...data.map(d=>d.amt));
+  const w=opts.width||100; const barW=`${100/data.length}%`;
+  const bars=data.map(d=>{
+    const h=Math.round(d.amt/max*100);
+    const isLast=d===data[data.length-1];
+    return `<div class="group relative flex flex-1 flex-col items-center justify-end" style="height:100%"><div class="absolute -top-7 left-1/2 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-surface-900 px-2 py-1 text-[10px] text-white group-hover:block dark:bg-surface-700 z-10">NT$ ${(d.amt*10000).toLocaleString()}</div><div class="vbar w-full max-w-[24px] rounded-t ${isLast?'bg-brand-500':'bg-brand-300/70 dark:bg-brand-500/40'} group-hover:bg-brand-600 transition-colors" style="height:${h}%"></div></div>`;
+  }).join('');
+  const labels=data.map((d,i)=>i%2===0?`<span class="flex-1 text-center text-[9px] text-muted-foreground">${d.date.slice(5)}</span>`:'').join('');
+  return `<div class="flex h-40 items-end gap-0.5 px-1">${bars}</div><div class="mt-1.5 flex">${labels}</div>`;
+}
+function donutChart(data){
+  const total=data.reduce((s,d)=>s+d.value,0);
+  let acc=0;const R=60;const C=2*Math.PI*R;
+  const segs=data.map(d=>{const pct=d.value/total;const len=pct*C;const off=-acc*C;acc+=pct;return `<circle cx="80" cy="80" r="${R}" fill="none" stroke="${d.color}" stroke-width="24" stroke-dasharray="${len} ${C-len}" stroke-dashoffset="${off}" transform="rotate(-90 80 80)" class="bar-grow"/>`;}).join('');
+  return `<svg width="160" height="160" viewBox="0 0 160 160">${segs}<text x="80" y="76" text-anchor="middle" class="fill-surface-900 dark:fill-surface-50 text-xl font-semibold">${total}</text><text x="80" y="94" text-anchor="middle" class="fill-surface-500 text-[10px]">總訂單</text></svg>`;
+}
+function hBarRow({label,value,max,color='#1a6e4a',suffix='',sublabel=''}){
+  const pct=Math.round(value/max*100);
+  return `<div class="flex items-center gap-3 py-1.5"><div class="w-28 shrink-0 truncate text-xs font-medium">${label}</div><div class="flex-1"><div class="h-5 overflow-hidden rounded bg-surface-100 dark:bg-surface-200"><div class="bar-grow flex h-full items-center justify-end rounded px-1.5 text-[10px] font-medium text-white" style="width:${Math.max(pct,8)}%;background:${color}">${value}${suffix}</div></div>${sublabel?`<div class="mt-0.5 text-[10px] text-muted-foreground">${sublabel}</div>`:''}</div></div>`;
+}
+
+/* ============================================================ 儀表板 v4（含 charts）============================================================ */
+function renderDashboard(){
+  const w=el('div');
+  w.innerHTML=pageHeader('儀表板','今日總覽 · 2026/07/08',btn('匯出報表','outline','download'));
+
+  // KPI 卡
+  const kpi=el('div','mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4');
+  MOCK.kpi.forEach(k=>kpi.insertAdjacentHTML('beforeend',`<button onclick="navigate('${k.route}')" class="text-left rounded-lg border border-border bg-card p-4 transition-all hover:border-brand-300 hover:shadow-sm dark:hover:border-brand-700"><div class="flex items-center justify-between"><span class="text-xs text-muted-foreground">${k.label}</span>${icon(k.icon,'h-4 w-4 text-muted-foreground')}</div><div class="mt-2 text-xl font-semibold tabular text-surface-900 dark:text-surface-50">${k.value}</div><div class="mt-1 text-xs ${k.up?'text-brand-600 dark:text-brand-400':'text-amber-600 dark:text-amber-400'}">${k.delta}</div></button>`));
+  w.appendChild(kpi);
+
+  // 待處理工作面板
+  const pending=el('div','mb-5 rounded-lg border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-500/30 dark:bg-amber-500/5');
+  const tones={amber:'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',red:'bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400',blue:'bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',brand:'bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'};
+  pending.innerHTML=`<div class="mb-2.5 flex items-center gap-2"><span class="text-sm font-semibold">${icon('alert-circle','inline h-4 w-4 align-text-bottom text-amber-600 dark:text-amber-400')} 待處理工作</span><span class="text-xs text-muted-foreground">點擊直接處理</span></div><div class="grid grid-cols-2 gap-2 lg:grid-cols-4">${MOCK.pendingWork.map(p=>`<button onclick="navigate('${p.route}')" class="flex items-center gap-2.5 rounded-lg border border-border bg-card px-3 py-2.5 text-left transition-all hover:border-brand-300 hover:shadow-sm dark:hover:border-brand-700"><div class="flex h-8 w-8 items-center justify-center rounded-md ${tones[p.tone]}">${icon(p.icon,'h-4 w-4')}</div><div><div class="text-lg font-bold tabular leading-none">${p.count}</div><div class="text-[11px] text-muted-foreground">${p.label}</div></div></button>`).join('')}</div>`;
+  w.appendChild(pending);
+
+  // charts 區
+  const charts=el('div','mb-5 grid gap-4 lg:grid-cols-3');
+  // 成交趨勢 bar chart
+  charts.insertAdjacentHTML('beforeend',card('p-4 lg:col-span-2',`<div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">14 日成交趨勢</h2><p class="text-xs text-muted-foreground">每日帶貨成交額（萬元）</p></div><div class="flex items-center gap-1.5 text-xs"><span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-brand-500"></span>近期</span><span class="flex items-center gap-1"><span class="h-2 w-2 rounded-full bg-brand-300/70 dark:bg-brand-500/40"></span>歷史</span></div></div>${barChart(MOCK.salesTrend)}`));
+  // 活動佔比 donut
+  const donutData=MOCK.campaignShare;
+  const maxShare=Math.max(...donutData.map(d=>d.value));
+  charts.insertAdjacentHTML('beforeend',card('p-4',`<div class="mb-3"><h2 class="text-sm font-semibold">活動成交佔比</h2><p class="text-xs text-muted-foreground">本週訂單分佈</p></div><div class="flex items-center gap-3"><div class="shrink-0">${donutChart(donutData)}</div><div class="min-w-0 flex-1 space-y-1">${donutData.map(d=>`<div class="flex items-center gap-2 text-xs"><span class="h-2.5 w-2.5 shrink-0 rounded-sm" style="background:${d.color}"></span><span class="flex-1 truncate">${d.name}</span><span class="tabular font-medium">${d.pct}%</span></div>`).join('')}</div></div>`));
+  w.appendChild(charts);
+
+  // Top 網紅 + 快速入口
+  const bottom=el('div','grid gap-4 lg:grid-cols-3');
+  const topInf=MOCK.topInfluencers;const maxSales=topInf[0].sales;
+  bottom.insertAdjacentHTML('beforeend',card('p-4 lg:col-span-2',`<div class="mb-2 flex items-center justify-between"><h2 class="text-sm font-semibold">Top 網紅帶貨排行</h2><button onclick="navigate('influencers')" class="text-xs font-medium text-brand-600 hover:underline dark:text-brand-400">看全部 →</button></div><div class="space-y-1">${topInf.map((t,i)=>hBarRow({label:`${i+1}. ${t.name}`,value:Math.round(t.sales/10000),max:Math.round(maxSales/10000),sublabel:`${t.orders} 筆訂單 · 分潤 ${t.rate}`,suffix:'萬'})).join('')}</div>`));
+  // 快速入口
+  const actions=[{label:'訂單確認',desc:'23 筆',icon:'clipboard-check',route:'order-confirm'},{label:'帶貨訂單',desc:'1 爭議',icon:'target',route:'attributed'},{label:'出貨準備',desc:'47 筆',icon:'truck',route:'fulfillment'},{label:'請款批次',desc:'1 待核',icon:'banknote',route:'payouts'}];
+  bottom.insertAdjacentHTML('beforeend',card('p-4',`<h2 class="mb-2 text-sm font-semibold">快速入口</h2><div class="space-y-1.5">${actions.map(a=>`<button onclick="navigate('${a.route}')" class="flex w-full items-center gap-2 rounded-md border border-border px-2.5 py-2 text-left text-[13px] transition-colors hover:border-brand-300 hover:bg-brand-50/50 dark:hover:bg-brand-500/10">${icon(a.icon,'h-4 w-4 text-muted-foreground')}<span class="flex-1 font-medium">${a.label}</span><span class="text-xs text-muted-foreground">${a.desc}</span></button>`).join('')}</div>`));
+  w.appendChild(bottom);
+  return w;
+}
+
+/* ============================================================ 商品管理 ============================================================ */
+function renderProducts(){const w=el('div');w.innerHTML=pageHeader('商品管理','商品、庫存與圖片資產',`<button onclick="openProductForm()" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('plus','h-4 w-4')}新增商品</button>`);w.innerHTML+=filterChips(['全部','啟用中','低庫存','缺貨']);w.insertAdjacentHTML('beforeend',card('overflow-hidden',table([`<input type="checkbox" id="selectAll" class="rounded" onchange="toggleSelectAll(this,'P-')">`,'商品','SKU','價格','庫存','訂單數','狀態','操作'],MOCK.products.map(p=>{const isOn=p.status==='active'||p.status==='low';const toggleFn='toggleProductStatus(\''+p.id+'\')';const editFn='openProductForm(\''+p.id+'\')';const delFn='deleteProduct(\''+p.id+'\')';const hideFn='toggleProductHide(\''+p.id+'\')';const actions=rowActions({custom:[isOn?{icon:'arrow-down',label:'下架',onclick:toggleFn,tone:'amber'}:{icon:'arrow-up',label:'上架',onclick:toggleFn,tone:'brand'}],onEdit:editFn,onDelete:delFn,onHide:hideFn,hidden:p.hidden});return `<td class="px-4 py-2.5"><input type="checkbox" class="row-cb rounded" data-id="${p.id}" ${selectedRows.has(p.id)?'checked':''} onchange="toggleRow('${p.id}',this.checked)"></td><td class="px-4 py-2.5 cursor-pointer" onclick="openProductDrawer('${p.id}')"><div class="flex items-center gap-2.5"><span class="flex h-8 w-8 items-center justify-center rounded bg-surface-100 text-base dark:bg-surface-200">${p.image}</span><div><div class="font-medium text-surface-900 dark:text-surface-50">${p.name}</div><div class="text-[11px] text-muted-foreground">${p.id}</div></div></div></td><td class="px-4 py-2.5 font-mono text-xs text-muted-foreground">${p.sku}</td><td class="px-4 py-2.5 tabular">${money(p.price)}</td><td class="px-4 py-2.5 tabular ${p.stock===0?'text-red-600 dark:text-red-400 font-medium':p.stock<100?'text-amber-600 dark:text-amber-400':''}">${p.stock}</td><td class="px-4 py-2.5 tabular">${p.orderCount}</td><td class="px-4 py-2.5">${statusBadge(p.status)}</td><td class="px-4 py-2.5">${actions}</td>`}))));w.insertAdjacentHTML('beforeend',bulkBar([{label:'上架',icon:'arrow-up'},{label:'下架',icon:'arrow-down'},{label:'批次調庫存',icon:'package'}]));setTimeout(wireBulk,0);return w;}
+function toggleProductStatus(id){const p=MOCK.products.find(x=>x.id===id);if(!p)return;const wasOn=p.status==='active'||p.status==='low';if(wasOn){confirmDialog({title:'下架商品？',message:`下架後「${p.name}」將不會出現在新的檔期中。現有訂單不受影響。`,confirmLabel:'確認下架',danger:false,onConfirm:()=>{p.status='oos';toast('商品已下架','warning',{detail:p.name});navigate('products');}});}else{p.status=p.stock>0?(p.stock<100?'low':'active'):'oos';toast('商品已上架','success',{detail:p.name});navigate('products');}}
+function toggleProductHide(id){const p=MOCK.products.find(x=>x.id===id);if(!p)return;p.hidden=!p.hidden;toast(p.hidden?'商品已隱藏':'商品已顯示','info',{detail:p.name,duration:2000});navigate('products');}
+function openProductForm(id){const p=id?MOCK.products.find(x=>x.id===id):null;formDialog({title:p?'編輯商品':'新增商品',subtitle:p?p.name:'建立新商品',values:p?{name:p.name,price:p.price,stock:p.stock,sku:p.sku,desc:p.desc,image:p.image}:null,fields:[{key:'image',label:'商品圖片',type:'image'},{key:'name',label:'商品名稱',required:true},{key:'sku',label:'SKU',required:true},{key:'price',label:'售價（NT$）',type:'number',required:true,min:0,step:10},{key:'stock',label:'庫存數量',type:'number',required:true,min:0},{key:'desc',label:'商品描述',type:'textarea'}],onSave:(data)=>{const img=data.image==='[uploaded]'||!data.image?'📦':data.image;if(p){Object.assign(p,data,{image:img});toast('商品已更新','success',{detail:data.name});}else{MOCK.products.push({id:'P-'+(2406+MOCK.products.length),...data,image:img,status:data.stock>0?'active':'oos',cost:0,orderCount:0,hidden:false});toast('商品已新增','success',{detail:data.name});}navigate('products');}});}
+function deleteProduct(id){const p=MOCK.products.find(x=>x.id===id);confirmDialog({title:'刪除商品？',message:`確定要刪除「${p.name}」？`,detail:`SKU: ${p.sku} · 庫存 ${p.stock}`,confirmLabel:'確認刪除',onConfirm:()=>{MOCK.products=MOCK.products.filter(x=>x.id!==id);toast('商品已刪除','success',{detail:p.name});navigate('products');}});}
+function openProductDrawer(id){const p=MOCK.products.find(x=>x.id===id);if(!p)return;const margin=Math.round((1-p.cost/p.price)*100);openDrawer({title:p.name,subtitle:`${p.id} · ${p.sku}`,bodyHtml:`<div class="mb-4 flex items-center gap-3"><span class="flex h-14 w-14 items-center justify-center rounded-lg bg-surface-100 text-3xl dark:bg-surface-200">${p.image}</span>${statusBadge(p.status)}</div><dl class="space-y-2.5 text-sm"><div class="flex justify-between"><dt class="text-muted-foreground">售價</dt><dd class="tabular font-medium">${money(p.price)}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">成本</dt><dd class="tabular">${money(p.cost)}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">毛利率</dt><dd class="tabular font-medium text-brand-600 dark:text-brand-400">${margin}%</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">庫存</dt><dd class="tabular ${p.stock===0?'text-red-600':p.stock<100?'text-amber-600':''} font-medium">${p.stock}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">訂單數</dt><dd class="tabular">${p.orderCount}</dd></div></dl><div class="mt-4 rounded-md bg-surface-50 p-3 text-sm text-muted-foreground dark:bg-surface-100">${p.desc}</div>`,footerHtml:`<div class="flex gap-2"><button onclick="closeDrawer();openProductForm('${p.id}')" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('edit','h-4 w-4')}編輯商品</button>${btn('庫存調整','outline','package')}</div>`});}
+
+/* ============================================================ 網紅名單（含折扣碼、訂單數）============================================================ */
+let infFilters={status:new Set()};
+let infSort={col:'totalSales',dir:'desc'};
+function renderInfluencers(){
+  const w=el('div');
+  w.innerHTML=pageHeader('網紅名單','合作網紅、專屬連結與分潤比例',`<button onclick="openInfluencerForm()" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('user-plus','h-4 w-4')}新增網紅</button>`);
+  // 篩選
+  const fb=el('div','mb-3 flex flex-wrap items-center gap-2');
+  fb.innerHTML=multiSelectFilter({id:'msfInfStatus',label:'狀態',options:[{value:'active',label:'合作中'},{value:'paused',label:'暫停'}],selectedSet:infFilters.status,onChangeFn:'onInfMSFChange',clearFn:'clearInfMSF'})+`<div class="ml-auto text-xs text-muted-foreground">${getFilteredInfluencers().length} / ${MOCK.influencers.length} 位</div>`;
+  w.appendChild(fb);
+  const filtered=getFilteredInfluencers();
+  const sh=(label,col)=>{const active=infSort.col===col;return `<th class="whitespace-nowrap px-4 py-2.5 text-left align-middle text-[11px] font-semibold uppercase tracking-wide text-muted-foreground"><button onclick="setInfSort('${col}')" class="inline-flex items-center gap-1 hover:text-foreground ${active?'text-brand-600 dark:text-brand-400':''}">${label}${active?icon(infSort.dir==='asc'?'chevron-up':'chevron-down','h-3 w-3'):icon('chevrons-up-down','h-3 w-3 opacity-30')}</button></th>`;};
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table([`<input type="checkbox" id="selectAll" class="rounded" onchange="toggleSelectAll(this,'INF-')">`,'網紅',sh('粉絲數','followers'),sh('訂單數','orderCount'),sh('轉化率','convRate'),sh('檔期數','campaigns'),sh('累計帶貨','totalSales'),'分潤','狀態','操作'],filtered.map(i=>{const editFn='openInfluencerForm(\''+i.id+'\')';const delFn='deleteInfluencer(\''+i.id+'\')';const actions=rowActions({onEdit:editFn,onDelete:delFn});return `<td class="px-4 py-2.5"><input type="checkbox" class="row-cb rounded" data-id="${i.id}" ${selectedRows.has(i.id)?'checked':''} onchange="toggleRow('${i.id}',this.checked)"></td><td class="px-4 py-2.5 cursor-pointer" onclick="openInfluencerDrawer('${i.id}')"><div class="flex items-center gap-2.5"><div class="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">${i.name[0]}</div><div><div class="font-medium text-surface-900 dark:text-surface-50">${i.name}</div><div class="text-[11px] text-muted-foreground">${i.handle}</div></div></div></td><td class="px-4 py-2.5 tabular">${i.followers.toLocaleString()}</td><td class="px-4 py-2.5 tabular font-medium">${i.orderCount}</td><td class="px-4 py-2.5 tabular text-xs ${parseFloat(i.convRate)>0.3?'text-brand-600 dark:text-brand-400':''}">${i.convRate}</td><td class="px-4 py-2.5 tabular">${i.campaigns}</td><td class="px-4 py-2.5 tabular font-medium">${money(i.totalSales)}</td><td class="px-4 py-2.5"><span class="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">${i.commissionRate}</span></td><td class="px-4 py-2.5">${statusBadge(i.status)}</td><td class="px-4 py-2.5">${actions}</td>`;}))));
+  w.insertAdjacentHTML('beforeend',bulkBar([{label:'啟用',icon:'check'},{label:'暫停',icon:'pause'},{label:'匯出',icon:'download'}]));
+  setTimeout(wireBulk,0);
+  return w;
+}
+function getFilteredInfluencers(){return MOCK.influencers.filter(i=>{if(infFilters.status.size&&!infFilters.status.has(i.status))return false;return true;}).sort((a,b)=>{const dir=infSort.dir==='asc'?1:-1;let va=a[infSort.col],vb=b[infSort.col];if(infSort.col==='convRate'){va=parseFloat(a.convRate);vb=parseFloat(b.convRate);}if(typeof va==='string')return va.localeCompare(vb,'zh-TW')*dir;return(va-vb)*dir;});}
+function setInfSort(col){if(infSort.col===col)infSort.dir=infSort.dir==='asc'?'desc':'asc';else{infSort.col=col;infSort.dir='desc';}navigate('influencers');}
+function onInfMSFChange(id,cb){if(cb.checked)infFilters.status.add(cb.value);else infFilters.status.delete(cb.value);navigate('influencers');}
+function clearInfMSF(id){infFilters.status.clear();navigate('influencers');}
+function copyCode(code){toast(`折扣碼 ${code} 已複製`,'success',{detail:'可貼至檔期規則或分享給網紅'});}
+function openInfluencerForm(id){const i=id?MOCK.influencers.find(x=>x.id===id):null;formDialog({title:i?'編輯網紅':'新增網紅',subtitle:i?i.name:'建立新的合作網紅',values:i?{name:i.name,handle:i.handle,email:i.email,followers:i.followers,commissionRate:i.commissionRate,discountCode:i.discountCode,bank:i.bank}:null,fields:[{key:'name',label:'網紅名稱',required:true},{key:'handle',label:'社群帳號',required:true,placeholder:'@handle'},{key:'email',label:'聯絡 Email',required:true},{key:'followers',label:'粉絲數',type:'number',min:0},{key:'commissionRate',label:'分潤比例',type:'select',options:['10%','12%','15%','18%','20%']},{key:'discountCode',label:'專屬折扣碼',placeholder:'自動產生或自訂'},{key:'bank',label:'收款帳戶',placeholder:'銀行 + 末4碼'}],onSave:(data)=>{if(i){Object.assign(i,data);toast('網紅資料已更新','success',{detail:data.name});}else{MOCK.influencers.push({id:'INF-'+String(MOCK.influencers.length+1).padStart(2,'0'),...data,status:'active',totalSales:0,campaigns:0,joinedAt:'2026/07/08',orderCount:0,clicks:0,convRate:'—'});toast('網紅已新增','success',{detail:data.name});}navigate('influencers');}});}
+function deleteInfluencer(id){const i=MOCK.influencers.find(x=>x.id===id);confirmDialog({title:'移除網紅？',message:`確定要將「${i.name}」移除？相關分潤紀錄保留但標記「已移除」。`,detail:`${i.handle} · 累計 ${money(i.totalSales)}`,confirmLabel:'確認移除',onConfirm:()=>{MOCK.influencers=MOCK.influencers.filter(x=>x.id!==id);toast('網紅已移除','success');navigate('influencers');}});}
+function openInfluencerDrawer(id){const i=MOCK.influencers.find(x=>x.id===id);if(!i)return;openDrawer({title:i.name,subtitle:`${i.handle} · ${i.id}`,bodyHtml:`<div class="mb-4 flex items-center gap-3"><div class="flex h-14 w-14 items-center justify-center rounded-full bg-brand-100 text-xl font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">${i.name[0]}</div>${statusBadge(i.status)}</div><dl class="space-y-2.5 text-sm"><div class="flex justify-between"><dt class="text-muted-foreground">粉絲數</dt><dd class="tabular font-medium">${i.followers.toLocaleString()}</dd></div><div class="flex justify-between items-center"><dt class="text-muted-foreground">專屬折扣碼</dt><dd><button onclick="copyCode('${i.discountCode}')" class="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">${i.discountCode}${icon('copy','h-3 w-3')}</button></dd></div><div class="flex justify-between"><dt class="text-muted-foreground">點擊數</dt><dd class="tabular">${i.clicks.toLocaleString()}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">訂單數</dt><dd class="tabular font-medium">${i.orderCount} 筆</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">轉化率</dt><dd class="tabular font-medium ${i.convRate>'0.3%'?'text-brand-600 dark:text-brand-400':''}">${i.convRate}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">累計帶貨金額</dt><dd class="tabular font-medium">${money(i.totalSales)}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">分潤比例</dt><dd><span class="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">${i.commissionRate}</span></dd></div><div class="flex justify-between"><dt class="text-muted-foreground">Email</dt><dd class="text-xs">${i.email}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">收款帳戶</dt><dd class="text-xs">${i.bank}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">合作起始</dt><dd class="text-xs">${i.joinedAt}</dd></div></dl>`,footerHtml:`<div class="flex gap-2"><button onclick="closeDrawer();openInfluencerForm('${i.id}')" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('edit','h-4 w-4')}編輯資料</button><button onclick="closeDrawer();navigate('attributed')" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[13px] font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200">${icon('target','h-4 w-4')}查看帶貨明細</button></div>`});}
+
+/* ============================================================ 檔期活動（含分析詳情）============================================================ */
+function renderCampaigns(){const w=el('div');w.innerHTML=pageHeader('檔期活動','活動期間、網紅與商品範圍',`<button onclick="openCampaignForm()" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('calendar-plus','h-4 w-4')}建立檔期</button>`);MOCK.campaigns.forEach(c=>{const pct=c.budget?Math.round(c.spent/c.budget*100):0;const roi=c.spent>0?(c.revenue/c.spent).toFixed(1):'—';w.insertAdjacentHTML('beforeend',`<div class="group mb-3 cursor-pointer rounded-lg border border-border bg-card p-4 transition-all hover:border-brand-300 hover:shadow-sm dark:hover:border-brand-700" onclick="openCampaignDetail('${c.id}')"><div class="flex items-start justify-between"><div class="flex items-center gap-3"><div class="flex h-10 w-10 items-center justify-center rounded-lg bg-violet-50 text-violet-600 dark:bg-violet-500/15 dark:text-violet-400">${icon('calendar-range','h-5 w-5')}</div><div><div class="flex items-center gap-2"><span class="font-medium text-surface-900 dark:text-surface-50">${c.name}</span>${statusBadge(c.status)}<span class="font-mono text-[11px] text-muted-foreground">${c.id}</span></div><div class="mt-0.5 text-xs text-muted-foreground">${c.period} · ${c.members.length} 位網紅 · ${c.products} 項商品 · ${c.orders} 筆訂單</div></div></div><div class="flex items-center gap-2"><button onclick="event.stopPropagation();openCampaignForm('${c.id}')" class="rounded p-1.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:bg-surface-100 hover:text-brand-600 dark:hover:bg-surface-200" title="編輯">${icon('pencil','h-4 w-4')}</button><div class="text-right"><div class="text-xs text-muted-foreground">ROI · 預算執行</div><div class="text-sm font-medium tabular"><span class="${roi!=='—'&&Number(roi)>=3?'text-brand-600 dark:text-brand-400':''}">${roi}x</span> · ${money(c.spent)}/${money(c.budget)}</div></div></div></div><div class="mt-3 h-1.5 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-200"><div class="h-full rounded-full bg-brand-500" style="width:${pct}%"></div></div></div>`);});return w;}
+function openCampaignDetail(id){detailCampaignId=id;navigate('campaign-detail');}
+function openCampaignForm(id){const c=id?MOCK.campaigns.find(x=>x.id===id):null;formDialog({title:c?'編輯檔期':'建立檔期',values:c?{name:c.name,period:c.period,budget:c.budget}:null,fields:[{key:'name',label:'檔期名稱',required:true},{key:'period',label:'活動期間',required:true,placeholder:'2026/08/01 – 2026/08/31'},{key:'budget',label:'預算（NT$）',type:'number',min:0,step:1000}],onSave:(data)=>{if(c){Object.assign(c,data);toast('檔期已更新','success',{detail:data.name});}else{MOCK.campaigns.push({id:'C-2026-'+String(MOCK.campaigns.length+5).padStart(2,'0'),...data,status:'scheduled',spent:0,products:0,orders:0,revenue:0,members:[]});toast('檔期已建立','success',{detail:data.name});}navigate('campaigns');}});}
+function renderCampaignDetail(){
+  const c=MOCK.campaigns.find(x=>x.id===detailCampaignId)||MOCK.campaigns[0];
+  const w=el('div');
+  // 返回 + 標題
+  w.innerHTML=`<div class="mb-4"><button onclick="navigate('campaigns')" class="mb-3 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">${icon('arrow-left','h-4 w-4')}返回檔期列表</button></div>`;
+  w.innerHTML+=pageHeader(c.name,`${c.id} · ${c.period} · ${c.members.length} 位網紅 · ${c.products} 項商品`,`<button onclick="openCampaignForm('${c.id}')" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[13px] font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200">${icon('edit','h-4 w-4')}編輯檔期</button>${btn('匯出成效','outline','download')}`);
+  // KPI 卡
+  const pct=c.budget?Math.round(c.spent/c.budget*100):0;const roi=c.spent>0?(c.revenue/c.spent).toFixed(1):'—';
+  const totalComm=c.members.reduce((s,m)=>s+m.commission,0);
+  w.insertAdjacentHTML('beforeend',`<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4"><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">總營收</div><div class="mt-1 text-lg font-semibold tabular text-brand-600 dark:text-brand-400">${money(c.revenue)}</div></div><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">總成本</div><div class="mt-1 text-lg font-semibold tabular">${money(c.spent)}</div></div><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">ROI</div><div class="mt-1 text-lg font-semibold tabular ${roi!=='—'&&Number(roi)>=3?'text-brand-600 dark:text-brand-400':''}">${roi}x</div></div><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">總分潤支出</div><div class="mt-1 text-lg font-semibold tabular text-amber-600 dark:text-amber-400">${money(totalComm)}</div></div></div>`);
+  // 預算執行
+  w.insertAdjacentHTML('beforeend',`<div class="mb-5 rounded-lg border border-border bg-card p-4"><div class="mb-1.5 flex justify-between text-sm"><span class="text-muted-foreground">預算執行</span><span class="font-medium tabular">${money(c.spent)} / ${money(c.budget)}（${pct}%）</span></div><div class="h-2 overflow-hidden rounded-full bg-surface-100 dark:bg-surface-200"><div class="h-full rounded-full bg-brand-500" style="width:${pct}%"></div></div></div>`);
+  // 網紅報表 chart + 表格
+  const maxOrders=Math.max(...c.members.map(m=>m.orders),1);
+  const chartData=c.members.filter(m=>m.orders>0).map(m=>({amt:m.orders,label:m.influencer}));
+  w.insertAdjacentHTML('beforeend',`<div class="mb-3 grid gap-4 lg:grid-cols-3">`+
+    card('p-4 lg:col-span-2',`<div class="mb-3"><h2 class="text-sm font-semibold">網紅訂單分佈</h2><p class="text-xs text-muted-foreground">各網紅帶來的訂單數</p></div>${hBarChart(chartData,{suffix:' 單'})}`)+
+    card('p-4',`<div class="mb-3"><h2 class="text-sm font-semibold">分潤佔比</h2></div>${hBarChart(c.members.filter(m=>m.commission>0).map(m=>({amt:Math.round(m.commission/1000),label:m.influencer})),{suffix:'k',color:'#e8a33d'})}`)
+  +`</div>`);
+  // 成員表（含折扣碼、訂單數，點網紅跳折扣規則）
+  const memberRows=c.members.map(m=>{
+    const inf=MOCK.influencers.find(i=>i.name===m.influencer);
+    const disc=inf?inf.discountCode:'—';
+    const cac=m.cac>0?money(m.cac):'—';
+    const cacTone=m.cac>0&&m.cac<=800?'text-brand-600 dark:text-brand-400':m.cac>1200?'text-red-600 dark:text-red-400':'';
+    return `<tr class="border-t border-border hover:bg-surface-50 dark:hover:bg-surface-100/50">
+      <td class="px-4 py-2.5"><button onclick="navigate('campaign-rules')" class="flex items-center gap-2 hover:underline"><div class="flex h-7 w-7 items-center justify-center rounded-full bg-brand-100 text-[10px] font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">${m.influencer[0]}</div><span class="text-sm font-medium text-brand-700 dark:text-brand-400">${m.influencer}</span></button></td>
+      <td class="px-4 py-2.5"><span class="inline-flex items-center gap-1 rounded-md bg-brand-50 px-2 py-0.5 font-mono text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">${disc}</span></td>
+      <td class="px-4 py-2.5 tabular font-medium">${m.orders}</td>
+      <td class="px-4 py-2.5 tabular">${money(m.revenue)}</td>
+      <td class="px-4 py-2.5 tabular text-amber-600 dark:text-amber-400">${money(m.commission)}</td>
+      <td class="px-4 py-2.5 tabular ${m.convRate>='0.6%'?'text-brand-600 dark:text-brand-400':''}">${m.convRate}</td>
+      <td class="px-4 py-2.5 tabular">${money(m.cost)}</td>
+      <td class="px-4 py-2.5 tabular font-medium ${cacTone}">${cac}</td>
+    </tr>`;
+  }).join('');
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',`<div class="flex items-center justify-between border-b border-border px-4 py-3"><h2 class="text-sm font-semibold">網紅成效明細（${c.members.length} 位）</h2><span class="text-xs text-muted-foreground">CAC = 成本 ÷ 訂單數，越低越有效率</span></div>${table(['網紅','折扣碼','訂單','營收','分潤','轉化率','成本','CAC'],[memberRows])}`));
+  return w;
+}
+// 水平條狀圖（給 campaign detail 用）
+function hBarChart(data,{suffix='',color='#1a6e4a'}={}){
+  if(!data.length)return '<div class="py-6 text-center text-sm text-muted-foreground">尚無資料</div>';
+  const max=Math.max(...data.map(d=>d.amt),1);
+  return `<div class="space-y-1.5">${data.map(d=>{const pct=Math.round(d.amt/max*100);return `<div class="flex items-center gap-3"><div class="w-28 shrink-0 truncate text-xs font-medium">${d.label}</div><div class="h-5 flex-1 overflow-hidden rounded bg-surface-100 dark:bg-surface-200"><div class="bar-grow flex h-full items-center justify-end rounded px-1.5 text-[10px] font-medium text-white" style="width:${Math.max(pct,8)}%;background:${color}">${d.amt}${suffix}</div></div></div>`;}).join('')}</div>`;
+}
+
+/* ============================================================ 折扣/分潤規則 ============================================================ */
+function renderCampaignRules(){
+  const w=el('div');
+  w.innerHTML=pageHeader('折扣 / 分潤規則','檔期 × 網紅 × 商品的折扣與分潤設定',btn('新增規則','primary','plus'));
+  // 篩選列
+  const cOpts=MOCK.campaigns.map(c=>c.name);
+  const pOpts=[...new Set(MOCK.campaignRules.map(r=>r.product))];
+  const iOpts=MOCK.influencers.map(i=>i.name);
+  const fb=el('div','mb-3 flex flex-wrap items-center gap-2');
+  fb.innerHTML=
+    multiSelectFilter({id:'msfRuleCampaign',label:'檔期',options:cOpts,selectedSet:ruleFilters.campaign,onChangeFn:'onRuleMSFChange',clearFn:'clearRuleMSF'})+
+    multiSelectFilter({id:'msfRuleProduct',label:'商品',options:pOpts,selectedSet:ruleFilters.product,onChangeFn:'onRuleMSFChange',clearFn:'clearRuleMSF'})+
+    multiSelectFilter({id:'msfRuleInf',label:'網紅',options:iOpts,selectedSet:ruleFilters.influencer,onChangeFn:'onRuleMSFChange',clearFn:'clearRuleMSF'})+
+    `<div class="ml-auto text-xs text-muted-foreground">${getFilteredRules().length} / ${MOCK.campaignRules.length} 筆</div>`;
+  w.appendChild(fb);
+  const filtered=getFilteredRules();
+  if(!filtered.length){w.appendChild(el('div','',emptyState('search-x','沒有符合的規則','試著調整篩選條件')));return w;}
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['商品','檔期','網紅','折扣','分潤類型','分潤值','備註','操作'],filtered.map(r=>`<td class="px-4 py-2.5 font-medium">${r.product}</td><td class="px-4 py-2.5 text-xs"><span class="rounded bg-violet-50 px-1.5 py-0.5 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400">${r.campaign}</span></td><td class="px-4 py-2.5"><button onclick="openInfluencerDrawerByName('${r.influencer}')" class="inline-flex items-center gap-1.5 hover:underline"><span class="flex h-5 w-5 items-center justify-center rounded-full bg-brand-100 text-[9px] font-semibold text-brand-700 dark:bg-brand-500/20 dark:text-brand-300">${r.influencer[0]}</span><span class="text-xs font-medium">${r.influencer}</span></button></td><td class="px-4 py-2.5">${r.discount==='無'?'<span class="text-muted-foreground">無</span>':`<button onclick="editRuleDiscount('${r.product}','${r.campaign}','${r.influencer}')" class="font-medium text-destructive hover:underline">${r.discount}</button>`}</td><td class="px-4 py-2.5 text-xs">${r.commissionType}</td><td class="px-4 py-2.5"><span class="rounded bg-brand-50 px-1.5 py-0.5 text-xs font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">${r.commissionValue}</span></td><td class="px-4 py-2.5 text-xs text-muted-foreground">${r.note}</td><td class="px-4 py-2.5">${rowActions({onEdit:`editRuleDiscount('${r.product}','${r.campaign}','${r.influencer}')`,onDelete:`deleteRuleByKeys('${r.product}','${r.campaign}','${r.influencer}')`})}</td>`))));
+  return w;
+}
+function getFilteredRules(){return MOCK.campaignRules.filter(r=>{if(ruleFilters.campaign.size&&!ruleFilters.campaign.has(r.campaign))return false;if(ruleFilters.product.size&&!ruleFilters.product.has(r.product))return false;if(ruleFilters.influencer.size&&!ruleFilters.influencer.has(r.influencer))return false;return true;});}
+function editRuleDiscount(product,campaign,influencer){
+  const r=MOCK.campaignRules.find(x=>x.product===product&&x.campaign===campaign&&x.influencer===influencer);if(!r)return;
+  formDialog({title:'編輯折扣 / 分潤',subtitle:`${influencer} · ${product} · ${campaign}`,values:{discount:r.discount,commissionType:r.commissionType==='百分比'?'pct':'fixed',commissionPct:r.commissionValue.replace('%',''),commissionFixed:r.commissionValue.replace(/[^0-9]/g,''),note:r.note},
+    fields:[
+      {key:'discount',label:'折扣',type:'select',options:['無','95折','9折','85折','8折','75折','7折']},
+      {key:'commissionType',label:'分潤類型',type:'select',options:[{value:'pct',label:'百分比'},{value:'fixed',label:'固定金額'}]},
+      {key:'commissionPct',label:'分潤百分比（%）',type:'number',min:0,max:50,step:1},
+      {key:'commissionFixed',label:'固定分潤金額（NT$）',type:'number',min:0,step:10},
+      {key:'note',label:'備註',type:'textarea',rows:2},
+    ],
+    onSave:(data)=>{r.discount=data.discount;r.commissionType=data.commissionType==='pct'?'百分比':'固定金額';r.commissionValue=data.commissionType==='pct'?data.commissionPct+'%':'NT$ '+data.commissionFixed+'/件';r.note=data.note||'—';toast('規則已更新','success',{detail:`${influencer} · ${product}`});navigate('campaign-rules');}
+  });
+}
+function deleteRuleByKeys(product,campaign,influencer){
+  const r=MOCK.campaignRules.find(x=>x.product===product&&x.campaign===campaign&&x.influencer===influencer);
+  confirmDialog({title:'刪除規則？',message:'確定要刪除此分潤規則？',detail:`${influencer} · ${product} · ${campaign}`,confirmLabel:'確認刪除',onConfirm:()=>{MOCK.campaignRules=MOCK.campaignRules.filter(x=>!(x.product===product&&x.campaign===campaign&&x.influencer===influencer));toast('規則已刪除','success');navigate('campaign-rules');}});
+}
+function openInfluencerDrawerByName(name){const i=MOCK.influencers.find(x=>x.name===name);if(i)openInfluencerDrawer(i.id);}
+// 規則篩選器的事件綁定
+function onRuleMSFChange(id,cb){const set=id==='msfRuleCampaign'?ruleFilters.campaign:id==='msfRuleProduct'?ruleFilters.product:ruleFilters.influencer;if(cb.checked)set.add(cb.value);else set.delete(cb.value);navigate('campaign-rules');}
+function clearRuleMSF(id){const set=id==='msfRuleCampaign'?ruleFilters.campaign:id==='msfRuleProduct'?ruleFilters.product:ruleFilters.influencer;set.clear();navigate('campaign-rules');}
+function moveRule(idx,dir){const ni=idx+dir;if(ni<0||ni>=MOCK.campaignRules.length)return;const[item]=MOCK.campaignRules.splice(idx,1);MOCK.campaignRules.splice(ni,0,item);toast('規則順序已調整','info',{duration:1500});navigate('campaign-rules');}
+function deleteRule(idx){const r=MOCK.campaignRules[idx];confirmDialog({title:'刪除規則？',message:'確定要刪除此分潤規則？',detail:`${r.product} · ${r.campaign}`,confirmLabel:'確認刪除',onConfirm:()=>{MOCK.campaignRules.splice(idx,1);toast('規則已刪除','success');navigate('campaign-rules');}});}
+
+/* ============================================================ 全部訂單（多選篩選 + 排序）============================================================ */
+function renderAllOrders(){
+  const w=el('div');
+  w.innerHTML=pageHeader('全部訂單','所有訂單總覽',btn('匯出','outline','download'));
+  // 篩選列：多選 filter + 搜尋
+  const campaignOpts=MOCK.campaigns.map(c=>c.name);
+  const infOpts=MOCK.influencers.map(i=>i.name);
+  const filterBar=el('div','mb-3 flex flex-wrap items-center gap-2');
+  filterBar.innerHTML=
+    multiSelectFilter({id:'msfCampaign',label:'檔期',options:campaignOpts,selectedSet:orderFilters.campaign})+
+    multiSelectFilter({id:'msfInf',label:'網紅',options:infOpts,selectedSet:orderFilters.influencer})+
+    multiSelectFilter({id:'msfStatus',label:'狀態',options:['pending','paid','shipped','cancelled'],selectedSet:orderFilters.status})+
+    `<div class="ml-auto text-xs text-muted-foreground">${getFilteredOrders().length} / ${MOCK.orders.length} 筆</div>`;
+  w.appendChild(filterBar);
+  // 篩選 + 排序
+  const filtered=getFilteredOrders().sort((a,b)=>{
+    const dir=orderSort.dir==='asc'?1:-1;
+    let va=a[orderSort.col],vb=b[orderSort.col];
+    if(orderSort.col==='total'){va=a.total;vb=b.total;}
+    if(typeof va==='string')return va.localeCompare(vb,'zh-TW')*dir;
+    return(va-vb)*dir;
+  });
+  if(!filtered.length){w.appendChild(el('div','',emptyState('search-x','沒有符合的訂單','試著調整篩選條件')));return w;}
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(
+    [`<input type="checkbox" id="selectAll" class="rounded" onchange="toggleSelectAll(this,'ORD-')">`,
+    sortableHeader('訂單號','id'),sortableHeader('日期','date'),'顧客',sortableHeader('品項','items'),sortableHeader('金額','total'),'帶貨網紅','檔期',sortableHeader('狀態','status'),'操作'],
+    filtered.map(o=>`<td class="px-4 py-2.5"><input type="checkbox" class="row-cb rounded" data-id="${o.id}" ${selectedRows.has(o.id)?'checked':''} onchange="toggleRow('${o.id}',this.checked)"></td><td class="px-4 py-2.5 cursor-pointer font-medium text-brand-700 dark:text-brand-400" onclick="openOrderDrawer('${o.id}')">${o.id}</td><td class="px-4 py-2.5 text-muted-foreground">${o.date}</td><td class="px-4 py-2.5">${o.customer}</td><td class="px-4 py-2.5 tabular">${o.items}</td><td class="px-4 py-2.5 tabular font-medium">${money(o.total)}</td><td class="px-4 py-2.5 text-xs">${o.influencer}</td><td class="px-4 py-2.5 text-xs"><span class="rounded bg-surface-100 px-1.5 py-0.5 dark:bg-surface-200">${o.campaign}</span></td><td class="px-4 py-2.5">${statusBadge(o.status)}</td><td class="px-4 py-2.5">${rowActions({onEdit:`openOrderDrawer('${o.id}')`,onDelete:`cancelOrder('${o.id}')`})}</td>`))));
+  w.insertAdjacentHTML('beforeend',bulkBar([{label:'批次列印揀貨單',icon:'printer',v:'primary'},{label:'匯出',icon:'download'}]));
+  setTimeout(wireBulk,0);
+  return w;
+}
+function getFilteredOrders(){
+  return MOCK.orders.filter(o=>{
+    if(orderFilters.campaign.size&&!orderFilters.campaign.has(o.campaign))return false;
+    if(orderFilters.influencer.size&&!orderFilters.influencer.has(o.influencer))return false;
+    if(orderFilters.status.size&&!orderFilters.status.has(o.status))return false;
+    return true;
+  });
+}
+function cancelOrder(id){const o=MOCK.orders.find(x=>x.id===id);confirmDialog({title:'取消訂單？',message:`確定要取消訂單 ${o.id}？`,detail:`${o.customer} · ${money(o.total)}`,confirmLabel:'確認取消',onConfirm:()=>{o.status='cancelled';toast('訂單已取消','success',{detail:o.id});navigate('all-orders');}});}
+
+/* ============================================================ 訂單確認 ============================================================ */
+let orderProcessTab='pending';
+function renderOrderConfirm(){
+  const w=el('div');
+  w.innerHTML=pageHeader('訂單處理','依訂單狀態推進流程');
+  const counts={pending:MOCK.orders.filter(o=>o.status==='pending').length,paid:MOCK.orders.filter(o=>o.status==='paid').length,shipped:MOCK.orders.filter(o=>o.status==='shipped').length,cancelled:MOCK.orders.filter(o=>o.status==='cancelled').length};
+  const tabs=[{key:'pending',label:'待付款',icon:'clock',tone:'amber'},{key:'paid',label:'待出貨',icon:'package',tone:'blue'},{key:'shipped',label:'已出貨',icon:'truck',tone:'brand'},{key:'cancelled',label:'已取消',icon:'x-circle',tone:'slate'}];
+  const toneCls={amber:'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400',blue:'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400',brand:'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300',slate:'bg-surface-100 text-surface-600 dark:bg-surface-200'};
+  w.innerHTML+=`<div class="mb-4 grid grid-cols-4 gap-2">${tabs.map(t=>`<button onclick="setOrderProcessTab('${t.key}')" class="flex items-center gap-2.5 rounded-lg border p-3 text-left transition-all ${orderProcessTab===t.key?'border-brand-400 bg-card shadow-sm dark:border-brand-600':'border-border bg-card hover:border-brand-300 dark:hover:border-brand-700'}"><div class="flex h-8 w-8 items-center justify-center rounded-md ${toneCls[t.tone]}">${icon(t.icon,'h-4 w-4')}</div><div><div class="text-lg font-bold tabular leading-none">${counts[t.key]}</div><div class="text-[11px] text-muted-foreground">${t.label}</div></div></button>`).join('')}</div>`;
+  const list=MOCK.orders.filter(o=>o.status===orderProcessTab);
+  if(!list.length){w.appendChild(el('div','',emptyState('check-circle',orderProcessTab==='pending'?'沒有待付款的訂單':orderProcessTab==='paid'?'沒有待出貨的訂單':'此狀態沒有訂單','')));return w;}
+  const wrap=el('div','space-y-2');
+  list.forEach(o=>{
+    const row=el('div','flex items-center justify-between rounded-lg border border-border bg-card p-3');
+    let actionHtml='';
+    if(o.status==='pending')actionHtml=`<button class="proc-btn inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('credit-card','h-4 w-4')}確認收款</button>`;
+    if(o.status==='paid')actionHtml=`<button class="proc-btn inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('truck','h-4 w-4')}標記已出貨</button>`;
+    if(o.status==='shipped')actionHtml=`<button class="proc-btn inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[13px] font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200">${icon('printer','h-4 w-4')}列印出貨單</button>`;
+    if(o.status==='cancelled')actionHtml='<span class="text-xs text-muted-foreground">已取消</span>';
+    row.innerHTML=`<div class="flex cursor-pointer items-center gap-3" onclick="openOrderDrawer('${o.id}')">${icon(orderProcessTab==='pending'?'clock':orderProcessTab==='paid'?'package':orderProcessTab==='shipped'?'truck':'x-circle','h-4 w-4 text-muted-foreground')}<div><div class="font-medium text-brand-700 dark:text-brand-400">${o.id}</div><div class="text-xs text-muted-foreground">${o.customer} · ${o.items} 件 · ${o.influencer} · ${o.date}</div></div></div><div class="flex items-center gap-3"><span class="tabular text-sm font-semibold">${money(o.total)}</span>${actionHtml}</div>`;
+    const btn2=row.querySelector('.proc-btn');
+    if(btn2&&o.status==='pending')btn2.addEventListener('click',e=>{const b=e.currentTarget;b.disabled=true;b.classList.add('opacity-70','cursor-wait');b.innerHTML=`<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>處理中`;setTimeout(()=>{o.status='paid';toast(`訂單 ${o.id} 已確認收款`,'success',{detail:money(o.total)+' · 已轉入待出貨'});navigate('order-confirm');},600);});
+    if(btn2&&o.status==='paid')btn2.addEventListener('click',e=>{const b=e.currentTarget;b.disabled=true;b.classList.add('opacity-70','cursor-wait');b.innerHTML=`<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span>處理中`;setTimeout(()=>{o.status='shipped';toast(`訂單 ${o.id} 已標記出貨`,'success',{detail:'轉入出貨準備流程'});navigate('order-confirm');},600);});
+    if(btn2&&o.status==='shipped')btn2.addEventListener('click',()=>toast('出貨單已列印','success',{detail:o.id}));
+    wrap.appendChild(row);
+  });
+  w.appendChild(wrap);
+  return w;
+}
+function setOrderProcessTab(key){orderProcessTab=key;navigate('order-confirm');}
+
+/* ============================================================ 帶貨訂單 ============================================================ */
+let attrFilters={influencer:new Set(),status:new Set()};
+function renderAttributed(){
+  const w=el('div');
+  w.innerHTML=pageHeader('帶貨訂單','這筆成交算哪個網紅的 — 分潤計算的依據',btn('匯出報表','outline','download'));
+  w.innerHTML+=`<div class="mb-3 rounded-md bg-brand-50 px-4 py-2.5 text-sm text-brand-800 dark:bg-brand-500/10 dark:text-brand-200">${icon('info','mr-1.5 inline h-4 w-4 align-text-bottom')}每筆成交算哪個網紅帶來的，直接決定分潤。<strong>有爭議的訂單要先確認歸誰，才會算進分潤。</strong></div>`;
+  // 篩選
+  const iOpts=[...new Set(MOCK.attributed.map(o=>o.attributedTo).filter(x=>x!=='待確認'&&x!=='—（自然流量）'))];
+  const sOpts=['confirmed','disputed','natural'];
+  const fb=el('div','mb-3 flex flex-wrap items-center gap-2');
+  fb.innerHTML=
+    multiSelectFilter({id:'msfAttrInf',label:'網紅',options:iOpts,selectedSet:attrFilters.influencer,onChangeFn:'onAttrMSFChange',clearFn:'clearAttrMSF'})+
+    multiSelectFilter({id:'msfAttrStatus',label:'狀態',options:[{value:'confirmed',label:'已確認'},{value:'disputed',label:'待確認'},{value:'natural',label:'自然流量'}],selectedSet:attrFilters.status,onChangeFn:'onAttrMSFChange',clearFn:'clearAttrMSF'})+
+    `<div class="ml-auto text-xs text-muted-foreground">${getFilteredAttributed().length} / ${MOCK.attributed.length} 筆</div>`;
+  w.appendChild(fb);
+  const filtered=getFilteredAttributed();
+  if(!filtered.length){w.appendChild(el('div','',emptyState('search-x','沒有符合的訂單','試著調整篩選條件')));return w;}
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['訂單','顧客','金額','來源管道','帶貨網紅','把握度','分潤','狀態','操作'],filtered.map(o=>{
+    const cc=o.confidence==='high'?'text-brand-600 dark:text-brand-400':o.confidence==='medium'?'text-amber-600 dark:text-amber-400':'text-red-600 dark:text-red-400';
+    const cl={high:'高',medium:'中',low:'低'}[o.confidence];
+    const actionBtn=o.status==='disputed'?`<button onclick="openReassign()" class="inline-flex items-center gap-1.5 rounded-md bg-destructive px-2.5 py-1 text-xs font-medium text-white hover:opacity-90">${icon('user-check','h-3.5 w-3.5')}確認歸誰</button>`:btn('詳情','ghost','','text-xs');
+    return `<td class="px-4 py-2.5 font-medium text-brand-700 dark:text-brand-400 cursor-pointer" onclick="openOrderDrawer('${o.orderId}')">${o.orderId}</td><td class="px-4 py-2.5">${o.customer}</td><td class="px-4 py-2.5 tabular">${money(o.total)}</td><td class="px-4 py-2.5 text-xs">${o.source}</td><td class="px-4 py-2.5 ${o.attributedTo==='待確認'?'text-amber-600 dark:text-amber-400 font-medium':''}">${o.attributedTo}</td><td class="px-4 py-2.5"><span class="${cc} text-xs font-medium">${cl}</span></td><td class="px-4 py-2.5 tabular">${o.commission!=null?money(o.commission):'<span class="text-muted-foreground">待確認</span>'}</td><td class="px-4 py-2.5">${statusBadge(o.status)}</td><td class="px-4 py-2.5">${actionBtn}</td>`;
+  }))));
+  return w;
+}
+function getFilteredAttributed(){return MOCK.attributed.filter(o=>{if(attrFilters.influencer.size&&!attrFilters.influencer.has(o.attributedTo))return false;if(attrFilters.status.size&&!attrFilters.status.has(o.status))return false;return true;});}
+function onAttrMSFChange(id,cb){const set=id==='msfAttrInf'?attrFilters.influencer:attrFilters.status;if(cb.checked)set.add(cb.value);else set.delete(cb.value);navigate('attributed');}
+function clearAttrMSF(id){const set=id==='msfAttrInf'?attrFilters.influencer:attrFilters.status;set.clear();navigate('attributed');}
+function openReassign(){formDialog({title:'確認這筆成交算誰的',subtitle:'ORD-58288 · 張○豪 · NT$ 2,560',fields:[{key:'influencer',label:'算哪個網紅帶來的',type:'select',options:[...MOCK.influencers.map(i=>i.name),'—（自然流量，不計分潤）'],default:'Tina 的保養實驗室'},{key:'reason',label:'說明原因（必填，會記入操作紀錄）',type:'textarea',default:'客戶來信提供 Tina 折扣碼使用紀錄，cookie 追蹤誤判。'}],confirmLabel:'確認',onSave:(data)=>{const d=MOCK.attributed.find(o=>o.status==='disputed');if(d){d.status='confirmed';d.attributedTo=data.influencer;d.confidence='high';d.commission=data.influencer.includes('自然')?0:Math.round(2560*0.12);}toast('已確認成交歸屬','success',{detail:`ORD-58288 → ${data.influencer}`});navigate('attributed');}});}
+
+/* ============================================================ 出貨準備 / 文件 ============================================================ */
+let fulfillTab='pending';
+function renderFulfillment(){
+  const w=el('div');
+  w.innerHTML=pageHeader('出貨準備','揀貨 → 包裝 → 交物流 — 商戶出貨流程');
+  // 流程說明卡（最上面）
+  w.innerHTML+=`<div class="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-3">${[
+    {step:'1',icon:'search',title:'揀貨',desc:'核對訂單品項，從倉庫找出商品',color:'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'},
+    {step:'2',icon:'package',title:'包裝',desc:'商品入箱、附明細單、封箱貼標',color:'bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400'},
+    {step:'3',icon:'truck',title:'交物流',desc:'產生託運單號、交付物流公司',color:'bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'},
+  ].map(s=>`<div class="flex items-start gap-2.5 rounded-lg border border-border bg-card p-3"><div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${s.color}"><span class="text-xs font-bold">${s.step}</span></div><div><div class="flex items-center gap-1.5 text-sm font-medium">${icon(s.icon,'h-3.5 w-3.5 text-muted-foreground')}${s.title}</div><div class="text-[11px] text-muted-foreground">${s.desc}</div></div></div>`).join('')}</div>`;
+  // 列表：所有已付款 + 已出貨的訂單
+  const list=MOCK.orders.filter(o=>o.status==='paid'||o.status==='shipped');
+  const stageBadge=(stage)=>{const m={pending:['bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400','待揀貨'],picking:['bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400','揀貨中'],packing:['bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400','包裝中'],shipped:['bg-brand-100 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300','已交物流']};const[c,l]=m[stage]||m.pending;return `<span class="inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${c}">${l}</span>`;};
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(
+    ['訂單','顧客','品項','金額','帶貨網紅','出貨進度','操作'],
+    list.map(o=>{
+      const printBtn=`<button onclick="toast('揀貨單已列印','success',{detail:'${o.id}'})" class="rounded-md border border-border p-1.5 text-muted-foreground hover:bg-surface-100 dark:hover:bg-surface-200" title="列印">${icon('printer','h-3.5 w-3.5')}</button>`;
+      let actionBtns=printBtn;
+      if(o.status!=='shipped'){
+        actionBtns+=`<div class="relative inline-block"><button onclick="toggleFulfillMenu('${o.id}')" class="inline-flex items-center gap-1 rounded-md bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">${icon('chevron-down','h-3 w-3')}推進</button><div id="ff-menu-${o.id}" class="anim-slide-down absolute right-0 top-full z-40 mt-1 hidden w-32 rounded-lg border border-border bg-card p-1 shadow-xl"><button onclick="setFulfillStage('${o.id}','picking')" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-100 dark:hover:bg-surface-200">${icon('search','h-3.5 w-3.5 text-amber-500')}標記揀貨中</button><button onclick="setFulfillStage('${o.id}','packing')" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-100 dark:hover:bg-surface-200">${icon('package','h-3.5 w-3.5 text-blue-500')}標記包裝中</button><button onclick="setFulfillStage('${o.id}','shipped')" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-surface-100 dark:hover:bg-surface-200">${icon('truck','h-3.5 w-3.5 text-brand-500')}交物流（出貨）</button><div class="my-1 border-t border-border"></div><button onclick="setFulfillStage('${o.id}','cancelled')" class="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs text-destructive hover:bg-red-50 dark:hover:bg-red-500/10">${icon('x-circle','h-3.5 w-3.5')}取消訂單</button></div></div>`;
+      }
+      return `<td class="px-4 py-2.5 cursor-pointer font-medium text-brand-700 dark:text-brand-400" onclick="openOrderDrawer('${o.id}')">${o.id}</td><td class="px-4 py-2.5">${o.customer}</td><td class="px-4 py-2.5 tabular">${o.items} 件</td><td class="px-4 py-2.5 tabular font-medium">${money(o.total)}</td><td class="px-4 py-2.5 text-xs">${o.influencer}</td><td class="px-4 py-2.5">${stageBadge(o.fulfillStage||'pending')}</td><td class="px-4 py-2.5"><div class="flex items-center gap-1">${actionBtns}</div></td>`;
+    })
+  )));
+  return w;
+}
+function toggleFulfillMenu(id){const m=$('#ff-menu-'+id);if(!m)return;$$('[id^="ff-menu-"]').forEach(x=>{if(x.id!=='ff-menu-'+id)x.hidden=true;});m.hidden=!m.hidden;}
+function setFulfillStage(id,stage){
+  const o=MOCK.orders.find(x=>x.id===id);if(!o)return;
+  if(stage==='cancelled'){confirmDialog({title:'取消訂單？',message:`確定要取消 ${o.id}？`,detail:`${o.customer} · ${money(o.total)}`,confirmLabel:'確認取消',onConfirm:()=>{o.status='cancelled';o.fulfillStage='cancelled';toast('訂單已取消','warning',{detail:o.id});navigate('fulfillment');}});return;}
+  if(stage==='shipped'){confirmDialog({title:'確認交物流？',message:`訂單 ${o.id} 將標記為已出貨。`,confirmLabel:'確認出貨',danger:false,onConfirm:()=>{o.status='shipped';o.fulfillStage='shipped';toast('已交物流','success',{detail:o.id+' · 已出貨'});navigate('fulfillment');}});return;}
+  o.fulfillStage=stage;
+  const label={picking:'揀貨中',packing:'包裝中'}[stage];
+  toast(o.id+' → '+label,'info',{duration:2000});
+  navigate('fulfillment');
+}
+document.addEventListener('click',e=>{if(!e.target.closest('[onclick*="toggleFulfillMenu"]')&&!e.target.closest('[id^="ff-menu-"]'))$$('[id^="ff-menu-"]').forEach(m=>m.hidden=true);},{capture:true});
+function renderFulfillDocs(){const w=el('div');w.innerHTML=pageHeader('出貨文件','揀貨單 / 包裝單產生與列印',btn('批次產生','primary','file-plus'));w.innerHTML+=`<div class="mb-3 rounded-md bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">${icon('alert-triangle','mr-1.5 inline h-4 w-4 align-text-bottom')}<strong>高風險操作</strong> — 需 <code class="rounded bg-amber-200/50 px-1 dark:bg-amber-500/20">influencercommerce_approval:manage</code> 權限。</div>`;const docs=[['揀貨單','ORD-58291, ORD-58288','2026/07/08 09:30','draft'],['包裝單','ORD-58289','2026/07/07 16:20','published'],['出貨簽收單','ORD-58285','2026/07/06 11:00','published']];w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['文件類型','關聯訂單','產生時間','狀態','操作'],docs.map(([type,ord,time,st])=>`<td class="px-4 py-2.5"><div class="flex items-center gap-2">${icon('file-text','h-4 w-4 text-muted-foreground')}<span class="font-medium">${type}</span></div></td><td class="px-4 py-2.5 text-xs">${ord}</td><td class="px-4 py-2.5 text-xs text-muted-foreground">${time}</td><td class="px-4 py-2.5">${st==='draft'?'<span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">草稿</span>':'<span class="rounded-full bg-brand-100 px-2 py-0.5 text-[11px] font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">已產生</span>'}</td><td class="px-4 py-2.5 text-right">${btn(st==='draft'?'產生 PDF':'重新下載',st==='draft'?'primary':'outline',st==='draft'?'file-check':'download','text-xs')}</td>`))));return w;}
+
+/* ============================================================ 分潤明細 / 請款 ============================================================ */
+function renderCommissionLines(){
+  const w=el('div');
+  const filtered=getFilteredCommissions();
+  const tp=filtered.filter(l=>l.status==='pending').reduce((s,l)=>s+l.commission,0);
+  const tl=filtered.filter(l=>l.status==='locked').reduce((s,l)=>s+l.commission,0);
+  w.innerHTML=pageHeader('分潤明細','依帶貨成交逐筆計算的分潤',btn('匯出','outline','download'));
+  // 篩選
+  const pOpts=[...new Set(MOCK.commissionLines.map(l=>l.product))];
+  const cOpts=[...new Set(MOCK.commissionLines.map(l=>l.campaign))];
+  const iOpts=[...new Set(MOCK.commissionLines.map(l=>l.influencer))];
+  const fb=el('div','mb-3 flex flex-wrap items-center gap-2');
+  fb.innerHTML=
+    multiSelectFilter({id:'msfCommProduct',label:'商品',options:pOpts,selectedSet:commFilters.product,onChangeFn:'onCommMSFChange',clearFn:'clearCommMSF'})+
+    multiSelectFilter({id:'msfCommCampaign',label:'檔期',options:cOpts,selectedSet:commFilters.campaign,onChangeFn:'onCommMSFChange',clearFn:'clearCommMSF'})+
+    multiSelectFilter({id:'msfCommInf',label:'網紅',options:iOpts,selectedSet:commFilters.influencer,onChangeFn:'onCommMSFChange',clearFn:'clearCommMSF'})+
+    `<div class="ml-auto text-xs text-muted-foreground">${filtered.length} / ${MOCK.commissionLines.length} 筆</div>`;
+  w.appendChild(fb);
+  w.insertAdjacentHTML('beforeend',`<div class="mb-3 grid grid-cols-3 gap-3"><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">篩選後待結算</div><div class="mt-1 text-lg font-semibold tabular text-amber-600 dark:text-amber-400">${money(tp)}</div></div><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">篩選後已鎖定</div><div class="mt-1 text-lg font-semibold tabular text-blue-600 dark:text-blue-400">${money(tl)}</div></div><div class="rounded-lg border border-border bg-card p-3"><div class="text-xs text-muted-foreground">涉及網紅</div><div class="mt-1 text-lg font-semibold tabular">${new Set(filtered.map(l=>l.influencer)).size} 位</div></div></div>`);
+  if(!filtered.length){w.appendChild(el('div','',emptyState('search-x','沒有符合的分潤明細','試著調整篩選條件')));return w;}
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table([`<input type="checkbox" id="selectAll" class="rounded" onchange="toggleSelectAllComm(this)">`,'網紅','訂單','商品','檔期','成交金額','分潤率','分潤金額','狀態'],filtered.map((l,idx)=>{const sel=selectedRows.has(l.orderId+l.influencer);return `<td class="px-4 py-2.5">${l.status==='pending'?`<input type="checkbox" class="row-cb rounded" data-comm-key="${l.orderId}|${l.influencer}" ${sel?'checked':''} onchange="toggleCommRow('${l.orderId}','${l.influencer}',this.checked)">`:'<span class="text-muted-foreground/30">—</span>'}</td><td class="px-4 py-2.5 font-medium">${l.influencer}</td><td class="px-4 py-2.5 font-medium text-brand-700 dark:text-brand-400">${l.orderId}</td><td class="px-4 py-2.5 text-xs">${l.product}</td><td class="px-4 py-2.5 text-xs"><span class="rounded bg-violet-50 px-1.5 py-0.5 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400">${l.campaign}</span></td><td class="px-4 py-2.5 tabular">${money(l.saleAmount)}</td><td class="px-4 py-2.5 text-xs">${l.rate}</td><td class="px-4 py-2.5 tabular font-semibold text-brand-700 dark:text-brand-400">${money(l.commission)}</td><td class="px-4 py-2.5">${statusBadge(l.status)}</td>`;}))));
+  // 送入請款批次操作列
+  w.insertAdjacentHTML('beforeend',bulkBar([{label:'送入請款批次',icon:'banknote',v:'primary'}]));
+  setTimeout(()=>{const b=$('#bulkBar');if(!b)return;const sendBtn=b.querySelector('.bulk-action');if(sendBtn)sendBtn.addEventListener('click',()=>{const sel=[...selectedRows].filter(k=>k.includes('|'));if(!sel.length)return;confirmDialog({title:'送入請款批次？',message:`將選取的 ${sel.length} 筆分潤明細建立為請款批次，這些明細會被鎖定。`,confirmLabel:'建立請款批次',danger:false,onConfirm:()=>{sel.forEach(k=>{const[oid,inf]=k.split('|');const line=MOCK.commissionLines.find(l=>l.orderId===oid&&l.influencer===inf);if(line)line.status='locked';});const firstInf=sel[0].split('|')[1];const amt=sel.reduce((s,k)=>{const[oid,inf]=k.split('|');const l=MOCK.commissionLines.find(x=>x.orderId===oid&&x.influencer===inf);return s+(l?l.commission:0);},0);MOCK.payouts.unshift({batchId:'PB-'+new Date().getFullYear()+'-'+String(MOCK.payouts.length+1).padStart(2,'0'),period:new Date().toISOString().slice(0,10).replace(/-/g,'/')+' 結算',influencer:firstInf,amount:amt,lines:sel.length,status:'pending',requestedAt:new Date().toISOString().slice(0,10),approvedAt:null,paidAt:null,lockedAt:null});toast('已建立請款批次','success',{detail:`${sel.length} 筆明細 · ${money(amt)}`});clearSelection();}});});},0);
+  return w;
+}
+function toggleSelectAllComm(cb){$$('.row-cb[data-comm-key]').forEach(c=>{const[oid,inf]=c.dataset.commKey.split('|');c.checked=cb.checked;if(cb.checked)selectedRows.add(oid+'|'+inf);else selectedRows.delete(oid+'|'+inf);});updateBulkBar();}
+function toggleCommRow(oid,inf,checked){const key=oid+'|'+inf;if(checked)selectedRows.add(key);else selectedRows.delete(key);updateBulkBar();}
+function getFilteredCommissions(){return MOCK.commissionLines.filter(l=>{if(commFilters.product.size&&!commFilters.product.has(l.product))return false;if(commFilters.campaign.size&&!commFilters.campaign.has(l.campaign))return false;if(commFilters.influencer.size&&!commFilters.influencer.has(l.influencer))return false;return true;});}
+function onCommMSFChange(id,cb){const set=id==='msfCommProduct'?commFilters.product:id==='msfCommCampaign'?commFilters.campaign:commFilters.influencer;if(cb.checked)set.add(cb.value);else set.delete(cb.value);navigate('commission-lines');}
+function clearCommMSF(id){const set=id==='msfCommProduct'?commFilters.product:id==='msfCommCampaign'?commFilters.campaign:commFilters.influencer;set.clear();navigate('commission-lines');}
+function renderPayouts(){
+  const w=el('div');
+  w.innerHTML=pageHeader('請款批次','網紅請款 → 核准 → 付款',btn('建立請款批次','primary','plus'));
+  w.innerHTML+=`<div class="mb-3 rounded-md bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">${icon('alert-triangle','mr-1.5 inline h-4 w-4 align-text-bottom')}<strong>錢出去的最後一步。</strong>「標記已付款」需 <code class="rounded bg-amber-200/50 px-1 dark:bg-amber-500/20">influencercommerce_approval:manage</code> 權限。</div>`;
+  w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(
+    [`<input type="checkbox" id="selectAll" class="rounded" onchange="toggleSelectAllPayout(this)">`,'批次','網紅','期間','明細數','金額','鎖定時間','狀態','操作'],
+    MOCK.payouts.map(p=>{
+      const sel=selectedRows.has(p.batchId);
+      const actionBtns=p.status==='pending'?`<button onclick="approvePayout('${p.batchId}')" class="inline-flex items-center gap-1 rounded-md bg-brand-600 px-2 py-1 text-xs font-medium text-white hover:bg-brand-700">${icon('check','h-3.5 w-3.5')}核准</button>`:p.status==='approved'?`<button onclick="markPaid('${p.batchId}')" class="inline-flex items-center gap-1 rounded-md bg-destructive px-2 py-1 text-xs font-medium text-white hover:opacity-90">${icon('badge-check','h-3.5 w-3.5')}標記已付款</button>`:'<span class="text-xs text-muted-foreground">已完成</span>';
+      return `<td class="px-4 py-2.5">${p.status!=='paid'?`<input type="checkbox" class="row-cb rounded" data-payout-id="${p.batchId}" ${sel?'checked':''} onchange="togglePayoutRow('${p.batchId}',this.checked)">`:'<span class="text-muted-foreground/30">—</span>'}</td><td class="px-4 py-2.5 font-mono text-xs text-brand-700 dark:text-brand-400">${p.batchId}</td><td class="px-4 py-2.5 font-medium">${p.influencer}</td><td class="px-4 py-2.5 text-xs text-muted-foreground">${p.period}</td><td class="px-4 py-2.5 tabular">${p.lines}</td><td class="px-4 py-2.5 tabular font-semibold">${money(p.amount)}</td><td class="px-4 py-2.5 text-xs ${p.lockedAt?'text-amber-600 dark:text-amber-400':'text-muted-foreground'}">${p.lockedAt?`${icon('lock','inline h-3 w-3')} ${p.lockedAt}`:'—'}</td><td class="px-4 py-2.5">${statusBadge(p.status)}</td><td class="px-4 py-2.5">${actionBtns}</td>`;
+    })
+  )));
+  // 批量操作列
+  w.insertAdjacentHTML('beforeend',bulkBar([{label:'批量核准',icon:'check',v:'primary'},{label:'批量標記已付款',icon:'badge-check',v:'danger'}]));
+  setTimeout(()=>{const b=$('#bulkBar');if(!b)return;b.querySelectorAll('.bulk-action').forEach(btn=>{btn.addEventListener('click',()=>{const label=btn.textContent.trim();const sel=[...selectedRows].filter(k=>k.startsWith('PB-'));if(!sel.length)return;confirmDialog({title:`${label}？`,message:`即將對選取的 ${sel.length} 個請款批次執行「${label}」。`,confirmLabel:label,danger:label.includes('已付款'),onConfirm:()=>{sel.forEach(bid=>{const p=MOCK.payouts.find(x=>x.batchId===bid);if(!p)return;if(label.includes('核准')&&p.status==='pending'){p.status='approved';p.approvedAt='2026/07/09';p.lockedAt='2026/07/09 10:00';}if(label.includes('已付款')&&p.status==='approved'){p.status='paid';p.paidAt='2026/07/09 11:00';}});toast(`已完成 ${sel.length} 項${label}`,'success');clearSelection();}});});});},0);
+  return w;
+}
+function toggleSelectAllPayout(cb){$$('.row-cb[data-payout-id]').forEach(c=>{c.checked=cb.checked;if(cb.checked)selectedRows.add(c.dataset.payoutId);else selectedRows.delete(c.dataset.payoutId);});updateBulkBar();}
+function togglePayoutRow(bid,checked){if(checked)selectedRows.add(bid);else selectedRows.delete(bid);updateBulkBar();}
+function approvePayout(id){const p=MOCK.payouts.find(x=>x.batchId===id);confirmDialog({title:'核准此請款批次？',message:`${p.influencer} 的請款 ${money(p.amount)} 將轉為「待付款」。`,confirmLabel:'核准',danger:false,onConfirm:()=>{p.status='approved';toast('請款已核准','success',{detail:`${p.batchId} · ${money(p.amount)}`});navigate('payouts');}});}
+function markPaid(id){const p=MOCK.payouts.find(x=>x.batchId===id);confirmDialog({title:'確認已付款？',message:`不可逆操作。標記後將通知 ${p.influencer} 並鎖定分潤明細。`,detail:`批次 ${p.batchId} · ${money(p.amount)}`,confirmLabel:'確認已付款',onConfirm:()=>{p.status='paid';toast('已標記付款完成','success',{detail:`${p.batchId} · 已通知 ${p.influencer}`});navigate('payouts');}});}
+
+/* ============================================================ 通用層頁面 ============================================================ */
+function renderContent(){const w=el('div');w.innerHTML=pageHeader('內容經營','文章 / 分類 / 位置 / 標籤',`<button onclick="openArticleForm()" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('plus','h-4 w-4')}新增文章</button>`);const tabs=['文章','分類','位置','標籤'];w.innerHTML+=`<div class="mb-4 flex gap-1 border-b border-border">${tabs.map((t,i)=>`<button class="content-tab -mb-px border-b-2 px-3 py-2 text-sm font-medium ${i===0?'border-brand-500 text-brand-600 dark:text-brand-400':'border-transparent text-muted-foreground hover:text-foreground'}" data-tab="${i}">${t}</button>`).join('')}</div>`;const panels=el('div');panels.innerHTML=`<div class="content-panel" data-panel="0">${card('overflow-hidden',table(['標題','分類','作者','狀態','瀏覽','發布日','操作'],MOCK.articles.map((a,idx)=>`<td class="px-4 py-2.5"><button onclick="openArticleForm(${idx})" class="font-medium text-left hover:underline">${a.title}</button></td><td class="px-4 py-2.5 text-xs"><span class="rounded bg-surface-100 px-1.5 py-0.5 dark:bg-surface-200">${a.category}</span></td><td class="px-4 py-2.5 text-xs text-muted-foreground">${a.author}</td><td class="px-4 py-2.5">${statusBadge(a.status)}</td><td class="px-4 py-2.5 tabular">${a.views.toLocaleString()}</td><td class="px-4 py-2.5 text-xs text-muted-foreground">${a.date}</td><td class="px-4 py-2.5">${rowActions({onEdit:`openArticleForm(${idx})`,onDelete:`deleteArticle(${idx})`})}</td>`)))}</div><div class="content-panel" data-panel="1" hidden>${card('p-4',`<div class="flex flex-wrap gap-2">${MOCK.categories.map(c=>`<span class="inline-flex items-center gap-1 rounded-full bg-surface-100 px-3 py-1 text-sm dark:bg-surface-200">${c}<button class="text-muted-foreground hover:text-destructive">×</button></span>`).join('')}</div>`)}</div><div class="content-panel" data-panel="2" hidden>${card('p-4',`<div class="space-y-2">${MOCK.placements.map(p=>`<div class="flex items-center justify-between rounded-md border border-border px-3 py-2"><span class="text-sm">${p}</span>${btn('編輯','ghost','','text-xs')}</div>`).join('')}</div>`)}</div><div class="content-panel" data-panel="3" hidden>${card('p-4',`<div class="flex flex-wrap gap-2">${MOCK.tags.map(t=>`<span class="inline-flex items-center gap-1 rounded-full bg-brand-50 px-3 py-1 text-sm text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">#${t}<button class="text-brand-400 hover:text-destructive">×</button></span>`).join('')}</div>`)}</div>`;w.appendChild(panels);setTimeout(()=>{w.querySelectorAll('.content-tab').forEach(tab=>tab.addEventListener('click',()=>{w.querySelectorAll('.content-tab').forEach(t=>{t.classList.remove('border-brand-500','text-brand-600','dark:text-brand-400');t.classList.add('border-transparent','text-muted-foreground');});tab.classList.add('border-brand-500','text-brand-600','dark:text-brand-400');tab.classList.remove('border-transparent','text-muted-foreground');w.querySelectorAll('.content-panel').forEach(p=>p.hidden=p.dataset.panel!==tab.dataset.tab);}));},0);return w;}
+function openArticleForm(idx){const a=idx!=null?MOCK.articles[idx]:null;formDialog({title:a?'編輯文章':'新增文章',subtitle:a?a.title:'撰寫新文章',size:'lg',allowFullscreen:true,values:a?{title:a.title,category:a.category,status:a.status==='published',summary:a.summary,body:a.body,tags:a.tags.join(', ')}:null,fields:[{key:'title',label:'標題',required:true},{key:'category',label:'分類',type:'select',options:MOCK.categories},{key:'summary',label:'摘要（用於列表 / SEO）',type:'textarea',rows:2},{key:'body',label:'正文（支援 Markdown）',type:'textarea',rows:12},{key:'tags',label:'標籤（逗號分隔）',placeholder:'保濕, 夏季'},{key:'status',label:'立即發布',type:'switch',default:false,help:'關閉則存為草稿'}],onSave:(data)=>{const article={title:data.title,category:data.category,summary:data.summary||'',body:data.body||'',tags:(data.tags||'').split(',').map(t=>t.trim()).filter(Boolean),status:data.status?'published':'draft',author:'陳冠廷',views:a?a.views:0,date:a?a.date:new Date().toISOString().slice(0,10).replace(/-/g,'/')};if(a){Object.assign(a,article);toast('文章已更新','success',{detail:data.title});}else{MOCK.articles.unshift(article);toast('文章已新增','success',{detail:data.title});}navigate('content');}});}
+function deleteArticle(idx){const a=MOCK.articles[idx];confirmDialog({title:'刪除文章？',message:`確定要刪除「${a.title}」？此操作不可復原。`,detail:a.category+' · '+(a.views>0?a.views.toLocaleString()+' 瀏覽':'草稿'),confirmLabel:'確認刪除',onConfirm:()=>{MOCK.articles.splice(idx,1);toast('文章已刪除','success');navigate('content');}});}
+function renderNotifProvider(){const w=el('div');w.innerHTML=pageHeader('寄送設定','Email provider 設定');w.innerHTML+=card('max-w-2xl p-5',`<div class="space-y-4"><div><label class="mb-1 block text-sm font-medium">Provider 模式</label><div class="flex gap-2">${['log（開發用）','SMTP','Brevo'].map((m,i)=>`<label class="flex items-center gap-2 rounded-md border border-border px-3 py-2 text-sm ${i===1?'border-brand-500 bg-brand-50 dark:bg-brand-500/10':''}"><input type="radio" name="provider" ${i===1?'checked':''}> ${m}</label>`).join('')}</div></div><div><label class="mb-1 block text-sm font-medium">SMTP Host</label><input class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="smtp.tokiwa.tw"></div><div class="grid grid-cols-2 gap-3"><div><label class="mb-1 block text-sm font-medium">Port</label><input class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="587"></div><div><label class="mb-1 block text-sm font-medium">加密</label><input class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="STARTTLS" readonly></div></div><div class="grid grid-cols-2 gap-3"><div><label class="mb-1 block text-sm font-medium">寄件者名稱</label><input class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="常磐保養"></div><div><label class="mb-1 block text-sm font-medium">寄件者 Email</label><input class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="noreply@tokiwa.tw"></div></div><div><label class="mb-1 block text-sm font-medium">SMTP 密碼</label><input type="password" class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="••••••••••••"><p class="mt-1 text-xs text-muted-foreground">已加密儲存，僅顯示遮罩。</p></div><div class="flex justify-end gap-2 pt-2"><button onclick="toast('測試連線成功','success',{detail:'smtp.tokiwa.tw:587 · 124ms'})">${btn('測試連線','outline','plug')}</button><button onclick="toast('設定已儲存','success')">${btn('儲存','primary','save')}</button></div></div>`);return w;}
+function renderNotifTemplates(){const w=el('div');w.innerHTML=pageHeader('Email 範本','標題 / 本文範本（後端注入變數）',btn('新增範本','primary','plus'));w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['範本名稱','主題','更新日','操作'],MOCK.notifTemplates.map(t=>`<td class="px-4 py-2.5"><div class="flex items-center gap-2">${icon('file-code-2','h-4 w-4 text-muted-foreground')}<span class="font-medium">${t.name}</span></div></td><td class="px-4 py-2.5 text-xs font-mono text-muted-foreground">${t.subject}</td><td class="px-4 py-2.5 text-xs text-muted-foreground">${t.updatedAt}</td><td class="px-4 py-2.5">${rowActions({onEdit:'',onDelete:''})}</td>`))));return w;}
+function renderNotifRules(){const w=el('div');w.innerHTML=pageHeader('派送規則','事件 → 範本對應',btn('新增規則','primary','plus'));w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['觸發事件','使用範本','收件人','狀態','操作'],MOCK.notifRules.map(r=>`<td class="px-4 py-2.5"><code class="rounded bg-surface-100 px-1.5 py-0.5 text-xs dark:bg-surface-200">${r.event}</code></td><td class="px-4 py-2.5 ${r.template.includes('未設定')?'text-amber-600 dark:text-amber-400':''}">${r.template}</td><td class="px-4 py-2.5 text-xs">${({customer:'客戶',admin:'管理員',influencer:'網紅'})[r.recipient]}</td><td class="px-4 py-2.5">${r.enabled?'<span class="inline-flex items-center gap-1 text-xs text-brand-600 dark:text-brand-400"><span class="h-1.5 w-1.5 rounded-full bg-brand-500"></span>啟用</span>':'<span class="inline-flex items-center gap-1 text-xs text-muted-foreground"><span class="h-1.5 w-1.5 rounded-full bg-surface-400"></span>停用</span>'}</td><td class="px-4 py-2.5">${rowActions({onEdit:'',onDelete:''})}</td>`))));return w;}
+function renderNotifTest(){const w=el('div');w.innerHTML=pageHeader('測試寄信','驗證 provider 與範本');w.innerHTML+=card('max-w-xl p-5',`<div class="space-y-4"><div><label class="mb-1 block text-sm font-medium">收件人 Email</label><input class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value="test@tokiwa.tw"></div><div><label class="mb-1 block text-sm font-medium">使用範本</label><select class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm">${MOCK.notifTemplates.map(t=>`<option>${t.name}</option>`).join('')}</select></div><div><label class="mb-1 block text-sm font-medium">範例變數（JSON）</label><textarea class="w-full rounded-md border border-input bg-background px-3 py-2 font-mono text-xs" rows="3">{"order_id":"ORD-TEST","influencer":"Maya","amount":1280}</textarea></div><div class="flex justify-end gap-2"><button id="testSendBtn" onclick="doTestSend()" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('send','h-4 w-4')}<span class="test-label">寄送測試信</span></button></div></div>`);return w;}
+function doTestSend(){const b=$('#testSendBtn');const l=b.querySelector('.test-label');b.disabled=true;b.classList.add('opacity-70','cursor-wait');l.innerHTML=`<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> 寄送中…`;setTimeout(()=>{toast('測試信已寄出','success',{detail:'test@tokiwa.tw · 預計 1-2 秒送達'});navigate('notif-test');},800);}
+function renderNotifEvents(){const w=el('div');w.innerHTML=pageHeader('事件目錄','可用於派送規則的通知事件');w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['事件 Key','說明','已用於規則數',''],MOCK.notifEvents.map(e=>`<td class="px-4 py-2.5"><code class="rounded bg-surface-100 px-1.5 py-0.5 text-xs dark:bg-surface-200">${e.key}</code></td><td class="px-4 py-2.5">${e.desc}</td><td class="px-4 py-2.5 tabular">${e.used}</td><td class="px-4 py-2.5 text-xs text-muted-foreground">唯讀</td>`))));return w;}
+function renderNotifAttempts(){const w=el('div');w.innerHTML=pageHeader('寄送紀錄','寄送嘗試與錯誤訊息');w.insertAdjacentHTML('beforeend',card('overflow-hidden',table(['時間','收件人','範本','狀態','錯誤'],MOCK.notifAttempts.map(a=>`<td class="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">${a.time}</td><td class="px-4 py-2.5 text-xs">${a.to}</td><td class="px-4 py-2.5 text-xs">${a.template}</td><td class="px-4 py-2.5">${statusBadge(a.status)}</td><td class="px-4 py-2.5 text-xs ${a.error?'text-red-600 dark:text-red-400':'text-muted-foreground'}">${a.error||'—'}</td>`))));return w;}
+
+/* ============================================================ 員工管理 ============================================================ */
+function renderStaff(){const w=el('div');w.innerHTML=pageHeader('員工管理','後台使用者帳號',`<button onclick="openStaffForm()" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('user-plus','h-4 w-4')}新增員工</button>`);const rm={super_admin:['超級管理員','bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400'],ops_manager:['營運主管','bg-brand-50 text-brand-700 dark:bg-brand-500/15 dark:text-brand-300'],finance:['財務','bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400'],cs_staff:['客服','bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-400'],viewer:['僅檢視','bg-surface-100 text-surface-600 dark:bg-surface-200']};w.insertAdjacentHTML('beforeend',card('overflow-hidden',table([`<input type="checkbox" id="selectAll" class="rounded" onchange="toggleSelectAll(this,'S-')">`,'員工','Email','角色','狀態','最後登入','操作'],MOCK.staff.map(s=>{const[rl,rc]=rm[s.role];return `<td class="px-4 py-2.5"><input type="checkbox" class="row-cb rounded" data-id="${s.id}" ${selectedRows.has(s.id)?'checked':''} onchange="toggleRow('${s.id}',this.checked)"></td><td class="px-4 py-2.5 cursor-pointer" onclick="openStaffDrawer('${s.id}')"><div class="flex items-center gap-2.5"><div class="flex h-8 w-8 items-center justify-center rounded-full bg-surface-100 text-xs font-semibold text-surface-600 dark:bg-surface-200">${s.name[0]}</div><span class="font-medium">${s.name}</span></div></td><td class="px-4 py-2.5 text-xs text-muted-foreground">${s.email}</td><td class="px-4 py-2.5"><span class="rounded-full px-2 py-0.5 text-[11px] font-medium ${rc}">${rl}</span></td><td class="px-4 py-2.5">${statusBadge(s.status)}</td><td class="px-4 py-2.5 text-xs text-muted-foreground">${s.lastLogin}</td><td class="px-4 py-2.5">${rowActions({onEdit:`openStaffForm('${s.id}')`,onDelete:`deleteStaff('${s.id}')`})}</td>`;}))));w.insertAdjacentHTML('beforeend',bulkBar([{label:'啟用',icon:'check'},{label:'停用',icon:'ban'},{label:'指派角色',icon:'shield'}]));setTimeout(wireBulk,0);return w;}
+function openStaffForm(id){const s=id?MOCK.staff.find(x=>x.id===id):null;formDialog({title:s?'編輯員工':'新增員工',subtitle:s?s.name:'建立後台使用者帳號',values:s?{name:s.name,email:s.email,role:s.role,status:s.status==='active'}:null,fields:[{key:'name',label:'姓名',required:true},{key:'email',label:'Email',required:true},{key:'role',label:'角色',type:'select',options:MOCK.permRoles.map(r=>({value:r.key,label:r.label}))},{key:'status',label:'啟用帳號',type:'switch',default:true,help:'關閉後此帳號無法登入'}],onSave:(data)=>{if(s){Object.assign(s,data);s.status=data.status?'active':'disabled';toast('員工資料已更新','success',{detail:data.name});}else{MOCK.staff.push({id:'S-'+String(MOCK.staff.length+1).padStart(2,'0'),...data,status:data.status?'active':'disabled',lastLogin:'—'});toast('員工已新增','success',{detail:data.name});}navigate('staff');}});}
+function deleteStaff(id){const s=MOCK.staff.find(x=>x.id===id);confirmDialog({title:'刪除員工帳號？',message:`確定要刪除「${s.name}」的帳號？`,detail:s.email,confirmLabel:'確認刪除',onConfirm:()=>{MOCK.staff=MOCK.staff.filter(x=>x.id!==id);toast('員工已刪除','success');navigate('staff');}});}
+function openStaffDrawer(id){const s=MOCK.staff.find(x=>x.id===id);if(!s)return;const rm={super_admin:'超級管理員',ops_manager:'營運主管',finance:'財務',cs_staff:'客服',viewer:'僅檢視'};openDrawer({title:s.name,subtitle:s.email,bodyHtml:`<div class="mb-4 flex items-center gap-2"><div class="flex h-12 w-12 items-center justify-center rounded-full bg-surface-100 text-base font-semibold text-surface-600 dark:bg-surface-200">${s.name[0]}</div>${statusBadge(s.status)}</div><dl class="space-y-2.5 text-sm"><div class="flex justify-between"><dt class="text-muted-foreground">角色</dt><dd class="font-medium">${rm[s.role]}</dd></div><div class="flex justify-between"><dt class="text-muted-foreground">最後登入</dt><dd class="text-xs">${s.lastLogin}</dd></div></dl>`,footerHtml:`<div class="flex gap-2"><button onclick="closeDrawer();openStaffForm('${s.id}')" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('edit','h-4 w-4')}編輯員工</button><button onclick="closeDrawer();navigate('roles')" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[13px] font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200">${icon('shield','h-4 w-4')}調整權限</button></div>`});}
+
+/* ============================================================ 角色權限 ============================================================ */
+function renderRoles(){const w=el('div');w.innerHTML=pageHeader('角色權限','依功能模組設定角色權限矩陣',`<button onclick="openRoleForm()" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[13px] font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200">${icon('plus','h-4 w-4')}新增角色</button>`);w.innerHTML+=`<div class="mb-4 flex flex-wrap items-center gap-3"><div class="flex items-center gap-2"><span class="text-xs font-medium text-muted-foreground">編輯中</span><select id="roleSelector" class="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm font-medium">${MOCK.permRoles.map(r=>`<option value="${r.key}">${r.label}</option>`).join('')}</select></div><div class="h-5 w-px bg-border"></div><div class="flex items-center gap-2"><span class="text-xs font-medium text-muted-foreground">套用範本</span><select id="templateSelector" class="rounded-md border border-input bg-background px-2.5 py-1.5 text-sm">${MOCK.permTemplates.map(t=>`<option value="${t.key}">${t.label}</option>`).join('')}</select><button id="applyTemplate" class="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-surface-700 hover:bg-surface-100 dark:text-surface-300 dark:hover:bg-surface-200">${icon('copy','h-3.5 w-3.5')}套用</button></div><div class="flex-1"></div><button id="savePerms" class="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-brand-700">${icon('save','h-4 w-4')}儲存變更</button></div>`;const mx=el('div','overflow-x-auto scrollbar-thin rounded-lg border border-border bg-card');const lg=el('div','mt-4 flex items-center gap-4 text-xs text-muted-foreground');const pv=el('div','mt-4 rounded-lg border border-brand-200 bg-brand-50/50 p-4 dark:border-brand-500/30 dark:bg-brand-500/5');const renderMatrix=()=>{const ar=$('#roleSelector')?.value||'super_admin';let html=`<table class="w-full text-sm"><thead><tr><th class="sticky left-0 z-10 bg-card px-4 py-2.5 text-left text-[11px] font-semibold uppercase text-muted-foreground">模組 ＼ 角色</th>`;MOCK.permRoles.forEach(r=>{html+=`<th class="px-2 py-2.5 text-center text-[11px] font-semibold uppercase ${r.key===ar?'text-brand-600 dark:text-brand-400':'text-muted-foreground'}">${r.label}</th>`;});html+=`</tr></thead><tbody>`;MOCK.permModules.forEach(mod=>{html+=`<tr class="border-t border-border hover:bg-surface-50 dark:hover:bg-surface-100/30"><td class="sticky left-0 z-10 bg-card px-4 py-2.5"><div class="flex items-center gap-2">${icon(mod.icon,'h-4 w-4 text-muted-foreground')}<span class="text-sm font-medium">${mod.label}</span></div></td>`;MOCK.permRoles.forEach(r=>{const lvl=MOCK.permMatrix[r.key][mod.key];const ld=MOCK.permLevels.find(l=>l.key===lvl);const act=r.key===ar;html+=`<td class="px-2 py-2 text-center"><button class="perm-cell inline-flex items-center justify-center rounded-md px-2 py-1 text-[11px] font-medium transition-all ${ld.cls} ${act?'ring-2 ring-brand-300 dark:ring-brand-500/40 cursor-pointer hover:scale-105':'opacity-60 cursor-default'}" data-role="${r.key}" data-mod="${mod.key}" data-lvl="${lvl}" ${act?'':'disabled'} title="${r.label} → ${mod.label}: ${ld.label}">${ld.abbr}</button></td>`;});html+=`</tr>`;});html+=`</tbody></table>`;mx.innerHTML=html;mx.querySelectorAll('.perm-cell').forEach(cell=>{if(cell.hasAttribute('disabled'))return;cell.addEventListener('click',()=>{const role=cell.dataset.role,mod=cell.dataset.mod;const ci=MOCK.permLevels.findIndex(l=>l.key===cell.dataset.lvl);const nl=MOCK.permLevels[(ci+1)%MOCK.permLevels.length];MOCK.permMatrix[role][mod]=nl.key;toast(`${MOCK.permRoles.find(r=>r.key===role).label} · ${MOCK.permModules.find(m=>m.key===mod).label} → ${nl.label}`,'info',{duration:2000});renderMatrix();updatePreview();});});refreshIcons();};lg.innerHTML=`<span class="font-medium text-surface-700 dark:text-surface-300">等級：</span>${MOCK.permLevels.map(l=>`<span class="inline-flex items-center gap-1"><span class="inline-flex h-5 w-5 items-center justify-center rounded ${l.cls} text-[10px] font-bold">${l.abbr}</span>${l.label}</span>`).join('')}<span class="ml-auto text-muted-foreground">點擊當前角色的儲存格循環切換等級</span>`;const updatePreview=()=>{const ar=$('#roleSelector')?.value||'super_admin';const rd=MOCK.permRoles.find(r=>r.key===ar);const pm=MOCK.permMatrix[ar];const sum=MOCK.permModules.map(m=>({mod:m,lvl:MOCK.permLevels.find(l=>l.key===pm[m.key])}));pv.innerHTML=`<div class="flex items-center gap-2 mb-2"><span class="text-xs font-semibold text-brand-700 dark:text-brand-300">即時預覽</span><span class="text-sm font-medium">${rd.label}</span><span class="text-xs text-muted-foreground">${rd.desc}</span></div><div class="flex flex-wrap gap-1.5">${sum.map(s=>`<span class="inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${s.lvl.cls}">${icon(s.mod.icon,'h-3 w-3')}${s.mod.label}: ${s.lvl.label}</span>`).join('')}</div>`;refreshIcons();};w.appendChild(mx);w.appendChild(lg);w.appendChild(pv);setTimeout(()=>{renderMatrix();updatePreview();$('#roleSelector').addEventListener('change',()=>{renderMatrix();updatePreview();});$('#applyTemplate').addEventListener('click',()=>{const tk=$('#templateSelector').value;const ar=$('#roleSelector').value;confirmDialog({title:`套用「${MOCK.permRoles.find(r=>r.key===tk).label}」範本？`,message:`這會覆寫 ${MOCK.permRoles.find(r=>r.key===ar).label} 目前所有模組的權限設定。`,confirmLabel:'套用',danger:false,onConfirm:()=>{MOCK.permMatrix[ar]={...MOCK.permMatrix[tk]};toast('權限範本已套用','success',{detail:`${MOCK.permRoles.find(r=>r.key===ar).label} ← ${MOCK.permRoles.find(r=>r.key===tk).label}`});renderMatrix();updatePreview();}});});$('#savePerms').addEventListener('click',()=>{const b=$('#savePerms');b.disabled=true;b.classList.add('opacity-70','cursor-wait');b.innerHTML=`<span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white"></span> 儲存中…`;setTimeout(()=>{toast('權限設定已儲存','success',{detail:'所有角色變更已套用'});navigate('roles');},700);});},0);return w;}
+
+/* ============================================================ 操作紀錄 / 設定 ============================================================ */
+function openRoleForm(){
+  formDialog({title:'新增角色',subtitle:'建立新角色並設定初始權限',fields:[
+    {key:'key',label:'角色 Key（英文識別碼）',required:true,placeholder:'editor'},
+    {key:'label',label:'角色名稱',required:true,placeholder:'內容編輯'},
+    {key:'desc',label:'角色說明',type:'textarea',rows:2,placeholder:'負責內容撰寫與發布'},
+    {key:'template',label:'從範本複製權限',type:'select',options:[{value:'',label:'— 空白（全部無權限）—'},...MOCK.permTemplates.map(t=>({value:t.key,label:t.label}))]},
+  ],onSave:(data)=>{
+    if(!data.key||!data.label){toast('角色 Key 和名稱為必填','error');return;}
+    const newKey=data.key.trim().toLowerCase().replace(/\s+/g,'_');
+    if(MOCK.permRoles.some(r=>r.key===newKey)){toast('此 Key 已存在','error');return;}
+    const templatePerms=data.template?{...MOCK.permMatrix[data.template]}:{};
+    MOCK.permModules.forEach(m=>{if(!templatePerms[m.key])templatePerms[m.key]='none';});
+    MOCK.permRoles.push({key:newKey,label:data.label,desc:data.desc||''});
+    MOCK.permMatrix[newKey]=templatePerms;
+    MOCK.permTemplates.push({key:newKey,label:data.label+' 範本'});
+    toast('角色已新增','success',{detail:data.label+'（可至矩陣調整權限）'});
+    setTimeout(()=>{const sel=$('#roleSelector');if(sel)sel.value=newKey;navigate('roles');},100);
+  }});
+}
+
+function renderAudits(){
+  const w=el('div');
+  w.innerHTML=pageHeader('操作紀錄','站點操作歷史與明細',btn('匯出','outline','download'));
+  const cOpts=['訂單','網紅','商品','分潤'];
+  const aOpts=[...new Set(MOCK.audits.map(a=>a.action))];
+  const uOpts=[...new Set(MOCK.audits.map(a=>a.actor))];
+  const fb=el('div','mb-3 flex flex-wrap items-center gap-2');
+  fb.innerHTML=
+    multiSelectFilter({id:'msfAuditCat',label:'分類',options:cOpts,selectedSet:auditFilters.category,onChangeFn:'onAuditMSFChange',clearFn:'clearAuditMSF'})+
+    multiSelectFilter({id:'msfAuditAction',label:'動作類型',options:aOpts,selectedSet:auditFilters.action,onChangeFn:'onAuditMSFChange',clearFn:'clearAuditMSF'})+
+    multiSelectFilter({id:'msfAuditActor',label:'操作者',options:uOpts,selectedSet:auditFilters.actor,onChangeFn:'onAuditMSFChange',clearFn:'clearAuditMSF'})+
+    `<button onclick="toggleAuditSort()" class="inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium border-border bg-card text-muted-foreground hover:bg-surface-100 dark:hover:bg-surface-200" title="切換排序">${icon(auditSort==='desc'?'arrow-down-narrow-wide':'arrow-up-narrow-wide','h-3.5 w-3.5')}時間${auditSort==='desc'?'新→舊':'舊→新'}</button>`+
+    `<div class="ml-auto text-xs text-muted-foreground">${getFilteredAudits().length} / ${MOCK.audits.length} 筆</div>`;
+  w.appendChild(fb);
+  const filtered=getFilteredAudits();
+  if(!filtered.length){w.appendChild(el('div','',emptyState('search-x','沒有符合的紀錄','試著調整篩選條件')));return w;}
+  // 按大分類分組
+  const catIcon={訂單:'package',網紅:'users',商品:'boxes',分潤:'coins'};
+  const catColor={訂單:'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/15',網紅:'text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-500/15',商品:'text-brand-600 dark:text-brand-400 bg-brand-50 dark:bg-brand-500/15',分潤:'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/15'};
+  const groups={};
+  filtered.forEach(a=>{(groups[a.category]=groups[a.category]||[]).push(a);});
+  const order=['訂單','網紅','商品','分潤'];
+  order.forEach(cat=>{
+    if(!groups[cat]||!groups[cat].length)return;
+    w.insertAdjacentHTML('beforeend',`<div class="mb-4"><div class="mb-2 flex items-center gap-2"><div class="flex h-6 w-6 items-center justify-center rounded-md ${catColor[cat]}">${icon(catIcon[cat],'h-3.5 w-3.5')}</div><h3 class="text-sm font-semibold">${cat}</h3><span class="text-xs text-muted-foreground">${groups[cat].length} 筆</span></div>${card('overflow-hidden',table(['時間','操作者','動作','對象','明細'],groups[cat].map(a=>`<td class="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">${a.time}</td><td class="px-4 py-2.5 font-medium">${a.actor}</td><td class="px-4 py-2.5"><span class="rounded bg-surface-100 px-1.5 py-0.5 text-xs dark:bg-surface-200">${a.action}</span></td><td class="px-4 py-2.5 font-mono text-xs text-brand-700 dark:text-brand-400">${a.target}</td><td class="px-4 py-2.5 text-xs">${a.detail}</td>`)))}</div>`);
+  });
+  return w;
+}
+function getFilteredAudits(){return MOCK.audits.filter(a=>{if(auditFilters.category.size&&!auditFilters.category.has(a.category))return false;if(auditFilters.action.size&&!auditFilters.action.has(a.action))return false;if(auditFilters.actor.size&&!auditFilters.actor.has(a.actor))return false;return true;}).sort((a,b)=>auditSort==='desc'?b.time.localeCompare(a.time):a.time.localeCompare(b.time));}
+function onAuditMSFChange(id,cb){const set=id==='msfAuditCat'?auditFilters.category:id==='msfAuditAction'?auditFilters.action:auditFilters.actor;if(cb.checked)set.add(cb.value);else set.delete(cb.value);navigate('audits');}
+function clearAuditMSF(id){const set=id==='msfAuditCat'?auditFilters.category:id==='msfAuditAction'?auditFilters.action:auditFilters.actor;set.clear();navigate('audits');}
+function toggleAuditSort(){auditSort=auditSort==='desc'?'asc':'desc';navigate('audits');}
+function renderSettings(){const w=el('div');w.innerHTML=pageHeader('站台設定','主題、品牌色、語言與站點資訊');w.innerHTML+=`<div class="grid gap-4 lg:grid-cols-2">${card('p-5',`<h3 class="mb-3 text-sm font-semibold">品牌與主題</h3><div class="space-y-3"><div><label class="mb-2 block text-xs font-medium text-muted-foreground">品牌色（tokiwa 常磐深綠）</label><div class="flex gap-2">${[['#1a6e4a','tokiwa'],['#2c5784','ai'],['#ce3a4e','beni'],['#e8a33d','yamabuki'],['#1d8ec3','tsuyukusa']].map(([hex,name],i)=>`<button class="h-8 w-8 rounded-full border-2 ${i===0?'border-surface-900 dark:border-surface-50':'border-transparent'}" style="background:${hex}" title="${name}"></button>`).join('')}</div></div><div class="flex items-center justify-between"><span class="text-sm">深色模式</span><button onclick="toggleDark()" class="flex h-6 w-11 items-center rounded-full bg-surface-200 px-0.5 dark:bg-brand-600"><span class="h-5 w-5 rounded-full bg-white shadow transition-transform dark:translate-x-5"></span></button></div></div>`)}${card('p-5',`<h3 class="mb-3 text-sm font-semibold">站點資訊</h3><div class="space-y-2 text-sm"><div class="flex justify-between"><span class="text-muted-foreground">站點 ID</span><code class="text-xs">influencer-commerce-demo</code></div><div class="flex justify-between"><span class="text-muted-foreground">站點名稱</span><span>網紅分潤後台</span></div><div class="flex justify-between"><span class="text-muted-foreground">預設語言</span><span>zh-TW</span></div><div class="flex justify-between"><span class="text-muted-foreground">貨幣</span><span>NT$ (TWD)</span></div><div class="flex justify-between"><span class="text-muted-foreground">時區</span><span>Asia/Taipei (UTC+8)</span></div></div>`)}</div>`;return w;}
+
+/* ============================================================ 訂單 Drawer ============================================================ */
+function openOrderDrawer(id){const o=MOCK.orders.find(x=>x.id===id);if(!o)return;
+  // 訂單狀態時間軸 o----o----o----o----o
+  const flow=[{key:'pending',label:'待付款',icon:'clock'},{key:'paid',label:'已付款',icon:'credit-card'},{key:'shipped',label:'已出貨',icon:'truck'},{key:'delivered',label:'已送達',icon:'package-check'}];
+  const statusOrder=['pending','paid','shipped','delivered'];
+  const curIdx=o.status==='cancelled'?-1:statusOrder.indexOf(o.status);
+  const timeline=flow.map((s,i)=>{
+    const done=i<=curIdx&&curIdx>=0;
+    const isCurrent=i===curIdx;
+    return `<div class="flex flex-col items-center ${i<flow.length-1?'flex-1':''}">
+      <div class="flex items-center w-full">
+        <div class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition-all ${done?'bg-brand-600 text-white':isCurrent?'bg-brand-100 text-brand-700 ring-2 ring-brand-400 dark:bg-brand-500/20 dark:text-brand-300':'bg-surface-200 text-surface-400 dark:bg-surface-700'}">${done?'<i data-lucide=\"check\" class=\"h-3.5 w-3.5\"></i>':i+1}</div>
+        ${i<flow.length-1?`<div class="h-0.5 flex-1 mx-1 ${i<curIdx?'bg-brand-500':'bg-surface-200 dark:bg-surface-700'}"></div>`:''}
+      </div>
+      <span class="mt-1.5 text-[10px] ${done||isCurrent?'font-medium text-surface-900 dark:text-surface-50':'text-muted-foreground'} ${isCurrent?'text-brand-600 dark:text-brand-400':''}">${s.label}</span>
+    </div>`;
+  }).join('');
+  const itemsHtml=o.items_detail.map(it=>`<div class="flex justify-between gap-2 py-2 text-sm"><span class="flex-1">${it.name} <span class="text-muted-foreground">×${it.qty}</span></span><span class="tabular text-muted-foreground shrink-0">${money(it.price)}</span></div>`).join('');
+  openDrawer({title:o.id,subtitle:`${o.customer} · ${o.date}`,bodyHtml:`
+    ${o.status==='cancelled'?'<div class="mb-4">'+statusBadge('cancelled')+'</div>':`<div class="mb-4 flex items-center gap-0.5 rounded-lg border border-border bg-surface-50 p-3 dark:bg-surface-100">${timeline}</div>`}
+    <div class="mb-4 flex items-center gap-2 text-xs text-muted-foreground">${statusBadge(o.status)}<span>帶貨：${o.influencer}</span></div>
+    <h3 class="mb-2 text-xs font-semibold uppercase text-muted-foreground">訂購品項</h3>
+    <div class="mb-4 rounded-lg border border-border bg-card divide-y divide-border px-3">${itemsHtml}</div>
+    <dl class="space-y-2 text-sm">
+      <div class="flex justify-between border-t border-border pt-2.5"><dt class="font-medium">訂單總額</dt><dd class="tabular text-base font-semibold">${money(o.total)}</dd></div>
+      <div class="flex justify-between gap-2"><dt class="text-muted-foreground shrink-0">檔期</dt><dd class="text-xs text-right">${o.campaign}</dd></div>
+      <div class="flex justify-between gap-2"><dt class="text-muted-foreground shrink-0">配送地址</dt><dd class="text-xs text-right">${o.addr}</dd></div>
+      ${o.note?`<div class="flex justify-between gap-2"><dt class="text-muted-foreground shrink-0">備註</dt><dd class="text-xs text-right">${o.note}</dd></div>`:''}
+    </dl>`,
+  footerHtml:`<div class="flex gap-2">${o.status==='pending'?btn('確認收款','primary','check'):''}${o.status==='paid'?btn('標記已出貨','primary','truck'):''}${btn('列印揀貨單','outline','printer')}</div>`});
+}
+
+/* ============================================================ 深色 + 鍵盤 + 啟動 ============================================================ */
+function toggleDark(){document.documentElement.classList.toggle('dark');const d=document.documentElement.classList.contains('dark');$('#darkIcon').setAttribute('data-lucide',d?'sun':'moon');refreshIcons();}
+document.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='k'){e.preventDefault();openCmdK();}if((e.metaKey||e.ctrlKey)&&e.key==='b'){e.preventDefault();toggleCollapse();}if(e.key==='Escape'){closeCmdK();closeDrawer();}if(e.target.tagName!=='INPUT'&&e.target.tagName!=='TEXTAREA'&&e.target.tagName!=='SELECT'&&!e.metaKey&&!e.ctrlKey){const n=parseInt(e.key);if(n>=1&&n<=9){const items=VISIBLE_LEAVES.filter(i=>i.render);if(items[n-1])navigate(items[n-1].id);}}});
+$('#cmdkTrigger').addEventListener('click',openCmdK);
+$('#collapseToggle').addEventListener('click',toggleCollapse);
+applySidebarState();renderNav();navigate('dashboard');refreshIcons();
+</script>
+</body>
+</html>

@@ -26,9 +26,10 @@ export const articlesResource: ResourceDef = {
     published_at_label: formatUnix(raw.published_at),
     updated_at: formatUnix(raw.updated_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'slug', l: 'Slug', r: 'mono' },
-    { k: 'title', l: '標題' },
+    { k: 'slug', pin: 'left', l: 'Slug', r: 'mono' },
+    { k: 'title', l: '標題', sortable: true },
     { k: 'pinned_label', l: '置頂', r: 'badge' },
     { k: 'published_label', l: '已發布', r: 'badge' },
     { k: 'published_at_label', l: '發布時間', r: 'datetime' },

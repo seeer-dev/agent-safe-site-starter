@@ -19,8 +19,9 @@ export const notificationLogsResource: ResourceDef = {
     ...raw,
     created_at: formatUnix(raw.created_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'created_at', l: '時間', r: 'datetime' },
+    { k: 'created_at', pin: 'left', l: '時間', r: 'datetime' },
     { k: 'code', l: '事件', r: 'badge' },
     { k: 'order_id', l: '訂單', r: 'mono' },
     { k: 'recipient', l: '收件人' },

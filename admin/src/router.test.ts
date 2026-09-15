@@ -19,6 +19,12 @@ const open = {
   meta: { caps: [] as string[] },
 }
 
+const rolesRoute = {
+  path: '/roles',
+  name: 'roles',
+  meta: { caps: ['staff.read'] },
+}
+
 describe('authCapabilityGuard', () => {
   it('does not redirect `/` to `/` while auth is connecting or unverified', () => {
     const noCaps = { status: 'connecting' as const, can: () => false }
@@ -43,5 +49,15 @@ describe('authCapabilityGuard', () => {
 
   it('leaves routes with no required caps open', () => {
     expect(authCapabilityGuard(open, { status: 'verified', can: () => false })).toBe(true)
+  })
+
+  it('denies /roles to verified principals without staff.read', () => {
+    expect(authCapabilityGuard(rolesRoute, { status: 'verified', can: () => false })).toBe('/')
+    expect(authCapabilityGuard(rolesRoute, {
+      status: 'verified',
+      can: (cap) => cap === 'staff.read',
+    })).toBe(true)
+    // Not yet verified → no redirect (App gate hides the shell anyway).
+    expect(authCapabilityGuard(rolesRoute, { status: 'connecting', can: () => false })).toBe(true)
   })
 })

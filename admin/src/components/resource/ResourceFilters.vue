@@ -1,9 +1,10 @@
 <script setup lang="ts">
-// 資源列表篩選工具列 — select 精確比對、text 模糊包含。
-// optsSource 型篩選的選項由外層載入後經 filterOpts 傳入。
-import Select from '@/components/ui/Select.vue'
+// 資源列表篩選工具列 — select 篩選用 dropdown menu（參考稿模式），
+// text 篩選維持模糊包含輸入。optsSource 型篩選的選項由外層載入後經
+// filterOpts 傳入。
+import DropdownMenu from '@/components/ui/DropdownMenu.vue'
 import Input from '@/components/ui/Input.vue'
-import type { FilterDef } from '@/lib/types'
+import type { FilterDef, MenuItem } from '@/lib/types'
 
 const props = defineProps<{
   filters: FilterDef[]
@@ -30,6 +31,27 @@ function optsFor(f: FilterDef): [string, string][] {
   return f.opts ?? []
 }
 
+/** Dropdown items for a select filter — current value is check-marked. */
+function menuItemsFor(f: FilterDef): MenuItem[] {
+  const cur = props.modelValue[f.k] ?? ''
+  return optsFor(f).map(([value, label]) => ({
+    key: value === '' ? '__all__' : value,
+    label,
+    checked: value === cur,
+  }))
+}
+
+/** Trigger label for a select filter — the current option's label. */
+function filterLabel(f: FilterDef): string {
+  const cur = props.modelValue[f.k] ?? ''
+  const found = optsFor(f).find(([v]) => v === cur)
+  return found ? found[1] : `全部${f.l}`
+}
+
+function onSelect(f: FilterDef, key: string) {
+  set(f.k, key === '__all__' ? '' : key)
+}
+
 function clear() {
   const next: Record<string, string> = {}
   for (const k of Object.keys(props.modelValue)) next[k] = ''
@@ -41,14 +63,14 @@ function clear() {
   <div class="toolbar">
     <template v-if="filters.length">
       <template v-for="f in filters" :key="f.k">
-        <Select
+        <DropdownMenu
           v-if="f.w === 'select'"
-          :options="optsFor(f)"
-          :model-value="modelValue[f.k] ?? ''"
-          width="auto"
-          style="min-width:140px"
+          :items="menuItemsFor(f)"
+          :label="filterLabel(f)"
+          align="start"
+          trigger-class="flt-select"
           :aria-label="`篩選${f.l}`"
-          @update:model-value="set(f.k, $event)"
+          @select="onSelect(f, $event)"
         />
         <div v-else class="flt-text">
           <Input

@@ -19,8 +19,9 @@ export const staffResource: ResourceDef = {
     status: '/admin/staff/{id}/status',
     delete: '/admin/staff/{id}',
   },
+  pinActions: true,
   cols: [
-    { k: 'id', l: 'ID', r: 'mono' },
+    { k: 'id', pin: 'left', l: 'ID', r: 'mono' },
     { k: 'display_name', l: '姓名' },
     { k: 'role_label', l: '角色', r: 'badge' },
     { k: 'email', l: 'Email' },

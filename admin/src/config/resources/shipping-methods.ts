@@ -23,8 +23,9 @@ export const shippingMethodsResource: ResourceDef = {
     enabled: String(raw.enabled),
     updated_at: formatUnix(raw.updated_unix),
   }),
+  pinActions: true,
   cols: [
-    { k: 'method', l: '代碼', r: 'mono' },
+    { k: 'method', pin: 'left', l: '代碼', r: 'mono' },
     { k: 'label', l: '名稱' },
     { k: 'fee', l: '運費', r: 'number' },
     { k: 'free_threshold', l: '免運門檻', r: 'number' },

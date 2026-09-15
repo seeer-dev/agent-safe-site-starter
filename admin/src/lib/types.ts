@@ -12,25 +12,30 @@ export interface Role {
   caps: Capability[];
 }
 
-export type SectionKey = 'primary' | 'secondary' | 'settings';
-
 export interface NavChild {
   key: string;
   label: string;
   icon?: string;
+  /** All-of capability gate — same semantics as RouteDef.caps. A child the
+   *  principal cannot use is hidden from every nav mode. */
+  caps: Capability[];
 }
 
 export interface RouteDef {
   key: string;
   label: string;
   icon: string;
-  section: SectionKey;
-  component: 'MinimalCartDashboardPage' | 'ResourceListPage' | 'StoreSettingsPage';
+  /** Declarative page tag for leaf entries. Groups (entries with children)
+   *  have no page of their own and leave this unset. */
+  component?: 'MinimalCartDashboardPage' | 'ResourceListPage' | 'StoreSettingsPage' | 'RolesPage';
   caps: Capability[];
-  /** Optional sub-menu children. When present the nav item renders as a
-   *  collapsible parent with inline children (expanded) and a hover flyout
-   *  (collapsed). Currently unused — structure is reserved for future
-   *  grouped navigation. */
+  /** Labeled divider rendered above this entry when it is the first
+   *  visible entry carrying that label (the mockup's "通用後台 Base"
+   *  boundary between module groups and universal base groups). */
+  dividerBefore?: string;
+  /** Group children. When present the entry renders as a collapsible
+   *  parent with inline children (expanded) and a hover flyout
+   *  (collapsed); it is not itself a route. */
   children?: NavChild[];
 }
 
@@ -40,12 +45,32 @@ export interface Col {
   k: string;
   l: string;
   r?: ColRender;
+  /** Opt-in client-side sorting over already-loaded rows. Columns without
+   *  this flag keep server order and never respond to header clicks. */
+  sortable?: boolean;
+  /** Pin this column to a table edge while the table scrolls horizontally.
+   *  Multiple pins on the same side stack outward in column order. */
+  pin?: 'left' | 'right';
   /** Resolve raw cell values to display labels from an admin list endpoint
    *  (e.g. category slug -> category name). */
   optsSource?: { api: string; listKey?: string; value: string; label: string };
 }
 
 export type FilterWidget = 'select' | 'text';
+
+/** Item in a DropdownMenu — used by row-action overflow menus and
+ *  dropdown-style filter selects. */
+export interface MenuItem {
+  key: string;
+  label: string;
+  /** Destructive styling. */
+  danger?: boolean;
+  /** Rendered but not activatable; hint explains why (e.g. missing caps). */
+  disabled?: boolean;
+  hint?: string;
+  /** Shows a check mark — used by dropdown-style filter selects. */
+  checked?: boolean;
+}
 
 export interface FilterDef {
   k: string;
@@ -192,17 +217,14 @@ export interface ResourceDef {
   /** Row field injected as expected_version on update (optimistic concurrency). */
   expectedVersionField?: string;
   cols: Col[];
+  /** Pin the trailing 動作 column to the table's right edge during
+   *  horizontal scroll, so row actions stay reachable. */
+  pinActions?: boolean;
   rowActions: RowAction[];
   bulkActions?: BulkAction[];
   filters: FilterDef[];
   form: FormDef;
   rows: Record<string, any>[];
-}
-
-export interface StateMachineFlow {
-  t: string;
-  flow: string[];
-  alt: string;
 }
 
 export type ToneKey = 'neutral' | 'success' | 'warn' | 'danger' | 'info';
