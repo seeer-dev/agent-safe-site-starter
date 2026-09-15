@@ -1,0 +1,72 @@
+{
+  "change_id": "edge-api-proxy",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Owner direction 2026-09-15 — \"放在 cf pages 層其實好切後端，我傾向改成放那裡\". Explicit architecture change approving a Pages Functions proxy seam, per the AGENTS.md escape clause.",
+  "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
+  "supersedes": [],
+  "applies_to": [
+    "specs/changes/edge-api-proxy/**",
+    "functions/**",
+    ".gitignore",
+    "AGENTS.md",
+    "README.md",
+    ".env.production.example",
+    ".env.development.example"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004"
+  ],
+  "evidence": {
+    "REQ-001": {
+      "status": "passed",
+      "proof": "wrangler pages dev dist --binding API_ORIGIN=http://localhost:8080: GET /api/products through :8788 returned identical product JSON as direct :8080; GET / returned static 200 — function intercepts /api/* only.",
+      "observed_revision": 1
+    },
+    "REQ-002": {
+      "status": "passed",
+      "proof": "Echo upstream (:8099) observed: x-edge-secret present on GET+POST, cookie:null despite sent Cookie, Authorization passed, path+query preserved, POST body+content-type intact.",
+      "observed_revision": 1
+    },
+    "REQ-003": {
+      "status": "passed",
+      "proof": "Guide step 6 no longer instructs api. CNAME or Transform Rule; diagram shows Pages Function hop; checklist has Pages-Functions-env + proxy-verification items; env.example + ownership table list API_ORIGIN/EDGE_SECRET as pages-fn vars.",
+      "observed_revision": 1
+    },
+    "REQ-004": {
+      "status": "passed",
+      "proof": "AGENTS.md hard-boundary bullet now names specs/changes/edge-api-proxy as the sole approved Pages Functions use.",
+      "observed_revision": 1
+    },
+    "AC-001": {
+      "status": "passed",
+      "proof": "/api/products via :8788 == direct :8080 body; static / unaffected (200).",
+      "observed_revision": 1
+    },
+    "AC-002": {
+      "status": "passed",
+      "proof": "Upstream saw X-Edge-Secret with bound value; Cookie header absent upstream.",
+      "observed_revision": 1
+    },
+    "AC-003": {
+      "status": "passed",
+      "proof": "grep of guide/README/env docs: no remaining api. subdomain or Transform Rule instructions; ECPay section points ReturnURL at site origin.",
+      "observed_revision": 1
+    },
+    "AC-004": {
+      "status": "passed",
+      "proof": "AGENTS.md: \"Approved exception: functions/api/[[path]].js ... specs/changes/edge-api-proxy/ — no other edge compute is authorized.\"",
+      "observed_revision": 1
+    }
+  }
+}

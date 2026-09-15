@@ -23,3 +23,6 @@ node_modules/
 
 # Obsolete design mockup — not built or served. Vite uses admin/index.html.
 admin/dashboard.html
+
+# Wrangler local-dev scratch (wrangler pages dev compiles Functions here)
+.wrangler/

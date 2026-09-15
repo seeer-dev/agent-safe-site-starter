@@ -10,7 +10,7 @@ Do not turn the starter into a multi-site or application platform while solving 
 
 ## Hard boundaries
 
-- Keep Cloudflare Pages static. Do not add Nuxt, Next.js, Pages Functions, or a second backend unless the user explicitly changes the architecture.
+- Keep Cloudflare Pages static. Do not add Nuxt, Next.js, Pages Functions, or a second backend unless the user explicitly changes the architecture. Approved exception: `functions/api/[[path]].js`, the `/api/*` pass-through proxy defined by `specs/changes/edge-api-proxy/` — it injects the edge credential and forwards to the Go origin only; no other edge compute is authorized.
 - Go is the only application backend.
 - Browser code must not query PostgreSQL/Supabase Database directly.
 - `server/internal/modules/<name>` must not import another module directly. If synchronous behavior crosses modules, the consumer defines the smallest typed interface it needs and bootstrap owns the adapter/wiring.

@@ -84,38 +84,46 @@ Key characteristics and operational boundaries:
 
 ## Deployment ownership
 
-| Variable | Railway (Go API) | Pages (build) | Browser bundle | Secret |
-|---|:--:|:--:|:--:|:--:|
-| `APP_ENV=production` | ● | ● | | |
-| `HTTP_ADDR` | ● | | | |
-| `SITE_ORIGIN` | ● | | | |
-| `EDGE_SECRET` | ● | | | ● |
-| `PUBLIC_SITE_URL` | ● | ● | | |
-| `PUBLIC_API_BASE` | ● | ● | | |
-| `ADMIN_API_BASE` | | ● | ● | |
-| `DB_DRIVER` | ● | ● | | |
-| `DATABASE_URL` | ● | ● | | ● |
-| `DB_MAX_OPEN_CONNS` | ● | | | |
-| `DB_MAX_IDLE_CONNS` | ● | | | |
-| `DB_CONN_MAX_LIFETIME` | ● | | | |
-| `DB_CONN_MAX_IDLE_TIME` | ● | | | |
-| `AUTH_MODE` | ● | ● | ● | |
-| `SUPABASE_URL` | ● | ● | ● | |
-| `SUPABASE_PUBLISHABLE_KEY` | ● | ● | ● | |
-| `SUPABASE_VERIFIER_MODE` | ● | | | |
-| `AUTH_GOOGLE_ENABLED` | | ● | ● | |
-| `AUTH_LINE_ENABLED` | | ● | ● | |
-| `DEV_AUTH_TOKEN` | | | | ● (never in production) |
-| `R2_ACCOUNT_ID` | ● | | | ● |
-| `R2_ACCESS_KEY_ID` | ● | | | ● |
-| `R2_SECRET_ACCESS_KEY` | ● | | | ● |
-| `R2_BUCKET` | ● | | | |
-| `R2_PUBLIC_BASE_URL` | ● | ● | | |
-| `RESEND_API_KEY` | ● | | | ● |
-| `RESEND_FROM` | ● | | | |
-| `CONTACT_NOTIFY_TO` | ● | | | |
-| `CF_PAGES_PROJECT` | | ● | | |
-| `CF_DEPLOY_HOOK_URL` | ● | | | ● |
+| Variable | Railway (Go API) | Pages (build) | Pages (fn env) † | Browser bundle | Secret |
+|---|:--:|:--:|:--:|:--:|:--:|
+| `APP_ENV=production` | ● | ● | | | |
+| `HTTP_ADDR` | ● | | | | |
+| `SITE_ORIGIN` | ● | | | | |
+| `EDGE_SECRET` | ● | | ● | | ● |
+| `API_ORIGIN` | | | ● | | |
+| `PUBLIC_SITE_URL` | ● | ● | | | |
+| `PUBLIC_API_BASE` | ● | ● | | | |
+| `ADMIN_API_BASE` | | ● | | ● | |
+| `DB_DRIVER` | ● | ● | | | |
+| `DATABASE_URL` | ● | ● | | | ● |
+| `DB_MAX_OPEN_CONNS` | ● | | | | |
+| `DB_MAX_IDLE_CONNS` | ● | | | | |
+| `DB_CONN_MAX_LIFETIME` | ● | | | | |
+| `DB_CONN_MAX_IDLE_TIME` | ● | | | | |
+| `AUTH_MODE` | ● | ● | | ● | |
+| `SUPABASE_URL` | ● | ● | | ● | |
+| `SUPABASE_PUBLISHABLE_KEY` | ● | ● | | ● | |
+| `SUPABASE_VERIFIER_MODE` | ● | | | | |
+| `AUTH_GOOGLE_ENABLED` | | ● | | ● | |
+| `AUTH_LINE_ENABLED` | | ● | | ● | |
+| `DEV_AUTH_TOKEN` | | | | | ● (never in production) |
+| `R2_ACCOUNT_ID` | ● | | | | ● |
+| `R2_ACCESS_KEY_ID` | ● | | | | ● |
+| `R2_SECRET_ACCESS_KEY` | ● | | | | ● |
+| `R2_BUCKET` | ● | | | | |
+| `R2_PUBLIC_BASE_URL` | ● | ● | | | |
+| `RESEND_API_KEY` | ● | | | | ● |
+| `RESEND_FROM` | ● | | | | |
+| `CONTACT_NOTIFY_TO` | ● | | | | |
+| `CF_PAGES_PROJECT` | | ● | | | |
+| `CF_DEPLOY_HOOK_URL` | ● | | | | ● |
+
+† **Pages Functions environment** — runtime variables on each Pages project
+(Settings → Environment variables), consumed by `functions/api/[[path]].js`
+when a request hits `/api/*`. They never enter a build output or browser
+bundle. `API_ORIGIN` is the Railway public URL the proxy fetches;
+`EDGE_SECRET` is the same hop credential the Railway side enforces — set it
+on the storefront project AND the admin project.
 
 ### Connection pool bounds
 
@@ -154,8 +162,13 @@ and historical DNS rather than only by guessing.
 
 `EDGE_SECRET` closes that. When set, the API refuses any request that does not
 carry it in `X-Edge-Secret`, so edge protection stops depending on the origin
-being undiscoverable. Configure the same value as a header the edge injects
-(a Cloudflare Transform Rule, for example).
+being undiscoverable. The value is injected by the Pages Function
+`functions/api/[[path]].js`, which both Pages projects deploy from the repo
+root: browsers call same-origin `/api/*`, the Function stamps the header and
+forwards to `API_ORIGIN`, and requests that never traverse it are refused.
+A Cloudflare Transform Rule on an `api.` subdomain remains a valid
+alternative injection mechanism, but the Function path is the documented
+default — no Transform Rule or `api.` DNS record is needed.
 
 It authenticates the **hop, not the caller**. It proves a request traversed the
 proxy; it says nothing about who sent it, and nothing in this repository uses

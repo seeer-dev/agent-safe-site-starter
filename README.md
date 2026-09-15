@@ -116,12 +116,16 @@ Key details that bite if missed:
   (`curatory` for this storefront; default `minimal-cart`).
 - **`SITE_ORIGIN`** is the single CORS-allowed browser origin — set it to
   the exact public site origin, not a wildcard.
-- **`EDGE_SECRET`** + a Cloudflare Transform Rule injecting
-  `X-Edge-Secret` stop traffic that bypasses the edge and hits the
-  Railway origin directly. `/healthz` is exempt so Railway probes still
-  work.
+- **`EDGE_SECRET`** is set on Railway AND as a Pages Functions env var on
+  both Pages projects. The repo-root `functions/api/[[path]].js` proxies
+  same-origin `/api/*` to `API_ORIGIN` (the Railway URL) and injects the
+  header — browsers never learn the origin, and direct origin hits get
+  403. No `api.` subdomain or Transform Rule is needed. `/healthz` is
+  exempt so Railway probes still work.
 - **Admin SPA** needs `admin/public/_redirects` (`/* /index.html 200`,
-  already shipped) and `ADMIN_API_BASE` ending in `/api`.
+  already shipped). Leave `ADMIN_API_BASE` unset — it defaults to
+  same-origin `/api`, which the admin project's own Pages Function proxy
+  forwards to Railway.
 
 ### Where production configuration lives
 
@@ -145,7 +149,12 @@ table and the browser-safe allowlist.
 2. **Admin (second Pages project):** build command
    `npm --prefix admin ci && npm --prefix admin run build:only`, output
    `admin/dist`.
-3. **Direct upload (alternative):**
+3. **API proxy (both projects):** repo-root `functions/api/[[path]].js`
+   is picked up by every Pages project. Set **runtime** env vars
+   `API_ORIGIN` (Railway URL) and `EDGE_SECRET` (same value as Railway)
+   under each project's Settings → Environment variables — these are not
+   build vars and never enter a bundle.
+4. **Direct upload (alternative):**
    `CF_PAGES_PROJECT=... go run ./server/tools/publish`; useful for
    AI/CI-driven publishing. A Pages **deploy hook** URL set as Railway's
    `CF_DEPLOY_HOOK_URL` lets publish actions trigger a Pages rebuild.

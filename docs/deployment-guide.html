@@ -88,11 +88,11 @@
     五個服務、一份 checklist。照順序走完全部就能上線。
     所有 secret 只設在平台端的環境變數，<strong>不進這個 repo、不進任何檔案</strong>。
   </p>
-  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-15（Supabase 新版 Connect/API Keys 頁面、Data API 開關建議）</small></p>
+  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-15（API 改走 Pages Function 同源代理、Supabase 新版 Connect/API Keys 頁面、Data API 開關建議）</small></p>
 </header>
 
 <div class="arch">Cloudflare Pages ── 靜態前台 (dist/) + 後台 SPA
-        │ 瀏覽器 islands 直打 API
+        │ /api/* → Pages Function 注入 X-Edge-Secret 轉發
         ▼
 Railway (Go API) ──► Supabase PostgreSQL + Auth
         │
@@ -220,22 +220,24 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr><td><code>HTTP_ADDR</code></td><td><code>:8080</code></td></tr>
         <tr><td><code>SITE_ORIGIN</code></td><td><code>https://你的網域</code>（CORS 單一來源，要跟 Pages 正式網域一致）</td></tr>
         <tr><td><code>PUBLIC_SITE_URL</code></td><td><code>https://你的網域</code></td></tr>
-        <tr><td><code>PUBLIC_API_BASE</code></td><td><code>https://api.你的網域</code> 或 Railway 給的 <code>*.up.railway.app</code></td></tr>
+        <tr><td><code>PUBLIC_API_BASE</code></td><td><code>https://你的網域</code> — 用<strong>前台網域</strong>：瀏覽器打同源的 <code>/api/*</code>，由 Pages Function 轉發；Railway 也用它組 ECPay ReturnURL</td></tr>
         <tr><td><code>DB_DRIVER</code> / <code>DATABASE_URL</code></td><td><code>postgres</code> + Supabase DSN<span class="secret">SECRET</span></td></tr>
         <tr><td><code>AUTH_MODE</code></td><td><code>supabase</code></td></tr>
         <tr><td><code>SUPABASE_URL</code> / <code>SUPABASE_PUBLISHABLE_KEY</code></td><td>步驟 1 拿到的</td></tr>
         <tr><td><code>SUPABASE_VERIFIER_MODE</code></td><td><code>remote</code>（預設；jwks 模式見文件取捨）</td></tr>
         <tr><td><code>R2_*</code> 五件</td><td>步驟 2 拿到的<span class="secret">SECRET</span></td></tr>
         <tr><td><code>RESEND_*</code> + <code>CONTACT_NOTIFY_TO</code></td><td>步驟 3 拿到的<span class="secret">SECRET</span></td></tr>
-        <tr><td><code>EDGE_SECRET</code><span class="secret">SECRET</span></td><td>自己生一個 32+ 字元隨機字串，步驟 6 的 Transform Rule 用同一個</td></tr>
+        <tr><td><code>EDGE_SECRET</code><span class="secret">SECRET</span></td><td>自己生一個 32+ 字元隨機字串，兩個 Pages 專案的環境變數用同一個值（步驟 5）</td></tr>
         <tr><td><code>CF_DEPLOY_HOOK_URL</code><span class="secret">SECRET</span></td><td>步驟 5 在 Pages 建完 Deploy Hook 後回填</td></tr>
         <tr><td><code>ECPAY_*</code> 四件</td><td>要上金流才設（見下方）；全留空就停用</td></tr>
       </table>
 
       <div class="note">
         部署完先驗證：<code>curl https://&lt;railway-domain&gt;/healthz</code> 回 200、
-        <code>/api/products</code> 回 200、Railway deploy log 裡 migrate 跑完。
-        API 網域建議在 Railway → Settings → Networking 綁 <code>api.你的網域</code>。
+        Railway deploy log 裡 migrate 跑完。<code>/api/products</code> 直打會回
+        <strong>403</strong> — 正常，那代表 <code>EDGE_SECRET</code> 擋住未經邊緣的流量；
+        瀏覽器是經由 Pages Function 注入 secret 才進得來。Railway 只需要預設的
+        <code>*.up.railway.app</code> 網域，<strong>不用綁 api. 子網域</strong>。
       </div>
     </div>
   </div>
@@ -253,15 +255,16 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr><th>設定</th><th>值</th></tr>
         <tr><td>Build command</td><td><code>make site</code>（會照 <code>SITE_THEME</code> 建對的 theme bundle 再 render）</td></tr>
         <tr><td>Output directory</td><td><code>dist</code></td></tr>
-        <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL</code>、<code>PUBLIC_API_BASE</code>、<code>R2_PUBLIC_BASE_URL</code>、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）</td></tr>
+        <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL=https://你的網域</code>、<code>PUBLIC_API_BASE=https://你的網域</code>、<code>R2_PUBLIC_BASE_URL</code>、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）</td></tr>
       </table>
+      <div class="note"><strong>Functions 環境變數（兩個專案都要設）：</strong>Pages 專案 → Settings → Environment variables（<em>不是</em> build 變數）→ <code>API_ORIGIN</code> = Railway 的 <code>https://xxx.up.railway.app</code>、<code>EDGE_SECRET</code><span class="secret">SECRET</span> = 跟 Railway 同值。repo 根的 <code>functions/api/[[path]].js</code> 會攔截 <code>/api/*</code>、注入 secret 後轉發 — 瀏覽器全程打同源，看不到 Railway 網域。</div>
 
       <h3>後台 SPA（第二個 Pages 專案）</h3>
       <table>
         <tr><th>設定</th><th>值</th></tr>
         <tr><td>Build command</td><td><code>npm --prefix admin ci &amp;&amp; npm --prefix admin run build:only</code></td></tr>
         <tr><td>Output directory</td><td><code>admin/dist</code></td></tr>
-        <tr><td>環境變數</td><td><code>ADMIN_API_BASE=https://api.你的網域/api</code>（結尾含 <code>/api</code>）、Supabase 三件</td></tr>
+        <tr><td>環境變數</td><td>Supabase 三件；<code>ADMIN_API_BASE</code> <strong>留空</strong>（預設同源 <code>/api</code>，由這個專案的 Pages Function 轉發 — 所以這個專案也要設 <code>API_ORIGIN</code> + <code>EDGE_SECRET</code>）</td></tr>
       </table>
       <div class="note">SPA 路由需要 <code>admin/dist/_redirects</code> 寫 <code>/* /index.html 200</code> — 若檔案不存在請在 repo 補上。</div>
 
@@ -278,16 +281,16 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
 <div class="step">
   <div class="step-num">6</div>
   <div class="step-body">
-    <h2>網域 + 邊緣防護 <span class="tag">Cloudflare DNS</span></h2>
+    <h2>網域綁定 + 邊緣驗證 <span class="tag">Cloudflare DNS</span></h2>
     <div class="card">
       <ul>
         <li>網域 DNS 託管到 Cloudflare（Registrar 買或把 nameserver 指過來）。</li>
-        <li>前台網域：Pages 專案 → Custom domains → 綁 <code>你的網域</code>。</li>
-        <li>API 網域：<code>api.你的網域</code> CNAME 到 Railway，且該 host 走 Cloudflare proxy（橘雲）。</li>
-        <li><strong>Transform Rule 注入 edge secret：</strong>Rules → Transform Rules → Modify Request Header → 對 <code>api.你的網域</code> 的請求 Set header <code>X-Edge-Secret</code> = Railway 的 <code>EDGE_SECRET</code> 值。之後直接打 Railway origin 的請求一律 403 — 擋掉繞過 Cloudflare WAF 的流量。</li>
+        <li>前台網域：前台 Pages 專案 → Custom domains → 綁 <code>你的網域</code>。</li>
+        <li>後台網域（選配）：後台 Pages 專案 → Custom domains → 綁 <code>admin.你的網域</code>；不綁就用 <code>*.pages.dev</code> 也可以。</li>
+        <li><strong>不需要 api. 子網域、不需要 Transform Rule</strong> — repo 根的 <code>functions/api/[[path]].js</code> 已把 <code>/api/*</code> 轉發到 <code>API_ORIGIN</code> 並注入 <code>EDGE_SECRET</code>。</li>
+        <li><strong>驗證邊緣閉環：</strong><code>curl https://你的網域/api/products</code> 回 200（經 Function 注入 secret）；<code>curl https://xxx.up.railway.app/api/products</code> 直打回 403 — 這代表 Railway origin 只接受經過 Pages 的流量。</li>
       </ul>
-      <div class="note warn"><strong>輪換順序：</strong>先在 edge 設新值 → 再改 Railway 的 <code>EDGE_SECRET</code> → 確認後把 edge 舊規則清掉。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。</div>
-      <div class="note"><strong>為什麼 API 走 api. 子網域而不是 Pages 轉發：</strong>Pages 的 <code>_redirects</code> proxy 只支援站內相對路徑，<strong>不能轉發到外部網域</strong>（官方文件明定）。要從 Pages 同源打 API 只能靠 Pages Functions 或獨立 Worker — 那是另一層 compute，不在本架構內。現行設計用 <code>api.</code> 子網域走 CF proxy + <code>EDGE_SECRET</code>，直接打 Railway origin 已經是 403 —「服務不曝光」的目標已達成，且不需額外的 edge compute。若要 origin 完全無公網位址，進階選項是 Cloudflare Tunnel（容器內跑 cloudflared），複雜度較高，需要再議。</div>
+      <div class="note warn"><strong>EDGE_SECRET 輪換順序：</strong>先在 Pages 兩個專案的環境變數改新值（會重新部署生效）→ 再改 Railway 的 <code>EDGE_SECRET</code>。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。</div>
     </div>
   </div>
 </div>
@@ -303,7 +306,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <ul>
         <li>廠商後台 → 系統開發管理 → 介接設定：拿 <code>MerchantID</code> / <code>HashKey</code> / <code>HashIV</code>。</li>
         <li>Railway 設 <code>ECPAY_ENVIRONMENT</code>（stage/production）+ 三個 key。<span class="secret">SECRET</span></li>
-        <li>ReturnURL / PaymentInfoURL 要指到 <code>https://api.你的網域</code> 的 ECPay callback 路由 — 在廠商後台或 API 參數設定。</li>
+        <li>ReturnURL / PaymentInfoURL 指到 <code>https://你的網域</code> 的 ECPay callback 路由（<code>PUBLIC_API_BASE</code> 已是前台網域，callback 經 Pages Function 進 API）— 在廠商後台或 API 參數設定。</li>
       </ul>
       <div class="note">上線前務必用 stage 環境完整跑一筆交易，確認 callback 對帳與訂單狀態轉移。</div>
     </div>
@@ -342,8 +345,9 @@ const ITEMS = [
   ["前台 Pages 建置成功", "make site 跑完、*.pages.dev 預覽正常、圖片與島都載入"],
   ["後台 Pages 建置成功", "admin/dist 上線、_redirects 生效、可用 Supabase 帳號登入"],
   ["Deploy hook 串接", "CF_DEPLOY_HOOK_URL 已設，publish 流程會觸發 Pages 重建"],
-  ["自訂網域綁定", "前台網域 + api 子網域都上 HTTPS"],
-  ["EDGE_SECRET Transform Rule 生效", "直接打 Railway origin 回 403，經 CF 的正常 200"],
+  ["自訂網域綁定", "前台網域綁定並上 HTTPS（後台可綁 admin. 或用 pages.dev）"],
+  ["Pages Functions env（兩專案）", "API_ORIGIN=Railway URL、EDGE_SECRET=與 Railway 同值，設在 Environment variables 非 build"],
+  ["EDGE_SECRET + Pages Function 生效", "https://你的網域/api/products 回 200、直打 Railway origin 回 403"],
   ["下單 → 通知 → 後台閉環", "正式環境下一筆測試單：訂單出現在後台、通知寄出/記 log"],
   ["（選配）ECPay stage 實測一筆", "callback 對帳、訂單轉 paid、瀏覽器返回頁狀態正確"],
 ];
