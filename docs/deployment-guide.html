@@ -330,7 +330,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <p>Workers &amp; Pages → Create → Pages → <strong>Connect to Git</strong> → 選 repo 與分支。</p>
       <table>
         <tr><th>設定</th><th>值</th></tr>
-        <tr><td>Build command</td><td><code>make site</code>（會照 <code>SITE_THEME</code> 建對的 theme bundle 再 render）</td></tr>
+        <tr><td>Build command</td><td><code>npm --prefix site/themes/curatory ci &amp;&amp; make site</code>（Cloudflare 是乾淨 build 容器，先安裝 theme 依賴，再照 <code>SITE_THEME</code> 建 bundle 與 render）</td></tr>
         <tr><td>Output directory</td><td><code>dist</code></td></tr>
         <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL=https://你的網域</code>、<code>PUBLIC_API_BASE=https://你的網域</code>、<code>R2_PUBLIC_BASE_URL</code>、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）</td></tr>
       </table>

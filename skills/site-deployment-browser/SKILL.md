@@ -111,6 +111,12 @@ For Supabase transaction pooler URLs, append
 rotation, use the documented overlap sequence with `EDGE_SECRET_PREVIOUS` on
 Railway before switching both Pages projects.
 
+Cloudflare's Pages build container starts clean. For the curatory storefront
+use `npm --prefix site/themes/curatory ci && make site` with output directory
+`dist`; `make site` alone fails before `vite` is installed. For the admin
+project use `npm --prefix admin ci && npm --prefix admin run build:only` with
+output directory `admin/dist`.
+
 ## Completion report
 
 Return a concise non-secret report:
