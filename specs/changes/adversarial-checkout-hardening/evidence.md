@@ -1,30 +1,31 @@
 # Adversarial Review Hardening — Evidence
 
 Change ID: adversarial-checkout-hardening
-Revision: 1
+Revision: 2
 Status: Verifying
 
 | Gate | Status | Proof |
 |---|---|---|
 | REQ-001 | passed | resolveVariant requires parent status in publicProductStatuses; live repro before fix: POST /api/orders with variant SKU of draft parent returned 201. TestDraftParentVariantNotOrderable passes; mutation (check removed) fails at 'expected not-found for draft-parent variant'. |
-| REQ-002 | passed | ProductInput.UnmarshalJSON records top-level key presence (null counts as absent); UpdateProduct merges via has() so absent scalars preserve existing values while explicit zeros apply. Live repro before fix: PUT {name,description} zeroed price/stock on CUR-FRA-02, producing an orderable $0 product. TestUpdateProductPartialBodyPreservesScalars and TestProductInputPresenceFromJSON pass; mutation (preserve removed) fails at 'scalars zeroed by partial body'. |
+| REQ-002 | passed | ProductInput.UnmarshalJSON records top-level key presence via shared decodeStrict/presentFields; UpdateProduct merges via has() so absent scalars preserve existing values while explicit zeros apply. Live repro before fix: PUT {name,description} zeroed price/stock on CUR-FRA-02, producing an orderable $0 product. TestUpdateProductPartialBodyPreservesScalars and TestProductInputPresenceFromJSON pass; mutation (preserve removed) fails at 'scalars zeroed by partial body'. |
 | REQ-003 | passed | maskCustomerPII strips Timeline Note on guest/member paths; admin reads retain notes. Live repro before fix: guest lookup showed 'INTERNAL: fraud-suspect hold for review'. TestCustomerOrderHidesStaffNotes passes; mutation (strip removed) fails at 'staff note leaked to guest'. |
-| REQ-004 | passed | All three fixes carry service-level regression tests in service_security_test.go, each observed failing under mutation of the protection, then passing after restore; live API re-verification done; verify chain green. |
+| REQ-004 | passed | PresentFields/decodeStrict shared by PromoInput, CategoryInput, ShippingMethodUpdateInput, PaymentMethodInput, MemberInput, NotificationTemplateInput; each update path merges absent->preserve, set() applies explicit null for usage_limit/free_threshold. UpdatePaymentMethod and UpsertNotificationTemplate now load the existing row before merging. Six tests pass; each observed failing under mutation of its merge (promo type-validation rejection, category is_active/sort_order wiped, shipping fee 0 + threshold cleared + disabled, payment env-validation rejection, member name/tags/notes blanked, template code-validation rejection). |
+| REQ-005 | passed | All seven fixed defects carry service-level regression tests in service_security_test.go (8 tests), each observed failing under mutation of the protection, then passing after restore; live API re-verification done; verify chain green. |
 | AC-001 | passed | TestDraftParentVariantNotOrderable: draft-parent variant order rejected; active-parent control succeeds. Mutation observed failing. |
 | AC-002 | passed | TestUpdateProductPartialBodyPreservesScalars: name-only body preserves price/original/stock/featured/text; explicit stock=0 applies and derives out_of_stock. Mutation observed failing. |
 | AC-003 | passed | TestCustomerOrderHidesStaffNotes: guest timeline notes empty, admin sees them. Mutation observed failing. |
 | AC-004 | passed | Live on restarted dev API: CUR-FRA-02 set draft then POST /api/orders with CUR-FRA-02-A returned 400 'commerce: not found'; PUT {tag} preserved price=860 stock=26. Product restored to active/860/26 and CUR-TEX-01-B stock restored to 5 after race test. |
 | AC-005 | passed | go run ./server/tools/verify after the fixes: archcheck, migration-parity (18), speccheck, scopecheck, go test ./..., commerce/staff/media -count=10, vet — all green. |
+| AC-006 | passed | Six tests (promo/category/shipping/payment/member/template partial updates) all pass; explicit-null clears usage_limit and free_threshold verified; each mutation observed failing at the protecting assertion. |
 
 ## Documented follow-ups (not fixed in this change)
 
-- Same absent-field zeroing pattern exists in PromoInput,
-  CategoryInput, ShippingMethodUpdateInput, PaymentMethodInput, and
-  site-content/store-settings inputs. Lower impact: admin-only surface
-  and several fail closed at validation. Sweep as a separate change.
-- Product updates carry no optimistic-concurrency field (orders and
-  shipping methods have expected_version); concurrent admin edits are
-  last-write-wins.
+- sitecontent StoreSettingsInput / SiteContentInput and content
+  UpsertInput are documented whole-document/full-replacement PUT
+  semantics — not the same defect.
+- Product and member updates carry no optimistic-concurrency field
+  (orders and shipping methods have expected_version); concurrent admin
+  edits are last-write-wins.
 - Idempotency-key replay returns 409 on payload mismatch, which reveals
   key existence; keys are client-generated so impact is minimal.
 - Public endpoints (comments, coupon validate, guest order lookup,

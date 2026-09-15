@@ -132,13 +132,55 @@ type ProductInput struct {
 	ProductImages   []ProductImageInput `json:"product_images"`
 	Variants        []ProductVariantInput `json:"variants"`
 
-	// present records which top-level keys the JSON body actually
-	// contained. On update, an absent scalar means "keep the existing
-	// value" — a partial PUT must not silently zero price, stock, or
-	// flags. Programmatic callers that build the struct directly leave
-	// present nil, which has() treats as all-present (full-replacement
-	// semantics preserved for tests and tools).
-	present map[string]bool
+	presentFields
+}
+
+// presentFields records which top-level JSON keys a request body
+// contained. Update paths consult has()/set() so a partial body
+// preserves existing values instead of silently zeroing price, stock,
+// flags, or limits. A nil map (struct built in code, not decoded from
+// JSON) means all-present — legacy full-replacement semantics for
+// programmatic callers and tests.
+type presentFields struct {
+	present map[string]json.RawMessage
+}
+
+// has reports whether field was supplied with a non-null value — the
+// predicate for scalar, bool, and slice fields, where an explicit JSON
+// null preserves the existing value.
+func (p presentFields) has(field string) bool {
+	if p.present == nil {
+		return true
+	}
+	v, ok := p.present[field]
+	return ok && string(v) != "null"
+}
+
+// set reports whether the key appeared in the body at all — the
+// predicate for nullable pointer fields, where an explicit JSON null
+// applies nil (clears the limit).
+func (p presentFields) set(field string) bool {
+	if p.present == nil {
+		return true
+	}
+	_, ok := p.present[field]
+	return ok
+}
+
+// decodeStrict decodes a JSON body into v with unknown-field rejection
+// and returns the raw top-level keys the body contained, for use as a
+// presentFields map.
+func decodeStrict(data []byte, v any) (map[string]json.RawMessage, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(v); err != nil {
+		return nil, err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 // UnmarshalJSON decodes the payload with unknown-field rejection and
@@ -146,29 +188,12 @@ type ProductInput struct {
 // counts as absent for scalar preservation purposes.
 func (in *ProductInput) UnmarshalJSON(data []byte) error {
 	type plain ProductInput
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode((*plain)(in)); err != nil {
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
 		return err
 	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	in.present = make(map[string]bool, len(raw))
-	for k, v := range raw {
-		if string(v) != "null" {
-			in.present[k] = true
-		}
-	}
+	in.present = present
 	return nil
-}
-
-// has reports whether the caller supplied the named JSON field. A nil
-// presence map (struct built in code, not decoded from a body) means
-// every field counts as present.
-func (in ProductInput) has(field string) bool {
-	return in.present == nil || in.present[field]
 }
 
 // ProductFilter narrows product listings by status and/or category.
@@ -197,6 +222,7 @@ type Category struct {
 }
 
 // CategoryInput is the admin-supplied payload for category create/update.
+// On update, absent fields preserve the existing row (presentFields).
 type CategoryInput struct {
 	Slug        string `json:"slug"`
 	Name        string `json:"name"`
@@ -204,6 +230,20 @@ type CategoryInput struct {
 	Image       string `json:"image"`
 	SortOrder   int    `json:"sort_order"`
 	IsActive    bool   `json:"is_active"`
+
+	presentFields
+}
+
+// UnmarshalJSON decodes with unknown-field rejection and records
+// top-level key presence for partial-update merge.
+func (in *CategoryInput) UnmarshalJSON(data []byte) error {
+	type plain CategoryInput
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
+		return err
+	}
+	in.present = present
+	return nil
 }
 
 // ProductVariant is a purchasable option of a product (e.g. a size or
@@ -266,13 +306,28 @@ type NotificationTemplate struct {
 }
 
 // NotificationTemplateInput is the admin-supplied payload for template
-// create/update.
+// create/update. On update of an existing template, absent fields
+// preserve the stored values (presentFields).
 type NotificationTemplateInput struct {
 	Code      string `json:"code"`
 	Name      string `json:"name"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
 	IsEnabled bool   `json:"is_enabled"`
+
+	presentFields
+}
+
+// UnmarshalJSON decodes with unknown-field rejection and records
+// top-level key presence for partial-update merge.
+func (in *NotificationTemplateInput) UnmarshalJSON(data []byte) error {
+	type plain NotificationTemplateInput
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
+		return err
+	}
+	in.present = present
+	return nil
 }
 
 // NotificationLog is an append-only record of one notification send
@@ -307,6 +362,7 @@ type Member struct {
 }
 
 // MemberInput is the browser-supplied payload for member updates.
+// Absent fields preserve the existing row (presentFields).
 type MemberInput struct {
 	Email  string `json:"email"`
 	Name   string `json:"name"`
@@ -314,6 +370,20 @@ type MemberInput struct {
 	Tier   string `json:"tier"`
 	Tags   string `json:"tags"`
 	Notes  string `json:"notes"`
+
+	presentFields
+}
+
+// UnmarshalJSON decodes with unknown-field rejection and records
+// top-level key presence for partial-update merge.
+func (in *MemberInput) UnmarshalJSON(data []byte) error {
+	type plain MemberInput
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
+		return err
+	}
+	in.present = present
+	return nil
 }
 
 // MemberFilter narrows member listings by status and/or tier.

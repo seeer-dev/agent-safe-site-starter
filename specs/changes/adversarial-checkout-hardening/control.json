@@ -1,9 +1,9 @@
 {
   "change_id": "adversarial-checkout-hardening",
-  "revision": 1,
+  "revision": 2,
   "status": "Verifying",
   "decision_authority": "Repository owner/user",
-  "approval_basis": "Owner direction 2026-09-15: run the PostgreSQL live gate and perform an adversarial security review; the review live-exploited three defects (draft-parent variant ordering, partial-PUT scalar zeroing, staff-note leakage) and fixing them is the review's implied remediation step.",
+  "approval_basis": "Owner direction 2026-09-15: run the PostgreSQL live gate and perform an adversarial security review; the review live-exploited three defects (draft-parent variant ordering, partial-PUT scalar zeroing, staff-note leakage) and fixing them is the review's implied remediation step. Revision 2: owner approved sweeping the same absent-field zeroing class across the remaining admin entity inputs.",
   "repository_baseline": "10f805e18e394e7065854dfbceb327114e0d4564",
   "supersedes": [],
   "applies_to": [
@@ -14,60 +14,72 @@
     "REQ-001",
     "REQ-002",
     "REQ-003",
-    "REQ-004"
+    "REQ-004",
+    "REQ-005"
   ],
   "acceptance": [
     "AC-001",
     "AC-002",
     "AC-003",
     "AC-004",
-    "AC-005"
+    "AC-005",
+    "AC-006"
   ],
   "evidence": {
     "REQ-001": {
       "status": "passed",
       "proof": "resolveVariant requires parent status in publicProductStatuses; live repro before fix: POST /api/orders with variant SKU of draft parent returned 201. TestDraftParentVariantNotOrderable passes; mutation (check removed) fails at 'expected not-found for draft-parent variant'.",
-      "observed_revision": 1
+      "observed_revision": 2
     },
     "REQ-002": {
       "status": "passed",
-      "proof": "ProductInput.UnmarshalJSON records top-level key presence (null counts as absent); UpdateProduct merges via has() so absent scalars preserve existing values while explicit zeros apply. Live repro before fix: PUT {name,description} zeroed price/stock on CUR-FRA-02, producing an orderable $0 product. TestUpdateProductPartialBodyPreservesScalars and TestProductInputPresenceFromJSON pass; mutation (preserve removed) fails at 'scalars zeroed by partial body'.",
-      "observed_revision": 1
+      "proof": "ProductInput.UnmarshalJSON records top-level key presence via shared decodeStrict/presentFields; UpdateProduct merges via has() so absent scalars preserve existing values while explicit zeros apply. Live repro before fix: PUT {name,description} zeroed price/stock on CUR-FRA-02, producing an orderable $0 product. TestUpdateProductPartialBodyPreservesScalars and TestProductInputPresenceFromJSON pass; mutation (preserve removed) fails at 'scalars zeroed by partial body'.",
+      "observed_revision": 2
     },
     "REQ-003": {
       "status": "passed",
       "proof": "maskCustomerPII strips Timeline Note on guest/member paths; admin reads retain notes. Live repro before fix: guest lookup showed 'INTERNAL: fraud-suspect hold for review'. TestCustomerOrderHidesStaffNotes passes; mutation (strip removed) fails at 'staff note leaked to guest'.",
-      "observed_revision": 1
+      "observed_revision": 2
     },
     "REQ-004": {
       "status": "passed",
-      "proof": "All three fixes carry service-level regression tests in service_security_test.go, each observed failing under mutation of the protection, then passing after restore; live API re-verification done; verify chain green.",
-      "observed_revision": 1
+      "proof": "PresentFields/decodeStrict shared by PromoInput, CategoryInput, ShippingMethodUpdateInput, PaymentMethodInput, MemberInput, NotificationTemplateInput; each update path merges absent->preserve, set() applies explicit null for usage_limit/free_threshold. UpdatePaymentMethod and UpsertNotificationTemplate now load the existing row before merging. Six tests pass; each observed failing under mutation of its merge (promo type-validation rejection, category is_active/sort_order wiped, shipping fee 0 + threshold cleared + disabled, payment env-validation rejection, member name/tags/notes blanked, template code-validation rejection).",
+      "observed_revision": 2
+    },
+    "REQ-005": {
+      "status": "passed",
+      "proof": "All seven fixed defects carry service-level regression tests in service_security_test.go (8 tests), each observed failing under mutation of the protection, then passing after restore; live API re-verification done; verify chain green.",
+      "observed_revision": 2
     },
     "AC-001": {
       "status": "passed",
       "proof": "TestDraftParentVariantNotOrderable: draft-parent variant order rejected; active-parent control succeeds. Mutation observed failing.",
-      "observed_revision": 1
+      "observed_revision": 2
     },
     "AC-002": {
       "status": "passed",
       "proof": "TestUpdateProductPartialBodyPreservesScalars: name-only body preserves price/original/stock/featured/text; explicit stock=0 applies and derives out_of_stock. Mutation observed failing.",
-      "observed_revision": 1
+      "observed_revision": 2
     },
     "AC-003": {
       "status": "passed",
       "proof": "TestCustomerOrderHidesStaffNotes: guest timeline notes empty, admin sees them. Mutation observed failing.",
-      "observed_revision": 1
+      "observed_revision": 2
     },
     "AC-004": {
       "status": "passed",
       "proof": "Live on restarted dev API: CUR-FRA-02 set draft then POST /api/orders with CUR-FRA-02-A returned 400 'commerce: not found'; PUT {tag} preserved price=860 stock=26. Product restored to active/860/26 and CUR-TEX-01-B stock restored to 5 after race test.",
-      "observed_revision": 1
+      "observed_revision": 2
     },
     "AC-005": {
       "status": "passed",
       "proof": "go run ./server/tools/verify after the fixes: archcheck, migration-parity (18), speccheck, scopecheck, go test ./..., commerce/staff/media -count=10, vet — all green.",
-      "observed_revision": 1
+      "observed_revision": 2
+    },
+    "AC-006": {
+      "status": "passed",
+      "proof": "Six tests (promo/category/shipping/payment/member/template partial updates) all pass; explicit-null clears usage_limit and free_threshold verified; each mutation observed failing at the protecting assertion.",
+      "observed_revision": 2
     }
   }
 }

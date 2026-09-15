@@ -21,7 +21,9 @@ type PaymentMethod struct {
 	UpdatedUnix     int64  `json:"updated_unix"`
 }
 
-// PaymentMethodInput is the browser-supplied payload for payment method updates.
+// PaymentMethodInput is the browser-supplied payload for payment method
+// updates. On update of an existing row, absent fields preserve the
+// stored values (presentFields).
 type PaymentMethodInput struct {
 	Method          string `json:"method"`
 	ProviderLabel   string `json:"provider_label"`
@@ -29,6 +31,20 @@ type PaymentMethodInput struct {
 	ReadinessStatus string `json:"readiness_status"`
 	Enabled         bool   `json:"enabled"`
 	Fee             int    `json:"fee"`
+
+	presentFields
+}
+
+// UnmarshalJSON decodes with unknown-field rejection and records
+// top-level key presence for partial-update merge.
+func (in *PaymentMethodInput) UnmarshalJSON(data []byte) error {
+	type plain PaymentMethodInput
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
+		return err
+	}
+	in.present = present
+	return nil
 }
 
 // PublicPaymentMethod is the public-facing payment method descriptor.
@@ -110,23 +126,57 @@ func (s Service) UpdatePaymentMethod(ctx context.Context, principal auth.Princip
 	if !auth.Can(principal, "twcommerce.admin") {
 		return PaymentMethod{}, ErrForbidden
 	}
-	if in.Environment != "production" && in.Environment != "sandbox" {
+	// Merge semantics on an existing row: absent fields preserve stored
+	// values — a partial body must not silently blank the provider label,
+	// disable the method, or zero its fee. An unknown id keeps the
+	// historical PUT-upsert behavior: the body applies as-is.
+	merged := in
+	methods, err := s.store.ListPaymentMethods(ctx)
+	if err != nil {
+		return PaymentMethod{}, err
+	}
+	for i := range methods {
+		if methods[i].ID != id {
+			continue
+		}
+		ex := methods[i]
+		if !in.has("method") {
+			merged.Method = ex.Method
+		}
+		if !in.has("provider_label") {
+			merged.ProviderLabel = ex.ProviderLabel
+		}
+		if !in.has("environment") {
+			merged.Environment = ex.Environment
+		}
+		if !in.has("readiness_status") {
+			merged.ReadinessStatus = ex.ReadinessStatus
+		}
+		if !in.has("enabled") {
+			merged.Enabled = ex.Enabled
+		}
+		if !in.has("fee") {
+			merged.Fee = ex.Fee
+		}
+		break
+	}
+	if merged.Environment != "production" && merged.Environment != "sandbox" {
 		return PaymentMethod{}, fmt.Errorf("%w: environment must be production or sandbox", ErrInvalidAdminInput)
 	}
-	if in.ReadinessStatus != "ready" && in.ReadinessStatus != "pending_setup" {
+	if merged.ReadinessStatus != "ready" && merged.ReadinessStatus != "pending_setup" {
 		return PaymentMethod{}, fmt.Errorf("%w: readiness_status must be ready or pending_setup", ErrInvalidAdminInput)
 	}
-	if in.Fee < 0 {
+	if merged.Fee < 0 {
 		return PaymentMethod{}, fmt.Errorf("%w: fee must be non-negative", ErrInvalidAdminInput)
 	}
 	pm := PaymentMethod{
 		ID:              id,
-		Method:          strings.TrimSpace(in.Method),
-		ProviderLabel:   in.ProviderLabel,
-		Environment:     in.Environment,
-		ReadinessStatus: in.ReadinessStatus,
-		Enabled:         in.Enabled,
-		Fee:             in.Fee,
+		Method:          strings.TrimSpace(merged.Method),
+		ProviderLabel:   merged.ProviderLabel,
+		Environment:     merged.Environment,
+		ReadinessStatus: merged.ReadinessStatus,
+		Enabled:         merged.Enabled,
+		Fee:             merged.Fee,
 		UpdatedUnix:     time.Now().Unix(),
 	}
 	if err := s.store.UpsertPaymentMethod(ctx, pm); err != nil {

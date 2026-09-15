@@ -41,7 +41,8 @@ type ShippingMethodInput struct {
 
 // ShippingMethodUpdateInput is the browser-supplied update payload.
 // method may be sent and is ignored; the stored key is immutable.
-// expected_version is required.
+// expected_version is required. Absent fields preserve the existing
+// row; explicit null on free_threshold clears the threshold.
 type ShippingMethodUpdateInput struct {
 	Method          string `json:"method"`
 	Label           string `json:"label"`
@@ -51,6 +52,20 @@ type ShippingMethodUpdateInput struct {
 	Enabled         bool   `json:"enabled"`
 	SortOrder       int    `json:"sort_order"`
 	ExpectedVersion int    `json:"expected_version"`
+
+	presentFields
+}
+
+// UnmarshalJSON decodes with unknown-field rejection and records
+// top-level key presence for partial-update merge.
+func (in *ShippingMethodUpdateInput) UnmarshalJSON(data []byte) error {
+	type plain ShippingMethodUpdateInput
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
+		return err
+	}
+	in.present = present
+	return nil
 }
 
 const (
@@ -167,14 +182,36 @@ func (s Service) UpdateShippingMethod(ctx context.Context, principal auth.Princi
 	}
 	// Method is immutable. Validate against the stored key so a tampered
 	// payload cannot rename the row, and so label/fee checks still run.
+	// Absent fields preserve the existing row — a partial body must not
+	// silently zero the fee, clear the free-shipping threshold, or
+	// disable the method. free_threshold uses set() so an explicit null
+	// still clears it.
 	validated := ShippingMethodInput{
 		Method:        existing.Method,
-		Label:         strings.TrimSpace(in.Label),
-		Description:   in.Description,
-		Fee:           in.Fee,
-		FreeThreshold: in.FreeThreshold,
-		Enabled:       in.Enabled,
-		SortOrder:     in.SortOrder,
+		Label:         existing.Label,
+		Description:   existing.Description,
+		Fee:           existing.Fee,
+		FreeThreshold: existing.FreeThreshold,
+		Enabled:       existing.Enabled,
+		SortOrder:     existing.SortOrder,
+	}
+	if in.has("label") {
+		validated.Label = strings.TrimSpace(in.Label)
+	}
+	if in.has("description") {
+		validated.Description = in.Description
+	}
+	if in.has("fee") {
+		validated.Fee = in.Fee
+	}
+	if in.set("free_threshold") {
+		validated.FreeThreshold = in.FreeThreshold
+	}
+	if in.has("enabled") {
+		validated.Enabled = in.Enabled
+	}
+	if in.has("sort_order") {
+		validated.SortOrder = in.SortOrder
 	}
 	if err := validateShippingMethodInput(validated); err != nil {
 		return ShippingMethod{}, err

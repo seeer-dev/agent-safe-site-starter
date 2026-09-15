@@ -52,7 +52,25 @@ func (s Service) UpdateCategory(ctx context.Context, principal auth.Principal, i
 	// Slug changes are allowed but validated; product.category stores the
 	// slug so renaming a slug orphans existing product associations —
 	// keep the existing slug when the input omits it.
-	c, err := buildCategory(existing.Slug, in, time.Now().Unix())
+	// Absent fields preserve the existing row — a partial body must not
+	// silently deactivate the category or reset its sort order.
+	merged := in
+	if !in.has("name") {
+		merged.Name = existing.Name
+	}
+	if !in.has("description") {
+		merged.Description = existing.Description
+	}
+	if !in.has("image") {
+		merged.Image = existing.Image
+	}
+	if !in.has("sort_order") {
+		merged.SortOrder = existing.SortOrder
+	}
+	if !in.has("is_active") {
+		merged.IsActive = existing.IsActive
+	}
+	c, err := buildCategory(existing.Slug, merged, time.Now().Unix())
 	if err != nil {
 		return Category{}, err
 	}

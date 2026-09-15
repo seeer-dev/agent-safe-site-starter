@@ -176,11 +176,44 @@ func (s Service) UpsertNotificationTemplate(ctx context.Context, principal auth.
 	if !auth.Can(principal, "twcommerce.admin") {
 		return NotificationTemplate{}, ErrForbidden
 	}
-	code := strings.TrimSpace(in.Code)
+	// On update of an existing template, absent fields preserve stored
+	// values — a partial body must not silently blank the body or
+	// disable the template. Create and unknown-id upsert keep
+	// apply-as-is semantics.
+	merged := in
+	if id != "" {
+		templates, err := s.store.ListNotificationTemplates(ctx)
+		if err != nil {
+			return NotificationTemplate{}, err
+		}
+		for i := range templates {
+			if templates[i].ID != id {
+				continue
+			}
+			ex := templates[i]
+			if !in.has("code") {
+				merged.Code = ex.Code
+			}
+			if !in.has("name") {
+				merged.Name = ex.Name
+			}
+			if !in.has("subject") {
+				merged.Subject = ex.Subject
+			}
+			if !in.has("body") {
+				merged.Body = ex.Body
+			}
+			if !in.has("is_enabled") {
+				merged.IsEnabled = ex.IsEnabled
+			}
+			break
+		}
+	}
+	code := strings.TrimSpace(merged.Code)
 	if !validTemplateCodes[code] {
 		return NotificationTemplate{}, fmt.Errorf("%w: template code must be one of order_placed, order_paid, order_shipped, order_completed, order_cancelled", ErrInvalidAdminInput)
 	}
-	if strings.TrimSpace(in.Subject) == "" {
+	if strings.TrimSpace(merged.Subject) == "" {
 		return NotificationTemplate{}, fmt.Errorf("%w: template subject is required", ErrInvalidAdminInput)
 	}
 	if id == "" {
@@ -193,10 +226,10 @@ func (s Service) UpsertNotificationTemplate(ctx context.Context, principal auth.
 	t := NotificationTemplate{
 		ID:          id,
 		Code:        code,
-		Name:        strings.TrimSpace(in.Name),
-		Subject:     in.Subject,
-		Body:        in.Body,
-		IsEnabled:   in.IsEnabled,
+		Name:        strings.TrimSpace(merged.Name),
+		Subject:     merged.Subject,
+		Body:        merged.Body,
+		IsEnabled:   merged.IsEnabled,
 		UpdatedUnix: time.Now().Unix(),
 	}
 	if err := s.store.UpsertNotificationTemplate(ctx, t); err != nil {

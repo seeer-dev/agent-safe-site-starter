@@ -1,7 +1,7 @@
 # Adversarial Review Hardening Plan
 
 Change ID: adversarial-checkout-hardening
-Revision: 1
+Revision: 2
 Status: Verifying
 
 Normative specification: [`spec.md`](spec.md)
@@ -35,12 +35,23 @@ Covers: REQ-002 (AC-002)
 
 Covers: REQ-003 (AC-003)
 
-### S04 — Tests + live verification + gates
+### S04 — Admin entity update sweep
 
-`service_security_test.go` (4 tests, each mutation-observed), live API
+Shared `presentFields` + `decodeStrict` extracted in model.go; the same
+presence-merge applied to UpdatePromo, UpdateCategory,
+UpdateShippingMethod, UpdatePaymentMethod (now loads the existing row),
+UpdateMember, and UpsertNotificationTemplate (existing-row merge;
+unknown ids keep PUT-upsert semantics). Nullable usage_limit /
+free_threshold use set() so explicit null clears.
+
+Covers: REQ-004 (AC-006)
+
+### S05 — Tests + live verification + gates
+
+`service_security_test.go` (10 tests, each mutation-observed), live API
 re-verification, verify chain.
 
-Covers: REQ-004 (AC-004, AC-005)
+Covers: REQ-005 (AC-004, AC-005)
 
 ## Traceability
 
@@ -49,5 +60,6 @@ Covers: REQ-004 (AC-004, AC-005)
 | REQ-001 / AC-001 | S01 | draft-variant rejection test + mutation |
 | REQ-002 / AC-002 | S02 | partial-body preservation test + mutation |
 | REQ-003 / AC-003 | S03 | guest-note-strip test + mutation |
-| REQ-004 / AC-004 | S04 | live API re-verification |
-| REQ-004 / AC-005 | S04 | verify chain |
+| REQ-004 / AC-006 | S04 | six partial-update tests + mutations |
+| REQ-005 / AC-004 | S05 | live API re-verification |
+| REQ-005 / AC-005 | S05 | verify chain |

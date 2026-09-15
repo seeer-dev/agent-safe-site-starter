@@ -825,14 +825,26 @@ func (s Service) UpdateMember(ctx context.Context, principal auth.Principal, id 
 	if tier != "regular" && tier != "vip" {
 		return Member{}, fmt.Errorf("%w: invalid member tier %q", ErrInvalidAdminInput, tier)
 	}
+	// Absent fields preserve the existing row — a status-only body must
+	// not blank the member's name, tags, or notes.
+	name, tags, notes := existing.Name, existing.Tags, existing.Notes
+	if in.has("name") {
+		name = in.Name
+	}
+	if in.has("tags") {
+		tags = in.Tags
+	}
+	if in.has("notes") {
+		notes = in.Notes
+	}
 	m := Member{
 		ID:          id,
 		Email:       defaultString(strings.TrimSpace(in.Email), existing.Email),
-		Name:        in.Name,
+		Name:        name,
 		Status:      status,
 		Tier:        tier,
-		Tags:        in.Tags,
-		Notes:       in.Notes,
+		Tags:        tags,
+		Notes:       notes,
 		TotalOrders: existing.TotalOrders,
 		TotalSpent:  existing.TotalSpent,
 		UpdatedUnix: time.Now().Unix(),

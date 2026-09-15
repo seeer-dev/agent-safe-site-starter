@@ -30,6 +30,8 @@ type Promo struct {
 }
 
 // PromoInput is the browser-supplied payload for promo create/update.
+// On update, absent fields preserve the existing row; an explicit null
+// on usage_limit clears the cap (presentFields.set).
 type PromoInput struct {
 	Code        string `json:"code"`
 	Label       string `json:"label"`
@@ -40,6 +42,20 @@ type PromoInput struct {
 	UsageLimit  *int   `json:"usage_limit"`
 	StartsUnix  int64  `json:"starts_unix"`
 	ExpiresUnix int64  `json:"expires_unix"`
+
+	presentFields
+}
+
+// UnmarshalJSON decodes with unknown-field rejection and records
+// top-level key presence for partial-update merge.
+func (in *PromoInput) UnmarshalJSON(data []byte) error {
+	type plain PromoInput
+	present, err := decodeStrict(data, (*plain)(in))
+	if err != nil {
+		return err
+	}
+	in.present = present
+	return nil
 }
 
 // NotificationLogFilter narrows notification log listings for the admin
@@ -107,21 +123,61 @@ func (s Service) UpdatePromo(ctx context.Context, principal auth.Principal, id s
 	if found == nil {
 		return Promo{}, ErrNotFound
 	}
-	if err := validatePromoInput(in); err != nil {
+	// Merge semantics: fields absent from the JSON body preserve the
+	// existing row — a partial update must not silently zero value,
+	// disable the promo, or drop its usage limit. usage_limit uses set()
+	// so an explicit null still clears the cap. Validation runs on the
+	// merged result so an omitted type keeps the existing one.
+	merged := PromoInput{
+		Code:        defaultString(strings.TrimSpace(in.Code), found.Code),
+		Label:       found.Label,
+		Type:        found.Type,
+		Value:       found.Value,
+		Enabled:     found.Enabled,
+		MinSubtotal: found.MinSubtotal,
+		UsageLimit:  found.UsageLimit,
+		StartsUnix:  found.StartsUnix,
+		ExpiresUnix: found.ExpiresUnix,
+	}
+	if in.has("label") {
+		merged.Label = in.Label
+	}
+	if in.has("type") {
+		merged.Type = in.Type
+	}
+	if in.has("value") {
+		merged.Value = in.Value
+	}
+	if in.has("enabled") {
+		merged.Enabled = in.Enabled
+	}
+	if in.has("min_subtotal") {
+		merged.MinSubtotal = in.MinSubtotal
+	}
+	if in.set("usage_limit") {
+		merged.UsageLimit = in.UsageLimit
+	}
+	if in.has("starts_unix") {
+		merged.StartsUnix = in.StartsUnix
+	}
+	if in.has("expires_unix") {
+		merged.ExpiresUnix = in.ExpiresUnix
+	}
+	if err := validatePromoInput(merged); err != nil {
 		return Promo{}, err
 	}
 	p := Promo{
 		ID:          id,
-		Code:        defaultString(strings.TrimSpace(in.Code), found.Code),
-		Label:       in.Label,
-		Type:        in.Type,
-		Value:       in.Value,
-		Enabled:     in.Enabled,
-		MinSubtotal: in.MinSubtotal,
-		UsageLimit:  in.UsageLimit,
+		Code:        merged.Code,
+		Label:       merged.Label,
+		Type:        merged.Type,
+		Value:       merged.Value,
+		Enabled:     merged.Enabled,
+		MinSubtotal: merged.MinSubtotal,
+		UsageLimit:  merged.UsageLimit,
 		UsedCount:   found.UsedCount,
-		StartsUnix:  in.StartsUnix,
-		ExpiresUnix: in.ExpiresUnix,
+		StartsUnix:  merged.StartsUnix,
+		ExpiresUnix: merged.ExpiresUnix,
 		UpdatedUnix: time.Now().Unix(),
 	}
 	if err := s.store.UpsertPromo(ctx, p); err != nil {

@@ -1,10 +1,10 @@
 # Adversarial Checkout Hardening Specification
 
 Change ID: adversarial-checkout-hardening
-Revision: 1
+Revision: 2
 Status: Verifying
 Decision authority: Repository owner/user
-Approval basis: Owner direction 2026-09-15: run the PostgreSQL live gate and perform an adversarial security review; the review live-exploited three defects (draft-parent variant ordering, partial-PUT scalar zeroing, staff-note leakage) and fixing them is the review's implied remediation step.
+Approval basis: Owner direction 2026-09-15: run the PostgreSQL live gate and perform an adversarial security review; the review live-exploited three defects (draft-parent variant ordering, partial-PUT scalar zeroing, staff-note leakage) and fixing them is the review's implied remediation step. Revision 2: owner approved sweeping the same absent-field zeroing class across the remaining admin entity inputs.
 Repository baseline: 10f805e18e394e7065854dfbceb327114e0d4564
 Supersedes: none
 
@@ -22,16 +22,18 @@ readable by any holder of a guest order token.
 In scope:
 
 - `server/internal/modules/commerce/` — resolveVariant parent-status
-  guard, presence-aware ProductInput merge on update, timeline note
-  redaction in maskCustomerPII, and the security regression test file.
+  guard, presence-aware merge on update for ProductInput, PromoInput,
+  CategoryInput, ShippingMethodUpdateInput, PaymentMethodInput,
+  MemberInput, and NotificationTemplateInput; timeline note redaction
+  in maskCustomerPII; and the security regression test file.
 
 Out of scope:
 
-- The same absent-field zeroing pattern in promo/category/shipping/
-  payment/sitecontent inputs (admin-only, several fail closed) —
-  recorded as a follow-up.
-- Product optimistic concurrency (orders/shipping methods have
-  expected_version; products do not).
+- sitecontent StoreSettingsInput / SiteContentInput and content
+  UpsertInput — these are documented whole-document/full-replacement
+  PUT semantics (OpenAPI marks fields required), not the same defect.
+- Product/member optimistic concurrency (orders and shipping methods
+  have expected_version; products and members do not).
 - Public-endpoint rate limiting — remains with the deferred
   public-endpoint-rate-limit spec.
 
@@ -86,7 +88,36 @@ order/track views never render note text. `maskCustomerPII` MUST strip
 - THEN every timeline entry has an empty note while the admin read
   retains the original note text.
 
-### REQ-004: Regression coverage and gates
+### REQ-004: Admin entity updates must preserve absent fields
+
+The same absent-field zeroing class found in UpdateProduct also
+affected UpdatePromo (usage_limit cap dropped, value zeroed, or
+spurious type-validation rejection), UpdateCategory (category silently
+deactivated, sort order reset), UpdateShippingMethod (fee zeroed to
+free shipping, free_threshold cleared, method disabled),
+UpdatePaymentMethod (provider label blanked, method disabled, fee
+zeroed), UpdateMember (name/tags/notes blanked), and
+UpsertNotificationTemplate (body blanked, template silently disabled —
+stopping order emails).
+
+All six inputs MUST record top-level JSON key presence and merge on
+update: absent fields preserve stored values; explicitly present fields
+apply, including explicit zeros. Nullable pointer fields
+(usage_limit, free_threshold) MUST treat an explicit JSON null as
+"clear" (present), not absent. Programmatic construction keeps
+all-present semantics. UpdatePaymentMethod and
+UpsertNotificationTemplate MUST load the existing row before merging;
+unknown ids keep the historical PUT-upsert behavior.
+
+#### AC-006: Partial admin updates preserve stored fields
+- GIVEN existing promo, category, shipping method, payment method,
+  member, and notification template rows with populated fields
+- WHEN an update body supplies only one field
+- THEN all absent fields keep their previous values, explicit JSON
+  null on usage_limit/free_threshold clears the cap, and each
+  regression test was observed failing when its merge was removed.
+
+### REQ-005: Regression coverage and gates
 
 Every fixed defect SHALL carry a service-level regression test whose
 failure trigger was observed via mutation of the protection, and the
