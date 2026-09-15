@@ -99,6 +99,83 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         ├──► Cloudflare R2（圖床）
         └──► Resend（交易信）</div>
 
+<!-- ============ AGENT RUNBOOK ============ -->
+<div class="step">
+  <div class="step-num">A</div>
+  <div class="step-body">
+    <h2>Agent 協作跑通模式 <span class="tag">登入 handoff + 安全取值</span></h2>
+    <div class="card">
+      <div class="note"><strong>本次實際部署目標：</strong>Supabase organization <code>ailazytech</code>（ref <code>ntrysovsjzjiqfbobdai</code>）；project <code>agent-safe-site-starter</code>（ref <code>wcjqrwchajqdyarhsriw</code>）；project URL <code>https://wcjqrwchajqdyarhsriw.supabase.co</code>；區域 <code>Southeast Asia (Singapore) ap-southeast-1</code>。這些識別資訊保留原值寫入紀錄，secret 只記變數名稱、來源位置與目的地。</div>
+      <div class="note"><strong>本次已取得的非 secret 狀態：</strong>Supabase Auth 使用者 <code>ailazytech@gmail.com</code>（UID <code>68a03370-56ee-413a-8097-950e629ee46a</code>）已存在；Cloudflare account ID <code>304aea33c544c2730e9fcd141dba420a</code> 的 R2 bucket <code>agent-safe-site-starter-assets</code> 已建立，位於 APAC，公開存取關閉且尚未綁 custom domain；Railway workspace <code>ailazytech's Projects</code> 已建立 project <code>zealous-connection</code>（ID <code>359501a3-fd3e-4669-ab1e-547df21a5b56</code>），production environment（ID <code>6fbe5189-1322-4075-a1c0-ed874b8857b3</code>）內的 service <code>agent-safe-site-starter</code>（ID <code>30a26c3a-4160-4dae-99d8-d8da64c2acea</code>）首次 GitHub deployment 已顯示 <code>Deployment successful</code>；服務目前仍是 unexposed、US West、1 replica。截圖已取得並只保留在本次操作紀錄，不寫入 repo。</div>
+      <p>若由 Codex 協助跑完整部署，使用 <code>skills/site-deployment-browser</code>。瀏覽器要用乾淨、可控制的部署用 profile 或由你明確交給 agent 的分頁；登入、MFA、CAPTCHA、密碼管理器一律由你操作，登入完成後再交回 agent 進入內頁取值與驗證。</p>
+
+      <div class="note warn">
+        <strong>secret 處理規則：</strong>agent 可以協助把 dashboard 上的值對到正確目的地，但不能把 secret 印到聊天、截圖、repo、文件、log 或報告。需要建立 key、儲存環境變數、部署、改 DNS、跑金流或傳送測試信前，agent 必須在當下說清楚來源、目的地、動作效果並取得你的確認。
+      </div>
+
+      <table>
+        <tr><th>站台</th><th>登入後要進的地方</th><th>要取得 / 設定</th><th>設到哪裡</th><th>驗證點</th></tr>
+        <tr>
+          <td>Supabase</td>
+          <td>Project → Connect、Settings → API Keys、Authentication → Users、Project Settings → Data API</td>
+          <td><code>DATABASE_URL</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code>、管理員帳號、Data API/RLS 開關</td>
+          <td>Railway；Pages build 需要的公開/建置值</td>
+          <td>pooler URL 已加 <code>default_query_exec_mode=simple_protocol</code>；Data API 關、auto expose 關、automatic RLS 開</td>
+        </tr>
+        <tr>
+          <td>Cloudflare R2</td>
+          <td>Cloudflare Dashboard → R2 Object Storage → bucket、Manage R2 API Tokens</td>
+          <td><code>R2_ACCOUNT_ID</code>、bucket、Object Read/Write token pair、<code>R2_PUBLIC_BASE_URL</code></td>
+          <td>Railway；<code>R2_PUBLIC_BASE_URL</code> 也設到 Pages build</td>
+          <td>bucket public URL 可載圖；token scope 只限指定 bucket</td>
+        </tr>
+        <tr>
+          <td>Resend</td>
+          <td>Domains、API Keys</td>
+          <td>驗證寄信網域、<code>RESEND_API_KEY</code>、<code>RESEND_FROM</code>、<code>CONTACT_NOTIFY_TO</code></td>
+          <td>Railway</td>
+          <td>SPF/DKIM 全綠；寄件人使用已驗證網域</td>
+        </tr>
+        <tr>
+          <td>Railway</td>
+          <td>Project → Go service → Variables、Deployments、Settings</td>
+          <td>Docker 部署、Railway origin、Go API 變數、<code>EDGE_SECRET</code>、<code>CF_DEPLOY_HOOK_URL</code></td>
+          <td>Railway service variables</td>
+          <td><code>/healthz</code> 回 200；migrate 完成；設上 <code>EDGE_SECRET</code> 後直打 Railway <code>/api/products</code> 預期回 403</td>
+        </tr>
+        <tr>
+          <td>Cloudflare Pages</td>
+          <td>Workers &amp; Pages → 前台 Pages project、後台 Pages project → Settings → Variables and Secrets、Settings → Builds → Add deploy hook</td>
+          <td>前台 build、後台 build、deploy hook、Functions runtime 變數 <code>API_ORIGIN</code> + <code>EDGE_SECRET</code></td>
+          <td>兩個 Pages projects；deploy hook URL 回填 Railway</td>
+          <td>前台 <code>/api/products</code> 經 Pages Function 回 200；admin 同源 <code>/api</code> 可登入打 API</td>
+        </tr>
+        <tr>
+          <td>Cloudflare DNS / Edge</td>
+          <td>DNS、Pages Custom domains</td>
+          <td>前台網域、選配後台網域、HTTPS、自訂網域綁定</td>
+          <td>Cloudflare DNS + Pages custom domains</td>
+          <td>正式網域 HTTPS；同源 API 成功、Railway origin 被擋</td>
+        </tr>
+        <tr>
+          <td>ECPay（選配）</td>
+          <td>先用 stage 廠商後台，再進 production</td>
+          <td><code>MerchantID</code>、<code>HashKey</code>、<code>HashIV</code>、callback 設定、一筆 stage 交易</td>
+          <td>Railway；ECPay 後台/API 設定</td>
+          <td>callback 對帳成功；訂單轉 paid；瀏覽器返回頁重新查詢狀態</td>
+        </tr>
+      </table>
+
+      <h3>截圖規則</h3>
+      <ul>
+        <li>可以截：登入前入口頁、已遮蔽 secret 的設定頁、非敏感成功狀態、部署狀態、DNS/驗證狀態。</li>
+        <li>不要截：資料庫 URL、API secret、access key、deploy hook URL、付款金鑰、顧客資料、訂單個資。</li>
+        <li>若頁面無法遮蔽 secret，只記文字 checkpoint，不保存圖片。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
 <!-- ============ STEP 1 ============ -->
 <div class="step">
   <div class="step-num">1</div>
@@ -257,7 +334,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr><td>Output directory</td><td><code>dist</code></td></tr>
         <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL=https://你的網域</code>、<code>PUBLIC_API_BASE=https://你的網域</code>、<code>R2_PUBLIC_BASE_URL</code>、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）</td></tr>
       </table>
-      <div class="note"><strong>Functions 環境變數（兩個專案都要設）：</strong>Pages 專案 → Settings → Environment variables（<em>不是</em> build 變數）→ <code>API_ORIGIN</code> = Railway 的 <code>https://xxx.up.railway.app</code>、<code>EDGE_SECRET</code><span class="secret">SECRET</span> = 跟 Railway 同值。repo 根的 <code>functions/api/[[path]].js</code> 會攔截 <code>/api/*</code>、注入 secret 後轉發 — 瀏覽器全程打同源，看不到 Railway 網域。</div>
+      <div class="note"><strong>Functions 環境變數（兩個專案都要設）：</strong>Pages 專案 → Settings → <strong>Variables and Secrets</strong> → Add（<em>不是</em> build 變數）→ <code>API_ORIGIN</code> = Railway 的 <code>https://xxx.up.railway.app</code>、<code>EDGE_SECRET</code><span class="secret">SECRET</span> = 跟 Railway 同值。保存後重新部署，設定才會進入 Function。repo 根的 <code>functions/api/[[path]].js</code> 會攔截 <code>/api/*</code>、注入 secret 後轉發 — 瀏覽器全程打同源，看不到 Railway 網域。</div>
 
       <h3>後台 SPA（第二個 Pages 專案）</h3>
       <table>
@@ -270,7 +347,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
 
       <h3>Deploy Hook（發布迴路）</h3>
       <ul>
-        <li>前台 Pages 專案 → Settings → Builds &amp; deployments → <strong>Deploy hooks</strong> → 建立，拿 URL。</li>
+        <li>前台 Pages 專案 → Settings → <strong>Builds</strong> → <strong>Add deploy hook</strong> → 建立，拿 URL。Cloudflare 介面若顯示 Builds &amp; deployments，仍是在同一個 Builds 區塊。</li>
         <li>回填 Railway 的 <code>CF_DEPLOY_HOOK_URL</code>。<code>tools/publish</code> 的流程：先在本地 render <code>dist/</code> 做預檢（失敗即中止、保留舊 dist）→ 成功後 POST hook，讓 Pages 從 Git 分支重建 — Pages build 內的 <code>make site</code> 會用 production DB 重新 render，<strong>整個流程不上傳 dist</strong>。</li>
         <li>後台的內容「發布」按鈕只把 DB 草稿標記為 published，<strong>不會自動觸發</strong>上述流程 — 內容要上線，由 CI 或人工執行 <code>go run ./server/tools/publish</code>，或直接 push 觸發 Git build。</li>
       </ul>
@@ -345,9 +422,9 @@ const ITEMS = [
   ["Railway env 全設", "APP_ENV=production、SITE_ORIGIN、EDGE_SECRET、DB/AUTH/R2/Resend"],
   ["前台 Pages 建置成功", "make site 跑完、*.pages.dev 預覽正常、圖片與島都載入"],
   ["後台 Pages 建置成功", "admin/dist 上線、_redirects 生效、可用 Supabase 帳號登入"],
-  ["Deploy hook 串接", "CF_DEPLOY_HOOK_URL 已設，publish 流程會觸發 Pages 重建"],
+  ["Deploy hook 串接", "Settings → Builds 建立 hook，CF_DEPLOY_HOOK_URL 已設，publish 流程會觸發 Pages 重建"],
   ["自訂網域綁定", "前台網域綁定並上 HTTPS（後台可綁 admin. 或用 pages.dev）"],
-  ["Pages Functions env（兩專案）", "API_ORIGIN=Railway URL、EDGE_SECRET=與 Railway 同值，設在 Environment variables 非 build"],
+  ["Pages Functions env（兩專案）", "API_ORIGIN=Railway URL、EDGE_SECRET=與 Railway 同值，設在 Variables and Secrets 非 build"],
   ["EDGE_SECRET + Pages Function 生效", "https://你的網域/api/products 回 200、直打 Railway origin 回 403"],
   ["下單 → 通知 → 後台閉環", "正式環境下一筆測試單：訂單出現在後台、通知寄出/記 log"],
   ["（選配）ECPay stage 實測一筆", "callback 對帳、訂單轉 paid、瀏覽器返回頁狀態正確"],

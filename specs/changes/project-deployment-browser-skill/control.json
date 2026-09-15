@@ -1,0 +1,69 @@
+{
+  "change_id": "project-deployment-browser-skill",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "User requested a project-scoped deployment browser skill and updated docs/deployment-guide.html on 2026-09-15, including authenticated dashboard operation, value retrieval, safe screenshots, and environment-variable placement.",
+  "repository_baseline": "862ea46b0fa22ff507ed887660bda187c86bf6f7",
+  "supersedes": [],
+  "applies_to": [
+    ".ai/scope.json",
+    "docs/deployment-guide.html",
+    "skills/site-deployment-browser/**",
+    "specs/changes/project-deployment-browser-skill/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-002": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "skills/site-deployment-browser/SKILL.md exists as a project-local skill and describes this starter's concrete provider map.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "The skill distinguishes user-only login/MFA/CAPTCHA/password-manager steps from agent dashboard navigation, requires action-time confirmation for provider mutations and secret transfer, and forbids printing, persisting, screenshotting, committing, or reporting secret values; see receipts/security-review.md.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "docs/deployment-guide.html now includes an Agent 協作跑通模式 section with provider dashboard entry points, values, destinations, confirmation gates, verification checkpoints, and screenshot rules.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "The project-local skill path is skills/site-deployment-browser/SKILL.md and its description routes only this starter's Supabase, Cloudflare, Railway, Resend, and ECPay deployment workflow.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Security review found no real secrets and confirmed the skill/guide forbid secret screenshots, logs, repo writes, chat disclosure, and reports; see receipts/security-review.md.",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ],
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "The HTML guide's runbook table covers Supabase, Cloudflare R2, Resend, Railway, Cloudflare Pages, Cloudflare DNS/edge proof, and optional ECPay with dashboard locations, values, destinations, and verification checkpoints.",
+      "status": "passed"
+    }
+  }
+}
