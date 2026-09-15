@@ -76,23 +76,72 @@ An existing root `.env` still works and is still read — you do not have to mig
 
 ## Production shape
 
-- **Site:** Cloudflare Pages
-- **API:** Railway Go container
+- **Site:** Cloudflare Pages (static `dist/` from the Go renderer)
+- **Admin:** Cloudflare Pages, second project (`admin/dist` Vue SPA)
+- **API:** Railway Go container (`Dockerfile` + `railway.toml`; migrations run as a pre-deploy command)
 - **Database:** Supabase PostgreSQL
 - **Auth:** Supabase Auth
 - **Files:** Cloudflare R2
 - **Email:** Resend
+- **Payments:** ECPay AIO v5 (optional; all four `ECPAY_*` vars blank disables it)
 
-Set `DB_DRIVER=postgres`, `AUTH_MODE=supabase`, the provider environment variables, and production URLs. Railway uses `Dockerfile` + `railway.toml` and runs migrations as a pre-deploy command.
+**Step-by-step guide with signup links, every value to collect, and a
+progress checklist:** open [`docs/deployment-guide.html`](docs/deployment-guide.html)
+in a browser.
 
-Production configuration lives in the provider, not in this repository. With `APP_ENV=production` the Go loader and both Vite builds read the process environment only and ignore every repository dotenv file, so there is no `.env.production` to create or deploy. `.env.production.example` is an inventory checklist; `docs/environment-configuration.md` has the full ownership table and the browser-safe allowlist.
+### Where to sign up and what to set
 
-For Pages, use either:
+| Service | Sign up at | Collect | Set on |
+|---|---|---|---|
+| Supabase | [supabase.com/dashboard](https://supabase.com/dashboard) | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Railway (+ Pages build for DB/auth) |
+| Cloudflare R2 | [dash.cloudflare.com](https://dash.cloudflare.com) → R2 | `R2_ACCOUNT_ID`, API token pair, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | Railway (+ `R2_PUBLIC_BASE_URL` on Pages) |
+| Resend | [resend.com](https://resend.com) | `RESEND_API_KEY`, verified domain for `RESEND_FROM` | Railway |
+| Railway | [railway.app](https://railway.app) → Deploy from GitHub | Railway domain or `api.` subdomain | — |
+| Cloudflare Pages | dash.cloudflare.com → Workers & Pages | Pages domains, deploy hook URL | — |
+| ECPay (optional) | [vendor.ecpay.com.tw](https://vendor.ecpay.com.tw) (stage: [vendor-stage.ecpay.com.tw](https://vendor-stage.ecpay.com.tw)) | `MerchantID`, `HashKey`, `HashIV` | Railway |
 
-1. **Git build:** build command `make site`, output `dist`; this is the preferred CMS/deploy-hook path when Pages can reach the production database. `make site` builds the theme bundle and then renders. The renderer alone is not enough: the bundle is git-ignored, so a clean checkout has none and `go run ./server/tools/render` fails closed until it is built. The build image therefore needs Node as well as Go.
-2. **Direct upload:** `CF_PAGES_PROJECT=... go run ./server/tools/publish`; useful for AI/CI-driven publishing.
+Key details that bite if missed:
 
-Cloudflare Pages' build image supports Go and custom build commands, so the renderer does not require a JavaScript site framework.
+- **Supabase transaction pooler** (port 6543): append
+  `&default_query_exec_mode=simple_protocol` to `DATABASE_URL` — pgx
+  prepared statements need it. Direct connection (5432) does not.
+- **`SITE_THEME`** selects which theme `make site` builds and renders
+  (`curatory` for this storefront; default `minimal-cart`).
+- **`SITE_ORIGIN`** is the single CORS-allowed browser origin — set it to
+  the exact public site origin, not a wildcard.
+- **`EDGE_SECRET`** + a Cloudflare Transform Rule injecting
+  `X-Edge-Secret` stop traffic that bypasses the edge and hits the
+  Railway origin directly. `/healthz` is exempt so Railway probes still
+  work.
+- **Admin SPA** needs `admin/public/_redirects` (`/* /index.html 200`,
+  already shipped) and `ADMIN_API_BASE` ending in `/api`.
+
+### Where production configuration lives
+
+Production configuration lives in the provider, not in this repository.
+With `APP_ENV=production` the Go loader and both Vite builds read the
+process environment only and ignore every repository dotenv file, so
+there is no `.env.production` to create or deploy. `AUTH_MODE=dev` is
+refused in production. `.env.production.example` is an inventory
+checklist; `docs/environment-configuration.md` has the full ownership
+table and the browser-safe allowlist.
+
+### Cloudflare Pages builds
+
+1. **Storefront (Git build):** connect the repo, build command
+   `make site`, output `dist`. `make site` builds the theme bundle the
+   renderer requires (the bundle is git-ignored, so a clean checkout has
+   none and `go run ./server/tools/render` fails closed until built) and
+   then renders. The build image needs Node as well as Go — Cloudflare's
+   image has both. The renderer reads the production database during the
+   build, so `DATABASE_URL` must be reachable from Pages builds.
+2. **Admin (second Pages project):** build command
+   `npm --prefix admin ci && npm --prefix admin run build:only`, output
+   `admin/dist`.
+3. **Direct upload (alternative):**
+   `CF_PAGES_PROJECT=... go run ./server/tools/publish`; useful for
+   AI/CI-driven publishing. A Pages **deploy hook** URL set as Railway's
+   `CF_DEPLOY_HOOK_URL` lets publish actions trigger a Pages rebuild.
 
 ## Repository map
 

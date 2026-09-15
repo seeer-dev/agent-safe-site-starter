@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>部署指南 — agent-safe-site-starter</title>
+<style>
+  :root {
+    --ink: #1a1a1a; --muted: #6b6b6b; --line: #e5e2dc; --bg: #faf9f6;
+    --card: #ffffff; --accent: #8a6d4b; --accent-soft: #f3ede4;
+    --ok: #2e7d4f; --code-bg: #f4f2ee;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body {
+    font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+    background: var(--bg); color: var(--ink); line-height: 1.75;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 48px 24px 96px; }
+  header.hero { margin-bottom: 40px; }
+  .kicker { font-size: 13px; letter-spacing: .12em; color: var(--accent); text-transform: uppercase; font-weight: 600; }
+  h1 { font-size: 30px; margin: 6px 0 10px; font-weight: 700; }
+  .sub { color: var(--muted); font-size: 15px; max-width: 640px; }
+  .arch {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 20px 24px; margin: 28px 0 48px; font-family: "JetBrains Mono", Consolas, monospace;
+    font-size: 13px; white-space: pre; overflow-x: auto; color: #444;
+  }
+  .step { display: flex; gap: 18px; margin-bottom: 28px; }
+  .step-num {
+    flex: 0 0 40px; height: 40px; border-radius: 50%; background: var(--ink); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px;
+  }
+  .step-body { flex: 1; }
+  .card {
+    background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+    padding: 22px 24px; margin-top: 8px;
+  }
+  h2 { font-size: 20px; font-weight: 700; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  h2 .tag { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 3px 10px; border-radius: 999px; }
+  h3 { font-size: 14px; font-weight: 700; margin: 18px 0 6px; color: #333; }
+  p, li { font-size: 14.5px; }
+  ul { padding-left: 22px; }
+  li { margin: 4px 0; }
+  a { color: var(--accent); }
+  .signup {
+    display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+    font-size: 13.5px; font-weight: 600; color: var(--accent); text-decoration: none;
+    border: 1px solid var(--accent); border-radius: 8px; padding: 6px 14px;
+  }
+  .signup:hover { background: var(--accent-soft); }
+  code {
+    font-family: "JetBrains Mono", Consolas, monospace; font-size: 12.5px;
+    background: var(--code-bg); padding: 1px 6px; border-radius: 5px;
+  }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 4px; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; }
+  td code { white-space: nowrap; }
+  .secret { color: #b3261e; font-weight: 600; font-size: 11px; margin-left: 4px; }
+  .note {
+    border-left: 3px solid var(--accent); background: var(--accent-soft);
+    padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13.5px; margin: 14px 0;
+  }
+  .note.warn { border-color: #b3261e; background: #fdf1ef; }
+  /* checklist */
+  .checklist { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 24px; margin-top: 12px; }
+  .progress { height: 8px; background: var(--code-bg); border-radius: 999px; overflow: hidden; margin: 14px 0 20px; }
+  .progress > div { height: 100%; width: 0; background: var(--ok); border-radius: 999px; transition: width .25s ease; }
+  .cl-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .cl-item:last-child { border-bottom: 0; }
+  .cl-item input { margin-top: 5px; width: 16px; height: 16px; accent-color: var(--ok); cursor: pointer; }
+  .cl-item span { font-size: 14px; }
+  .cl-item.done span { color: var(--muted); text-decoration: line-through; }
+  .cl-item small { display: block; color: var(--muted); font-size: 12.5px; }
+  .cl-done-msg { color: var(--ok); font-weight: 700; font-size: 15px; display: none; margin-top: 14px; }
+  .cl-reset { font-size: 12px; color: var(--muted); background: none; border: 0; cursor: pointer; text-decoration: underline; margin-top: 10px; }
+  footer { margin-top: 56px; color: var(--muted); font-size: 12.5px; border-top: 1px solid var(--line); padding-top: 20px; }
+  @media (max-width: 560px) { .step { gap: 12px; } .arch { font-size: 11.5px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Deployment Guide</div>
+  <h1>質選所商店 — 上線部署指南</h1>
+  <p class="sub">
+    五個服務、一份 checklist。照順序走完全部就能上線。
+    所有 secret 只設在平台端的環境變數，<strong>不進這個 repo、不進任何檔案</strong>。
+  </p>
+</header>
+
+<div class="arch">Cloudflare Pages ── 靜態前台 (dist/) + 後台 SPA
+        │ 瀏覽器 islands 直打 API
+        ▼
+Railway (Go API) ──► Supabase PostgreSQL + Auth
+        │
+        ├──► Cloudflare R2（圖床）
+        └──► Resend（交易信）</div>
+
+<!-- ============ STEP 1 ============ -->
+<div class="step">
+  <div class="step-num">1</div>
+  <div class="step-body">
+    <h2>Supabase <span class="tag">PostgreSQL + Auth</span></h2>
+    <div class="card">
+      <h3>申請 / 控制台</h3>
+      <p><a class="signup" href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com/dashboard →</a> 用 GitHub 登入即可，New Project 建一個專案（Region 選 Singapore 離台灣最近）。</p>
+
+      <h3>要蒐集的資訊</h3>
+      <table>
+        <tr><th>值</th><th>在哪裡拿</th><th>設到</th></tr>
+        <tr><td><code>DATABASE_URL</code><span class="secret">SECRET</span></td>
+            <td>Project → Connect（右上）→ Transaction pooler 字串，密碼換成建專案時設的 DB password</td>
+            <td>Railway + Pages build</td></tr>
+        <tr><td><code>SUPABASE_URL</code></td>
+            <td>Project Settings → API → Project URL</td>
+            <td>Railway + Pages + browser</td></tr>
+        <tr><td><code>SUPABASE_PUBLISHABLE_KEY</code></td>
+            <td>同頁 → Publishable key（舊版叫 anon key）</td>
+            <td>Railway + Pages + browser</td></tr>
+      </table>
+
+      <div class="note warn">
+        <strong>Transaction pooler 必加參數：</strong>若用 pooler（port 6543）字串，尾端要加
+        <code>&amp;default_query_exec_mode=simple_protocol</code> — pgx 的 prepared statement 在
+        transaction 模式下需要它。用 direct connection（port 5432）則不用。
+      </div>
+
+      <h3>建管理員帳號</h3>
+      <ul>
+        <li>Authentication → Users → <strong>Add user → Create new user</strong>，填後台登入用的 email + 密碼。</li>
+        <li>若要 Google / LINE 登入：Authentication → Sign In / Providers 開啟，OAuth client secret 設在 Supabase 後台（<strong>不是</strong>環境變數）。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 2 ============ -->
+<div class="step">
+  <div class="step-num">2</div>
+  <div class="step-body">
+    <h2>Cloudflare R2 <span class="tag">圖床</span></h2>
+    <div class="card">
+      <h3>申請 / 控制台</h3>
+      <p><a class="signup" href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com →</a> 註冊後左側 R2 Object Storage（需綁付款方式，免費額度內不收費）。</p>
+
+      <h3>要蒐集的資訊</h3>
+      <table>
+        <tr><th>值</th><th>在哪裡拿</th><th>設到</th></tr>
+        <tr><td><code>R2_ACCOUNT_ID</code><span class="secret">SECRET</span></td>
+            <td>R2 Overview 右側的 Account ID</td><td>Railway</td></tr>
+        <tr><td><code>R2_ACCESS_KEY_ID</code><span class="secret">SECRET</span></td>
+            <td rowspan="2">R2 → Manage R2 API Tokens → Create API token（Object Read &amp; Write，指定 bucket）— secret 只顯示一次</td>
+            <td>Railway</td></tr>
+        <tr><td><code>R2_SECRET_ACCESS_KEY</code><span class="secret">SECRET</span></td><td>Railway</td></tr>
+        <tr><td><code>R2_BUCKET</code></td><td>建的 bucket 名稱</td><td>Railway</td></tr>
+        <tr><td><code>R2_PUBLIC_BASE_URL</code></td>
+            <td>bucket → Settings → Public access：開 <code>r2.dev</code> 子網域，或綁自訂網域</td>
+            <td>Railway + Pages build</td></tr>
+      </table>
+      <div class="note">建議綁自訂子網域（如 <code>img.你的網域</code>）取代 r2.dev — 品牌一致、可過自己網域的快取規則。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 3 ============ -->
+<div class="step">
+  <div class="step-num">3</div>
+  <div class="step-body">
+    <h2>Resend <span class="tag">交易信</span></h2>
+    <div class="card">
+      <h3>申請 / 控制台</h3>
+      <p><a class="signup" href="https://resend.com" target="_blank" rel="noopener">resend.com →</a></p>
+
+      <h3>設定步驟</h3>
+      <ul>
+        <li>Domains → <strong>Add Domain</strong>：輸入你的網域，照畫面在 DNS（Cloudflare）加 SPF / DKIM 記錄，等 Verify。</li>
+        <li>API Keys → <strong>Create API Key</strong>（Sending access）。</li>
+      </ul>
+
+      <table>
+        <tr><th>值</th><th>內容</th><th>設到</th></tr>
+        <tr><td><code>RESEND_API_KEY</code><span class="secret">SECRET</span></td><td>建立的 API key（只顯示一次）</td><td>Railway</td></tr>
+        <tr><td><code>RESEND_FROM</code></td><td><code>質選所 &lt;orders@你的網域&gt;</code>（網域須已驗證）</td><td>Railway</td></tr>
+        <tr><td><code>CONTACT_NOTIFY_TO</code></td><td>客服通知收件信箱</td><td>Railway</td></tr>
+      </table>
+      <div class="note">沒設 <code>RESEND_API_KEY</code> 不會壞 — 通知會記成 log 不寄出，之後可在後台「通知日誌」一鍵重試。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 4 ============ -->
+<div class="step">
+  <div class="step-num">4</div>
+  <div class="step-body">
+    <h2>Railway <span class="tag">Go API</span></h2>
+    <div class="card">
+      <h3>申請 / 部署</h3>
+      <p><a class="signup" href="https://railway.app" target="_blank" rel="noopener">railway.app →</a> New Project → Deploy from GitHub Repo → 選這個 repo。<code>railway.toml</code> 已配好 Docker build、部署前自動 <code>migrate</code>、<code>/healthz</code> 健康檢查。</p>
+
+      <h3>Variables 分頁設這些</h3>
+      <table>
+        <tr><th>變數</th><th>值</th></tr>
+        <tr><td><code>APP_ENV</code></td><td><code>production</code></td></tr>
+        <tr><td><code>HTTP_ADDR</code></td><td><code>:8080</code></td></tr>
+        <tr><td><code>SITE_ORIGIN</code></td><td><code>https://你的網域</code>（CORS 單一來源，要跟 Pages 正式網域一致）</td></tr>
+        <tr><td><code>PUBLIC_SITE_URL</code></td><td><code>https://你的網域</code></td></tr>
+        <tr><td><code>PUBLIC_API_BASE</code></td><td><code>https://api.你的網域</code> 或 Railway 給的 <code>*.up.railway.app</code></td></tr>
+        <tr><td><code>DB_DRIVER</code> / <code>DATABASE_URL</code></td><td><code>postgres</code> + Supabase DSN<span class="secret">SECRET</span></td></tr>
+        <tr><td><code>AUTH_MODE</code></td><td><code>supabase</code></td></tr>
+        <tr><td><code>SUPABASE_URL</code> / <code>SUPABASE_PUBLISHABLE_KEY</code></td><td>步驟 1 拿到的</td></tr>
+        <tr><td><code>SUPABASE_VERIFIER_MODE</code></td><td><code>remote</code>（預設；jwks 模式見文件取捨）</td></tr>
+        <tr><td><code>R2_*</code> 五件</td><td>步驟 2 拿到的<span class="secret">SECRET</span></td></tr>
+        <tr><td><code>RESEND_*</code> + <code>CONTACT_NOTIFY_TO</code></td><td>步驟 3 拿到的<span class="secret">SECRET</span></td></tr>
+        <tr><td><code>EDGE_SECRET</code><span class="secret">SECRET</span></td><td>自己生一個 32+ 字元隨機字串，步驟 6 的 Transform Rule 用同一個</td></tr>
+        <tr><td><code>CF_DEPLOY_HOOK_URL</code><span class="secret">SECRET</span></td><td>步驟 5 在 Pages 建完 Deploy Hook 後回填</td></tr>
+        <tr><td><code>ECPAY_*</code> 四件</td><td>要上金流才設（見下方）；全留空就停用</td></tr>
+      </table>
+
+      <div class="note">
+        部署完先驗證：<code>curl https://&lt;railway-domain&gt;/healthz</code> 回 200、
+        <code>/api/products</code> 回 200、Railway deploy log 裡 migrate 跑完。
+        API 網域建議在 Railway → Settings → Networking 綁 <code>api.你的網域</code>。
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 5 ============ -->
+<div class="step">
+  <div class="step-num">5</div>
+  <div class="step-body">
+    <h2>Cloudflare Pages <span class="tag">前台 + 後台</span></h2>
+    <div class="card">
+      <h3>前台專案</h3>
+      <p>Workers &amp; Pages → Create → Pages → <strong>Connect to Git</strong> → 選 repo 與分支。</p>
+      <table>
+        <tr><th>設定</th><th>值</th></tr>
+        <tr><td>Build command</td><td><code>make site</code>（會照 <code>SITE_THEME</code> 建對的 theme bundle 再 render）</td></tr>
+        <tr><td>Output directory</td><td><code>dist</code></td></tr>
+        <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL</code>、<code>PUBLIC_API_BASE</code>、<code>R2_PUBLIC_BASE_URL</code>、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）</td></tr>
+      </table>
+
+      <h3>後台 SPA（第二個 Pages 專案）</h3>
+      <table>
+        <tr><th>設定</th><th>值</th></tr>
+        <tr><td>Build command</td><td><code>npm --prefix admin ci &amp;&amp; npm --prefix admin run build:only</code></td></tr>
+        <tr><td>Output directory</td><td><code>admin/dist</code></td></tr>
+        <tr><td>環境變數</td><td><code>ADMIN_API_BASE=https://api.你的網域/api</code>（結尾含 <code>/api</code>）、Supabase 三件</td></tr>
+      </table>
+      <div class="note">SPA 路由需要 <code>admin/dist/_redirects</code> 寫 <code>/* /index.html 200</code> — 若檔案不存在請在 repo 補上。</div>
+
+      <h3>Deploy Hook（發布迴路）</h3>
+      <ul>
+        <li>前台 Pages 專案 → Settings → Builds &amp; deployments → <strong>Deploy hooks</strong> → 建立，拿 URL。</li>
+        <li>回填 Railway 的 <code>CF_DEPLOY_HOOK_URL</code> — 之後 <code>tools/publish</code>（後台發布動作）會 render → 上傳 dist → POST hook 觸發 Pages 重建。</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 6 ============ -->
+<div class="step">
+  <div class="step-num">6</div>
+  <div class="step-body">
+    <h2>網域 + 邊緣防護 <span class="tag">Cloudflare DNS</span></h2>
+    <div class="card">
+      <ul>
+        <li>網域 DNS 託管到 Cloudflare（Registrar 買或把 nameserver 指過來）。</li>
+        <li>前台網域：Pages 專案 → Custom domains → 綁 <code>你的網域</code>。</li>
+        <li>API 網域：<code>api.你的網域</code> CNAME 到 Railway，且該 host 走 Cloudflare proxy（橘雲）。</li>
+        <li><strong>Transform Rule 注入 edge secret：</strong>Rules → Transform Rules → Modify Request Header → 對 <code>api.你的網域</code> 的請求 Set header <code>X-Edge-Secret</code> = Railway 的 <code>EDGE_SECRET</code> 值。之後直接打 Railway origin 的請求一律 403 — 擋掉繞過 Cloudflare WAF 的流量。</li>
+      </ul>
+      <div class="note warn"><strong>輪換順序：</strong>先在 edge 設新值 → 再改 Railway 的 <code>EDGE_SECRET</code> → 確認後把 edge 舊規則清掉。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ ECPay optional ============ -->
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <h2>ECPay 綠界 <span class="tag">選配 — 要上金流才做</span></h2>
+    <div class="card">
+      <p><a class="signup" href="https://vendor.ecpay.com.tw" target="_blank" rel="noopener">廠商後台 vendor.ecpay.com.tw →</a>
+         測試環境：<a href="https://vendor-stage.ecpay.com.tw" target="_blank" rel="noopener">vendor-stage.ecpay.com.tw</a></p>
+      <ul>
+        <li>廠商後台 → 系統開發管理 → 介接設定：拿 <code>MerchantID</code> / <code>HashKey</code> / <code>HashIV</code>。</li>
+        <li>Railway 設 <code>ECPAY_ENVIRONMENT</code>（stage/production）+ 三個 key。<span class="secret">SECRET</span></li>
+        <li>ReturnURL / PaymentInfoURL 要指到 <code>https://api.你的網域</code> 的 ECPay callback 路由 — 在廠商後台或 API 參數設定。</li>
+      </ul>
+      <div class="note">上線前務必用 stage 環境完整跑一筆交易，確認 callback 對帳與訂單狀態轉移。</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ CHECKLIST ============ -->
+<div class="step">
+  <div class="step-num">✓</div>
+  <div class="step-body">
+    <h2>上線 Checklist</h2>
+    <div class="checklist">
+      <div class="progress"><div id="bar"></div></div>
+      <div id="items"></div>
+      <div class="cl-done-msg" id="doneMsg">全部完成 — 可以上線了。</div>
+      <button class="cl-reset" id="resetBtn">清除勾選</button>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Secrets 只存在各平台的環境變數，永不進 repo / dist / browser bundle。完整變數對照表見
+  <code>docs/environment-configuration.md</code>，部署驗收口徑見 <code>docs/commerce-acceptance.md</code>。
+</footer>
+</div>
+
+<script>
+const ITEMS = [
+  ["Supabase 專案建立", "DATABASE_URL（pooler 記得加 simple_protocol）、URL、publishable key"],
+  ["Supabase 管理員帳號建立", "Authentication → Users → Add user"],
+  ["R2 bucket + API token + 公開網域", "五個 R2_* 值備齊，bucket public access 已開"],
+  ["Resend 網域驗證 + API key", "SPF/DKIM 全綠，RESEND_FROM 用已驗證網域"],
+  ["Railway 部署成功", "/healthz 200、/api/products 200、deploy log 的 migrate 完成"],
+  ["Railway env 全設", "APP_ENV=production、SITE_ORIGIN、EDGE_SECRET、DB/AUTH/R2/Resend"],
+  ["前台 Pages 建置成功", "make site 跑完、*.pages.dev 預覽正常、圖片與島都載入"],
+  ["後台 Pages 建置成功", "admin/dist 上線、_redirects 生效、可用 Supabase 帳號登入"],
+  ["Deploy hook 串接", "CF_DEPLOY_HOOK_URL 已設，publish 流程會觸發 Pages 重建"],
+  ["自訂網域綁定", "前台網域 + api 子網域都上 HTTPS"],
+  ["EDGE_SECRET Transform Rule 生效", "直接打 Railway origin 回 403，經 CF 的正常 200"],
+  ["下單 → 通知 → 後台閉環", "正式環境下一筆測試單：訂單出現在後台、通知寄出/記 log"],
+  ["（選配）ECPay stage 實測一筆", "callback 對帳、訂單轉 paid、瀏覽器返回頁狀態正確"],
+];
+const KEY = "deploy-checklist-v1";
+const saved = JSON.parse(localStorage.getItem(KEY) || "[]");
+const box = document.getElementById("items");
+ITEMS.forEach(([t, d], i) => {
+  const el = document.createElement("label");
+  el.className = "cl-item" + (saved[i] ? " done" : "");
+  el.innerHTML = `<input type="checkbox" ${saved[i] ? "checked" : ""}> <span>${t}<small>${d}</small></span>`;
+  el.querySelector("input").addEventListener("change", e => {
+    saved[i] = e.target.checked;
+    el.classList.toggle("done", e.target.checked);
+    localStorage.setItem(KEY, JSON.stringify(saved));
+    update();
+  });
+  box.appendChild(el);
+});
+function update() {
+  const n = saved.filter(Boolean).length;
+  document.getElementById("bar").style.width = (n / ITEMS.length * 100) + "%";
+  document.getElementById("doneMsg").style.display = n === ITEMS.length ? "block" : "none";
+}
+document.getElementById("resetBtn").addEventListener("click", () => {
+  localStorage.removeItem(KEY); location.reload();
+});
+update();
+</script>
+</body>
+</html>

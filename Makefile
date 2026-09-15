@@ -9,11 +9,16 @@ migrate:
 seed:
 	go run ./server/tools/seed
 
+# THEME follows the SITE_THEME environment variable (same value the
+# renderer reads) so `make site` always builds the theme that will be
+# rendered. Defaults to minimal-cart when unset, matching the renderer.
+THEME ?= $(or $(SITE_THEME),minimal-cart)
+
 # theme builds the Vue islands bundle the renderer requires. The bundle is
 # git-ignored, so a fresh clone has none and the renderer fails closed until
 # this runs.
 theme:
-	npm --prefix site/themes/minimal-cart run build
+	npm --prefix site/themes/$(THEME) run build
 
 # site is the one command that takes a fresh clone to a rendered site. Use it
 # as the deployment build command. The two steps remain separately callable.
