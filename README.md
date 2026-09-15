@@ -93,7 +93,7 @@ in a browser.
 
 | Service | Sign up at | Collect | Set on |
 |---|---|---|---|
-| Supabase | [supabase.com/dashboard](https://supabase.com/dashboard) | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Railway (+ Pages build for DB/auth) |
+| Supabase | [supabase.com/dashboard](https://supabase.com/dashboard) — project page top-right **Connect** button has all three values (keys also under Settings → API Keys) | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Railway (+ Pages build for DB/auth) |
 | Cloudflare R2 | [dash.cloudflare.com](https://dash.cloudflare.com) → R2 | `R2_ACCOUNT_ID`, API token pair, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | Railway (+ `R2_PUBLIC_BASE_URL` on Pages) |
 | Resend | [resend.com](https://resend.com) | `RESEND_API_KEY`, verified domain for `RESEND_FROM` | Railway |
 | Railway | [railway.app](https://railway.app) → Deploy from GitHub | Railway domain or `api.` subdomain | — |

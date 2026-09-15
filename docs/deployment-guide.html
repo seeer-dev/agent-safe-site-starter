@@ -88,6 +88,7 @@
     五個服務、一份 checklist。照順序走完全部就能上線。
     所有 secret 只設在平台端的環境變數，<strong>不進這個 repo、不進任何檔案</strong>。
   </p>
+  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-15（Supabase 新版 Connect/API Keys 頁面、Data API 開關建議）</small></p>
 </header>
 
 <div class="arch">Cloudflare Pages ── 靜態前台 (dist/) + 後台 SPA
@@ -108,16 +109,17 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <p><a class="signup" href="https://supabase.com/dashboard" target="_blank" rel="noopener">supabase.com/dashboard →</a> 用 GitHub 登入即可，New Project 建一個專案（Region 選 Singapore 離台灣最近）。</p>
 
       <h3>要蒐集的資訊</h3>
+      <p>三個值都在同一個地方拿：<strong>專案頁面右上角的「Connect」按鈕</strong>，點開的對話框裡有 connection strings 與 API keys。Keys 也可走左側 Settings → <strong>API Keys</strong> 獨立頁。</p>
       <table>
         <tr><th>值</th><th>在哪裡拿</th><th>設到</th></tr>
         <tr><td><code>DATABASE_URL</code><span class="secret">SECRET</span></td>
-            <td>Project → Connect（右上）→ Transaction pooler 字串，密碼換成建專案時設的 DB password</td>
+            <td><strong>Connect</strong> → Type 選 <code>postgres</code>（或 URI）→ <strong>Transaction pooler</strong> 分頁那串 <code>aws-*.pooler.supabase.com:6543</code>，<code>[YOUR-PASSWORD]</code> 換成建專案時設的 DB password。長得像 <code>postgresql://postgres.xxxx:[密碼]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres</code></td>
             <td>Railway + Pages build</td></tr>
         <tr><td><code>SUPABASE_URL</code></td>
-            <td>Project Settings → API → Project URL</td>
+            <td><strong>Connect</strong> → App Frameworks 分頁顯示的 <code>https://xxxx.supabase.co</code>；或 Settings → API 頁的 Project URL</td>
             <td>Railway + Pages + browser</td></tr>
         <tr><td><code>SUPABASE_PUBLISHABLE_KEY</code></td>
-            <td>同頁 → Publishable key（舊版叫 anon key）</td>
+            <td><strong>Connect</strong> 同對話框的 <code>sb_publishable_...</code>；或 Settings → <strong>API Keys</strong> → Publishable key（不是 <code>eyJ...</code> 開頭的 legacy anon key）</td>
             <td>Railway + Pages + browser</td></tr>
       </table>
 
@@ -285,6 +287,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <li><strong>Transform Rule 注入 edge secret：</strong>Rules → Transform Rules → Modify Request Header → 對 <code>api.你的網域</code> 的請求 Set header <code>X-Edge-Secret</code> = Railway 的 <code>EDGE_SECRET</code> 值。之後直接打 Railway origin 的請求一律 403 — 擋掉繞過 Cloudflare WAF 的流量。</li>
       </ul>
       <div class="note warn"><strong>輪換順序：</strong>先在 edge 設新值 → 再改 Railway 的 <code>EDGE_SECRET</code> → 確認後把 edge 舊規則清掉。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。</div>
+      <div class="note"><strong>為什麼 API 走 api. 子網域而不是 Pages 轉發：</strong>Pages 的 <code>_redirects</code> proxy 只支援站內相對路徑，<strong>不能轉發到外部網域</strong>（官方文件明定）。要從 Pages 同源打 API 只能靠 Pages Functions 或獨立 Worker — 那是另一層 compute，不在本架構內。現行設計用 <code>api.</code> 子網域走 CF proxy + <code>EDGE_SECRET</code>，直接打 Railway origin 已經是 403 —「服務不曝光」的目標已達成，且不需額外的 edge compute。若要 origin 完全無公網位址，進階選項是 Cloudflare Tunnel（容器內跑 cloudflared），複雜度較高，需要再議。</div>
     </div>
   </div>
 </div>
