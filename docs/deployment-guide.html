@@ -132,6 +132,18 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <li>Authentication → Users → <strong>Add user → Create new user</strong>，填後台登入用的 email + 密碼。</li>
         <li>若要 Google / LINE 登入：Authentication → Sign In / Providers 開啟，OAuth client secret 設在 Supabase 後台（<strong>不是</strong>環境變數）。</li>
       </ul>
+
+      <h3>Data API / RLS 開關（重要）</h3>
+      <p>本架構是「瀏覽器 → Go API → Postgres」，<strong>沒有任何東西走 Supabase Data API</strong>（PostgREST REST API）。Go 後端用 <code>DATABASE_URL</code> 直連 postgres 協定；Supabase Auth（JWT 驗證）是獨立服務，不受這些開關影響。</p>
+      <table>
+        <tr><th>開關（Project Settings → Data API）</th><th>建議</th><th>理由</th></tr>
+        <tr><td>Enable Data API</td><td><strong>關</strong></td>
+            <td>整站不走 /rest/v1/，關掉直接消掉整面攻擊面</td></tr>
+        <tr><td>Automatically expose new tables</td><td><strong>關</strong></td>
+            <td>自動對 anon/authenticated 授權新表 — migration 一建表就對外暴露，永遠手動控管</td></tr>
+        <tr><td>Enable automatic RLS</td><td><strong>開</strong></td>
+            <td>防禦縱深：新表自動啟 RLS，誤開 Data API 時預設 deny-all。對 Go 後端無副作用（postgres 角色 bypass RLS）</td></tr>
+      </table>
     </div>
   </div>
 </div>
@@ -319,6 +331,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
 const ITEMS = [
   ["Supabase 專案建立", "DATABASE_URL（pooler 記得加 simple_protocol）、URL、publishable key"],
   ["Supabase 管理員帳號建立", "Authentication → Users → Add user"],
+  ["Supabase Data API 開關確認", "Data API 關、auto-expose 關、automatic RLS 開"],
   ["R2 bucket + API token + 公開網域", "五個 R2_* 值備齊，bucket public access 已開"],
   ["Resend 網域驗證 + API key", "SPF/DKIM 全綠，RESEND_FROM 用已驗證網域"],
   ["Railway 部署成功", "/healthz 200、/api/products 200、deploy log 的 migrate 完成"],
@@ -331,15 +344,15 @@ const ITEMS = [
   ["下單 → 通知 → 後台閉環", "正式環境下一筆測試單：訂單出現在後台、通知寄出/記 log"],
   ["（選配）ECPay stage 實測一筆", "callback 對帳、訂單轉 paid、瀏覽器返回頁狀態正確"],
 ];
-const KEY = "deploy-checklist-v1";
-const saved = JSON.parse(localStorage.getItem(KEY) || "[]");
+const KEY = "deploy-checklist-v2";
+const saved = JSON.parse(localStorage.getItem(KEY) || "{}");
 const box = document.getElementById("items");
-ITEMS.forEach(([t, d], i) => {
+ITEMS.forEach(([t, d]) => {
   const el = document.createElement("label");
-  el.className = "cl-item" + (saved[i] ? " done" : "");
-  el.innerHTML = `<input type="checkbox" ${saved[i] ? "checked" : ""}> <span>${t}<small>${d}</small></span>`;
+  el.className = "cl-item" + (saved[t] ? " done" : "");
+  el.innerHTML = `<input type="checkbox" ${saved[t] ? "checked" : ""}> <span>${t}<small>${d}</small></span>`;
   el.querySelector("input").addEventListener("change", e => {
-    saved[i] = e.target.checked;
+    saved[t] = e.target.checked;
     el.classList.toggle("done", e.target.checked);
     localStorage.setItem(KEY, JSON.stringify(saved));
     update();
@@ -347,7 +360,7 @@ ITEMS.forEach(([t, d], i) => {
   box.appendChild(el);
 });
 function update() {
-  const n = saved.filter(Boolean).length;
+  const n = Object.values(saved).filter(Boolean).length;
   document.getElementById("bar").style.width = (n / ITEMS.length * 100) + "%";
   document.getElementById("doneMsg").style.display = n === ITEMS.length ? "block" : "none";
 }

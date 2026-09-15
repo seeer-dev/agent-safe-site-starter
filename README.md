@@ -105,6 +105,13 @@ Key details that bite if missed:
 - **Supabase transaction pooler** (port 6543): append
   `&default_query_exec_mode=simple_protocol` to `DATABASE_URL` — pgx
   prepared statements need it. Direct connection (5432) does not.
+- **Supabase Data API settings** (Project Settings → Data API): nothing
+  in this architecture calls the auto-generated REST API — the browser
+  never queries Supabase and the Go API connects over the postgres
+  protocol. Disable **Enable Data API** and **Automatically expose new
+  tables**; enable **automatic RLS** as a harmless deny-by-default
+  safety net (the `postgres` role bypasses RLS, so the backend is
+  unaffected). Supabase Auth is a separate service and keeps working.
 - **`SITE_THEME`** selects which theme `make site` builds and renders
   (`curatory` for this storefront; default `minimal-cart`).
 - **`SITE_ORIGIN`** is the single CORS-allowed browser origin — set it to
