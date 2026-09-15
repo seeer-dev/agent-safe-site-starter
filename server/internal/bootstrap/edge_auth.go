@@ -28,14 +28,25 @@ const healthPath = "/healthz"
 // hostname bypasses every edge rule. Certificate Transparency logs and
 // historical DNS make that discovery a matter of effort rather than luck.
 //
-// The check is opt-in: an empty secret returns the handler untouched, so local
-// development, tests, and existing deployments are unaffected until an operator
-// configures one.
-func withEdgeAuth(secret string, next http.Handler) http.Handler {
-	if secret == "" {
+// The check is opt-in: with no configured value it returns the handler
+// untouched, so local development, tests, and existing deployments are
+// unaffected until an operator configures one.
+//
+// The accepted set is the non-empty values of current and previous. previous
+// exists for rotation windows: while the edge still sends the outgoing value,
+// the origin already accepts the incoming one, so rotating never produces a
+// 403 gap. A previous-only configuration simply makes that value the sole
+// accepted credential — the set has no coupling between the two names.
+func withEdgeAuth(current, previous string, next http.Handler) http.Handler {
+	var accepted [][]byte
+	for _, secret := range []string{current, previous} {
+		if secret != "" {
+			accepted = append(accepted, []byte(secret))
+		}
+	}
+	if len(accepted) == 0 {
 		return next
 	}
-	want := []byte(secret)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == healthPath {
@@ -47,7 +58,14 @@ func withEdgeAuth(secret string, next http.Handler) http.Handler {
 		// subtle.ConstantTimeCompare returns 0 for unequal lengths without
 		// comparing contents, so a length check would not add anything and a
 		// byte-by-byte comparison would leak the secret to a patient caller.
-		if subtle.ConstantTimeCompare(got, want) != 1 {
+		matched := false
+		for _, want := range accepted {
+			if subtle.ConstantTimeCompare(got, want) == 1 {
+				matched = true
+				break
+			}
+		}
+		if !matched {
 			// The record names the request, never the value. A rejected
 			// attempt is worth seeing; the supplied secret is not, and neither
 			// is whether it was absent, empty, or merely wrong.

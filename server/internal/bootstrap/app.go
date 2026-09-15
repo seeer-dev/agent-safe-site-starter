@@ -258,7 +258,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	// Order matters: observability wraps everything so a rejected request still
 	// gets a record, and the edge guard runs before CORS so a bypass attempt is
 	// refused rather than answered with CORS headers.
-	return &App{Handler: withRequestObservability(withEdgeAuth(cfg.EdgeSecret, withCORS(cfg.SiteOrigin, mux))), DB: db, Dialect: dialect}, nil
+	return &App{Handler: withRequestObservability(withEdgeAuth(cfg.EdgeSecret, cfg.EdgeSecretPrevious, withCORS(cfg.SiteOrigin, mux))), DB: db, Dialect: dialect}, nil
 }
 
 func withCORS(origin string, next http.Handler) http.Handler {

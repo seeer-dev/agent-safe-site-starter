@@ -20,9 +20,13 @@ type Config struct {
 	// EdgeSecret authenticates the hop, not the caller. When set, the API
 	// refuses requests that do not present it, so edge protection stops
 	// depending on the origin being undiscoverable. Empty disables the check.
-	EdgeSecret    string
-	PublicSiteURL string
-	PublicAPIBase string
+	EdgeSecret string
+	// EdgeSecretPrevious is the outgoing value during a rotation window:
+	// the origin accepts it alongside EdgeSecret so the edge can be switched
+	// without a 403 gap, then it is unset. It exists only for rotation.
+	EdgeSecretPrevious string
+	PublicSiteURL      string
+	PublicAPIBase      string
 
 	DBDriver    string
 	DatabaseURL string
@@ -49,8 +53,6 @@ type Config struct {
 	ResendAPIKey    string
 	ResendFrom      string
 	ContactNotifyTo string
-
-	CFPagesProject string
 
 	ECPayEnvironment string
 	ECPayMerchantID  string
@@ -88,13 +90,14 @@ func Load() Config {
 		}
 	}
 	return Config{
-		AppEnv:        env("APP_ENV", "development"),
-		HTTPAddr:      env("HTTP_ADDR", ":8080"),
-		SiteAddr:      env("SITE_ADDR", ":4173"),
-		SiteOrigin:    env("SITE_ORIGIN", "http://localhost:4173"),
-		EdgeSecret:    os.Getenv("EDGE_SECRET"),
-		PublicSiteURL: env("PUBLIC_SITE_URL", "http://localhost:4173"),
-		PublicAPIBase: env("PUBLIC_API_BASE", "http://localhost:8080"),
+		AppEnv:             env("APP_ENV", "development"),
+		HTTPAddr:           env("HTTP_ADDR", ":8080"),
+		SiteAddr:           env("SITE_ADDR", ":4173"),
+		SiteOrigin:         env("SITE_ORIGIN", "http://localhost:4173"),
+		EdgeSecret:         os.Getenv("EDGE_SECRET"),
+		EdgeSecretPrevious: os.Getenv("EDGE_SECRET_PREVIOUS"),
+		PublicSiteURL:      env("PUBLIC_SITE_URL", "http://localhost:4173"),
+		PublicAPIBase:      env("PUBLIC_API_BASE", "http://localhost:8080"),
 
 		DBDriver:    strings.ToLower(env("DB_DRIVER", "sqlite")),
 		DatabaseURL: env("DATABASE_URL", "file:var/site.db?_pragma=foreign_keys(1)&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"),
@@ -119,8 +122,6 @@ func Load() Config {
 		ResendAPIKey:    os.Getenv("RESEND_API_KEY"),
 		ResendFrom:      env("RESEND_FROM", "Site <hello@example.com>"),
 		ContactNotifyTo: os.Getenv("CONTACT_NOTIFY_TO"),
-
-		CFPagesProject: os.Getenv("CF_PAGES_PROJECT"),
 
 		ECPayEnvironment: strings.ToLower(strings.TrimSpace(os.Getenv("ECPAY_ENVIRONMENT"))),
 		ECPayMerchantID:  strings.TrimSpace(os.Getenv("ECPAY_MERCHANT_ID")),

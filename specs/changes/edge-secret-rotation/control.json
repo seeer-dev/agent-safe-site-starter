@@ -1,0 +1,106 @@
+{
+  "change_id": "edge-secret-rotation",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner approved revision 1 on 2026-09-15 via plain apply on the sole review-ready proposal. The deployment guide documented EDGE_SECRET rotation, but the origin accepted exactly one value, so any documented order produced a 403 window; and CFPagesProject was loaded by config but consumed by nothing.",
+  "repository_baseline": "3a196c39ce746d1bf9c078a137fb124f879289ae",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/config/config.go",
+    "server/internal/config/config_test.go",
+    "server/internal/bootstrap/app.go",
+    "server/internal/bootstrap/edge_auth.go",
+    "server/internal/bootstrap/edge_auth_test.go",
+    ".env.development.example",
+    ".env.production.example",
+    "docs/environment-configuration.md",
+    "docs/deployment-guide.html",
+    "README.md",
+    "specs/changes/edge-secret-rotation/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004",
+    "REQ-005"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-004": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "withEdgeAuth builds the accepted set from the non-empty values of EDGE_SECRET and EDGE_SECRET_PREVIOUS (loaded as Config.EdgeSecretPrevious and wired in bootstrap alongside EdgeSecret) and admits any of them before the handler runs. TestEdgeAuthAdmitsRotationWindow proves the current and previous values both reach the handler with 200 while a wrong value and an absent header get the identical generic 403 with no handler run. Mutation-verified: dropping previous from the candidate set turned TestEdgeAuthAdmitsRotationWindow/previous_value and TestEdgeAuthPreviousOnly red.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "The candidate set is built only from non-empty values, so with neither variable configured withEdgeAuth returns the inner handler untouched — TestEdgeAuthIsOptIn serves a bare request and one carrying an irrelevant header with 200, and was mutation-verified by replacing the empty-set early return with if false. A previous-only configuration makes that value the sole accepted credential (TestEdgeAuthPreviousOnly), keeping the set semantics uncoupled between the two names.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Every accepted value is compared with subtle.ConstantTimeCompare inside the candidate loop; a rejection runs every candidate and emits one record naming request_id, method, path, and peer — never a configured or supplied value. TestEdgeAuthDisclosesNothing drives a wrong value and a near-miss of the previous value plus a bearer token through the rejection path with both secrets configured and asserts none appear in the response body or the emitted log.",
+      "status": "passed"
+    },
+    "REQ-004": {
+      "observed_revision": 1,
+      "proof": "The CFPagesProject field and the CF_PAGES_PROJECT read are deleted from config.go; go build ./... is clean and a repository search finds no live reference — the name survives only inside this change's own spec artifacts, which are the frozen records the acceptance scenario allows.",
+      "status": "passed"
+    },
+    "REQ-005": {
+      "observed_revision": 1,
+      "proof": "docs/deployment-guide.html describes the zero-outage sequence (Railway sets EDGE_SECRET_PREVIOUS=old plus EDGE_SECRET=new so the origin accepts both, both Pages projects switch to the new value, then Railway drops the previous value) instead of the brief-outage warning; docs/environment-configuration.md adds the EDGE_SECRET_PREVIOUS ownership row and the same three-step procedure; .env.production.example lists it as a rotation-window-only Railway secret.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "TestEdgeAuthAdmitsRotationWindow: with EDGE_SECRET and EDGE_SECRET_PREVIOUS configured to different values, the current and previous values are admitted (handler reached, 200); a wrong value and an absent header receive 403 with byte-identical bodies and no handler run. TestEdgeAuthRefusesNonEdgeTraffic additionally proves five failure modes produce indistinguishable bodies under a single-value configuration.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "TestEdgeAuthIsOptIn: with neither variable configured, a bare request and one carrying an irrelevant header are both served with 200 exactly as before this change. Mutation-verified: removing the empty-set early return turned both cases red.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "TestEdgeAuthPreviousOnly: with EDGE_SECRET_PREVIOUS configured and EDGE_SECRET empty, the previous value is admitted while a wrong value and an absent header are refused with 403.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "Constant-time comparison per candidate plus the disclosure gate: with both secrets configured, requests carrying a wrong value and a near-miss of the previous value plus a bearer token are rejected without any configured or supplied value reaching the response body or log, while the record retains rejected, the path, and a request id so a redact-everything implementation cannot pass. Mutation-verified: adding the supplied value to the record leaked it and turned the assertion red. Recorded in receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "AC-005": {
+      "observed_revision": 1,
+      "proof": "go build ./... is clean after deleting the field and env read; a repository search for CFPagesProject/CF_PAGES_PROJECT finds references only inside specs/changes/edge-secret-rotation/, this change's own normative records.",
+      "status": "passed"
+    },
+    "AC-006": {
+      "observed_revision": 1,
+      "proof": "EDGE_SECRET_PREVIOUS is named in .env.production.example (rotation-window-only Railway secret), .env.development.example, docs/environment-configuration.md (ownership row plus procedure), and README.md (EDGE_SECRET bullet). docs/deployment-guide.html names it in the rotation note, which describes origin-accepts-both, edge-switches, origin-drops-old with no outage warning.",
+      "status": "passed"
+    }
+  }
+}

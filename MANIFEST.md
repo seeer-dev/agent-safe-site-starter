@@ -8,7 +8,7 @@ This v0 package demonstrates the architecture, not a finished CMS product.
 - SQLite is the no-account local default
 - production adapters are PostgreSQL, Supabase Auth, R2, and Resend
 - `server/tools/render`: full static publish into `dist/`
-- `server/tools/publish`: render + Cloudflare Pages Direct Upload
+- `server/tools/publish`: render pre-check + Cloudflare Pages Deploy Hook trigger (no dist upload)
 
 ## Vertical examples
 
@@ -28,7 +28,7 @@ This v0 package demonstrates the architecture, not a finished CMS product.
 ## Deliberately absent
 
 - Nuxt / Next / frontend SSR runtime
-- Pages Functions or a second backend
+- Pages Functions beyond the single `/api/*` credential proxy, or a second backend
 - generic provider registry / DI container / plugin framework
 - admin frontend
 - request-time ISR

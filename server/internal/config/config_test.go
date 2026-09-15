@@ -99,6 +99,24 @@ func TestLoadDevelopmentPrecedence(t *testing.T) {
 	}
 }
 
+// REQ-001: the rotation-window credential loads alongside EDGE_SECRET. Both
+// names are independent — a previous-only configuration must survive Load so
+// it can act as the sole accepted value.
+func TestLoadEdgeSecrets(t *testing.T) {
+	isolatedRepo(t, "EDGE_SECRET", "EDGE_SECRET_PREVIOUS")
+	t.Setenv("APP_ENV", "development")
+	t.Setenv("EDGE_SECRET", "current-value")
+	t.Setenv("EDGE_SECRET_PREVIOUS", "previous-value")
+
+	cfg := Load()
+	if cfg.EdgeSecret != "current-value" {
+		t.Errorf("EdgeSecret: got %q", cfg.EdgeSecret)
+	}
+	if cfg.EdgeSecretPrevious != "previous-value" {
+		t.Errorf("EdgeSecretPrevious: got %q", cfg.EdgeSecretPrevious)
+	}
+}
+
 // AC-001: a missing primary profile is not an error; the legacy file alone
 // keeps an existing local setup working.
 func TestLoadDevelopmentLegacyOnly(t *testing.T) {

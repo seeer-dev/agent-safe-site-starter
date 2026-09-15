@@ -90,6 +90,7 @@ Key characteristics and operational boundaries:
 | `HTTP_ADDR` | ● | | | | |
 | `SITE_ORIGIN` | ● | | | | |
 | `EDGE_SECRET` | ● | | ● | | ● |
+| `EDGE_SECRET_PREVIOUS` | ● | | | | ● |
 | `API_ORIGIN` | | | ● | | |
 | `PUBLIC_SITE_URL` | ● | ● | | | |
 | `PUBLIC_API_BASE` | ● | ● | | | |
@@ -115,7 +116,6 @@ Key characteristics and operational boundaries:
 | `RESEND_API_KEY` | ● | | | | ● |
 | `RESEND_FROM` | ● | | | | |
 | `CONTACT_NOTIFY_TO` | ● | | | | |
-| `CF_PAGES_PROJECT` | | ● | | | |
 | `CF_DEPLOY_HOOK_URL` | ● | | | | ● |
 
 † **Pages Functions environment** — runtime variables on each Pages project
@@ -182,9 +182,13 @@ Operational notes:
   than through the edge, so guarding it would fail every probe.
 - **Every rejection looks the same.** Absent, empty, and wrong all return the
   same 403 body, so a prober cannot learn whether the header name is right.
-- **Rotation is a two-step.** Set the new value at the edge first, then at the
-  origin; between those steps both are accepted only if you run two edge rules,
-  otherwise expect a brief window of refusals.
+- **Rotation is zero-outage.** The origin accepts the non-empty values of
+  `EDGE_SECRET` and `EDGE_SECRET_PREVIOUS` as a set, so: set
+  `EDGE_SECRET_PREVIOUS` to the outgoing value and `EDGE_SECRET` to the new
+  value on Railway and redeploy (both are accepted) → set `EDGE_SECRET` to the
+  new value on both Pages projects and redeploy → remove
+  `EDGE_SECRET_PREVIOUS` on Railway and redeploy. `EDGE_SECRET_PREVIOUS`
+  exists only for the window — remove it once rotation completes.
 
 ## The browser boundary
 

@@ -88,7 +88,7 @@
     五個服務、一份 checklist。照順序走完全部就能上線。
     所有 secret 只設在平台端的環境變數，<strong>不進這個 repo、不進任何檔案</strong>。
   </p>
-  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-15（API 改走 Pages Function 同源代理、Supabase 新版 Connect/API Keys 頁面、Data API 開關建議）</small></p>
+  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-15（API 改走 Pages Function 同源代理、Supabase 新版 Connect/API Keys 頁面、Data API 開關建議、publish 流程與 EDGE_SECRET 零中斷輪換程序）</small></p>
 </header>
 
 <div class="arch">Cloudflare Pages ── 靜態前台 (dist/) + 後台 SPA
@@ -271,7 +271,8 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <h3>Deploy Hook（發布迴路）</h3>
       <ul>
         <li>前台 Pages 專案 → Settings → Builds &amp; deployments → <strong>Deploy hooks</strong> → 建立，拿 URL。</li>
-        <li>回填 Railway 的 <code>CF_DEPLOY_HOOK_URL</code> — 之後 <code>tools/publish</code>（後台發布動作）會 render → 上傳 dist → POST hook 觸發 Pages 重建。</li>
+        <li>回填 Railway 的 <code>CF_DEPLOY_HOOK_URL</code>。<code>tools/publish</code> 的流程：先在本地 render <code>dist/</code> 做預檢（失敗即中止、保留舊 dist）→ 成功後 POST hook，讓 Pages 從 Git 分支重建 — Pages build 內的 <code>make site</code> 會用 production DB 重新 render，<strong>整個流程不上傳 dist</strong>。</li>
+        <li>後台的內容「發布」按鈕只把 DB 草稿標記為 published，<strong>不會自動觸發</strong>上述流程 — 內容要上線，由 CI 或人工執行 <code>go run ./server/tools/publish</code>，或直接 push 觸發 Git build。</li>
       </ul>
     </div>
   </div>
@@ -290,7 +291,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <li><strong>不需要 api. 子網域、不需要 Transform Rule</strong> — repo 根的 <code>functions/api/[[path]].js</code> 已把 <code>/api/*</code> 轉發到 <code>API_ORIGIN</code> 並注入 <code>EDGE_SECRET</code>。</li>
         <li><strong>驗證邊緣閉環：</strong><code>curl https://你的網域/api/products</code> 回 200（經 Function 注入 secret）；<code>curl https://xxx.up.railway.app/api/products</code> 直打回 403 — 這代表 Railway origin 只接受經過 Pages 的流量。</li>
       </ul>
-      <div class="note warn"><strong>EDGE_SECRET 輪換順序：</strong>先在 Pages 兩個專案的環境變數改新值（會重新部署生效）→ 再改 Railway 的 <code>EDGE_SECRET</code>。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。</div>
+      <div class="note warn"><strong>EDGE_SECRET 輪換零中斷三步驟：</strong>① Railway 設 <code>EDGE_SECRET_PREVIOUS</code><span class="secret">SECRET</span> = 舊值、<code>EDGE_SECRET</code> = 新值，重新部署 — origin 過渡期同時接受新舊兩值，Pages 還在送舊值也不受影響 → ② 兩個 Pages 專案的 <code>EDGE_SECRET</code> 改成新值並重新部署 → ③ 確認邊緣全送新值後，移除 Railway 的 <code>EDGE_SECRET_PREVIOUS</code> 並重新部署。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。<strong>注意：</strong><code>EDGE_SECRET_PREVIOUS</code> 只為輪換窗口存在，完成後務必移除 — 留著等於兩組憑證長期有效。</div>
     </div>
   </div>
 </div>
@@ -340,7 +341,7 @@ const ITEMS = [
   ["Supabase Data API 開關確認", "Data API 關、auto-expose 關、automatic RLS 開"],
   ["R2 bucket + API token + 公開網域", "五個 R2_* 值備齊，bucket public access 已開"],
   ["Resend 網域驗證 + API key", "SPF/DKIM 全綠，RESEND_FROM 用已驗證網域"],
-  ["Railway 部署成功", "/healthz 200、/api/products 200、deploy log 的 migrate 完成"],
+  ["Railway 部署成功", "/healthz 回 200、deploy log 的 migrate 完成。直打 /api/products 的預期碼取決於 EDGE_SECRET：設上前回 200、設上後回 403 都屬正常"],
   ["Railway env 全設", "APP_ENV=production、SITE_ORIGIN、EDGE_SECRET、DB/AUTH/R2/Resend"],
   ["前台 Pages 建置成功", "make site 跑完、*.pages.dev 預覽正常、圖片與島都載入"],
   ["後台 Pages 建置成功", "admin/dist 上線、_redirects 生效、可用 Supabase 帳號登入"],

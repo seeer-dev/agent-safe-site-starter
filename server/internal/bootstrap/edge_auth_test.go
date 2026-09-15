@@ -8,10 +8,11 @@ import (
 )
 
 const testEdgeSecret = "edge-secret-value-abc123"
+const testEdgeSecretPrevious = "edge-secret-value-old456"
 
 // served reports what the guard did: whether the inner handler ran, and the
 // status the client received.
-func served(t *testing.T, secret string, header *string, path string) (bool, int, string) {
+func served(t *testing.T, current, previous string, header *string, path string) (bool, int, string) {
 	t.Helper()
 	reached := false
 	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -23,13 +24,14 @@ func served(t *testing.T, secret string, header *string, path string) (bool, int
 		r.Header.Set(edgeSecretHeader, *header)
 	}
 	rec := httptest.NewRecorder()
-	withEdgeAuth(secret, inner).ServeHTTP(rec, r)
+	withEdgeAuth(current, previous, inner).ServeHTTP(rec, r)
 	return reached, rec.Code, rec.Body.String()
 }
 
 func ptr(s string) *string { return &s }
 
-// AC-001: absent, empty, and wrong are refused identically, and no handler runs.
+// AC-001: with only the current value configured, absent, empty, and wrong
+// are refused identically, and no handler runs.
 func TestEdgeAuthRefusesNonEdgeTraffic(t *testing.T) {
 	t.Parallel()
 
@@ -47,7 +49,7 @@ func TestEdgeAuthRefusesNonEdgeTraffic(t *testing.T) {
 	var bodies []string
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			reached, code, body := served(t, testEdgeSecret, tc.header, "/api/orders")
+			reached, code, body := served(t, testEdgeSecret, "", tc.header, "/api/orders")
 			if reached {
 				t.Error("handler must not run for a request without a valid edge credential")
 			}
@@ -58,7 +60,7 @@ func TestEdgeAuthRefusesNonEdgeTraffic(t *testing.T) {
 				t.Error("response must not echo the configured secret")
 			}
 		})
-		_, _, b := served(t, testEdgeSecret, tc.header, "/api/orders")
+		_, _, b := served(t, testEdgeSecret, "", tc.header, "/api/orders")
 		bodies = append(bodies, b)
 	}
 
@@ -74,12 +76,58 @@ func TestEdgeAuthRefusesNonEdgeTraffic(t *testing.T) {
 // AC-001: the correct value is admitted.
 func TestEdgeAuthAdmitsValidCredential(t *testing.T) {
 	t.Parallel()
-	reached, code, _ := served(t, testEdgeSecret, ptr(testEdgeSecret), "/api/orders")
+	reached, code, _ := served(t, testEdgeSecret, "", ptr(testEdgeSecret), "/api/orders")
 	if !reached {
 		t.Error("a request with the correct edge credential must reach the handler")
 	}
 	if code != http.StatusOK {
 		t.Errorf("status = %d, want 200", code)
+	}
+}
+
+// AC-001: during a rotation window both the current and the previous value
+// are admitted; anything else gets the identical generic 403 with no handler
+// running.
+func TestEdgeAuthAdmitsRotationWindow(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name   string
+		header *string
+	}{
+		{"current value", ptr(testEdgeSecret)},
+		{"previous value", ptr(testEdgeSecretPrevious)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reached, code, _ := served(t, testEdgeSecret, testEdgeSecretPrevious, tc.header, "/api/orders")
+			if !reached {
+				t.Error("a request carrying an accepted rotation-window credential must reach the handler")
+			}
+			if code != http.StatusOK {
+				t.Errorf("status = %d, want 200", code)
+			}
+		})
+	}
+
+	var bodies []string
+	for _, tc := range []struct {
+		name   string
+		header *string
+	}{
+		{"wrong value", ptr("not-the-secret")},
+		{"no header at all", nil},
+	} {
+		reached, code, body := served(t, testEdgeSecret, testEdgeSecretPrevious, tc.header, "/api/orders")
+		if reached {
+			t.Errorf("%s: handler must not run for a request without an accepted credential", tc.name)
+		}
+		if code != http.StatusForbidden {
+			t.Errorf("%s: status = %d, want 403", tc.name, code)
+		}
+		bodies = append(bodies, body)
+	}
+	if bodies[0] != bodies[1] {
+		t.Errorf("rejection bodies differ (%q vs %q); every failure mode must be indistinguishable", bodies[0], bodies[1])
 	}
 }
 
@@ -95,7 +143,7 @@ func TestEdgeAuthIsOptIn(t *testing.T) {
 		{"irrelevant header", ptr("anything-at-all")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			reached, code, _ := served(t, "", tc.header, "/api/orders")
+			reached, code, _ := served(t, "", "", tc.header, "/api/orders")
 			if !reached {
 				t.Error("with no configured secret every request must be served as before")
 			}
@@ -106,39 +154,81 @@ func TestEdgeAuthIsOptIn(t *testing.T) {
 	}
 }
 
-// AC-003: the platform health probe cannot carry the header, so guarding it
-// would fail every probe and take the deployment down.
+// AC-003: with only the previous value configured it acts as the sole
+// accepted credential — the two names form a pure set with no coupling.
+func TestEdgeAuthPreviousOnly(t *testing.T) {
+	t.Parallel()
+
+	reached, code, _ := served(t, "", testEdgeSecretPrevious, ptr(testEdgeSecretPrevious), "/api/orders")
+	if !reached {
+		t.Error("previous-only configuration must admit the configured value")
+	}
+	if code != http.StatusOK {
+		t.Errorf("status = %d, want 200", code)
+	}
+
+	for _, tc := range []struct {
+		name   string
+		header *string
+	}{
+		{"wrong value", ptr(testEdgeSecret)},
+		{"no header at all", nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reached, code, _ := served(t, "", testEdgeSecretPrevious, tc.header, "/api/orders")
+			if reached {
+				t.Error("handler must not run for a request without the accepted credential")
+			}
+			if code != http.StatusForbidden {
+				t.Errorf("status = %d, want 403", code)
+			}
+		})
+	}
+}
+
+// The health probe exemption is an invariant kept from
+// edge-origin-authentication: the platform health probe cannot carry the
+// header, so guarding it would fail every probe and take the deployment down.
 func TestEdgeAuthExemptsHealthProbe(t *testing.T) {
 	t.Parallel()
-	reached, code, _ := served(t, testEdgeSecret, nil, healthPath)
+	reached, code, _ := served(t, testEdgeSecret, testEdgeSecretPrevious, nil, healthPath)
 	if !reached {
 		t.Errorf("the health path must stay reachable without the edge credential, got status %d", code)
 	}
 }
 
-// AC-004: neither the configured secret nor the supplied value may reach the
-// response or a log record. The supplied value is a plausible near-miss, so a
-// naive "log what we got" implementation would fail this.
+// AC-004: neither a configured value nor a supplied value may reach the
+// response or a log record. With both rotation-window values configured the
+// requests carry a wrong value and a plausible near-miss of the previous one
+// plus a bearer token, so a naive "log what we got" implementation would fail
+// this.
 func TestEdgeAuthDisclosesNothing(t *testing.T) {
 	buf := captureLogs(t)
 
-	supplied := "attacker-guess-" + testEdgeSecret[:8]
-	r := httptest.NewRequest(http.MethodPost, "/api/orders?probe=1", nil)
-	r.Header.Set(edgeSecretHeader, supplied)
-	r.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.token")
-	rec := httptest.NewRecorder()
+	supplied := []string{"not-the-secret", "attacker-guess-" + testEdgeSecretPrevious[:8]}
+	var bodies []string
+	for _, value := range supplied {
+		r := httptest.NewRequest(http.MethodPost, "/api/orders?probe=1", nil)
+		r.Header.Set(edgeSecretHeader, value)
+		r.Header.Set("Authorization", "Bearer eyJhbGciOiJIUzI1NiJ9.token")
+		rec := httptest.NewRecorder()
 
-	withEdgeAuth(testEdgeSecret, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
-		t.Error("handler must not run")
-	})).ServeHTTP(rec, r)
+		withEdgeAuth(testEdgeSecret, testEdgeSecretPrevious, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			t.Error("handler must not run")
+		})).ServeHTTP(rec, r)
+		bodies = append(bodies, rec.Body.String())
+	}
 
-	logged, body := buf.String(), rec.Body.String()
-	for _, secret := range []string{testEdgeSecret, supplied, "eyJhbGciOiJIUzI1NiJ9.token"} {
+	logged := buf.String()
+	secrets := append([]string{testEdgeSecret, testEdgeSecretPrevious, "eyJhbGciOiJIUzI1NiJ9.token"}, supplied...)
+	for _, secret := range secrets {
 		if strings.Contains(logged, secret) {
 			t.Errorf("log record leaked %q: %s", secret, logged)
 		}
-		if strings.Contains(body, secret) {
-			t.Errorf("response body leaked %q", secret)
+		for _, body := range bodies {
+			if strings.Contains(body, secret) {
+				t.Errorf("response body leaked %q", secret)
+			}
 		}
 	}
 	// A record that logged nothing would also pass the checks above while

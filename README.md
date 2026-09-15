@@ -121,7 +121,10 @@ Key details that bite if missed:
   same-origin `/api/*` to `API_ORIGIN` (the Railway URL) and injects the
   header — browsers never learn the origin, and direct origin hits get
   403. No `api.` subdomain or Transform Rule is needed. `/healthz` is
-  exempt so Railway probes still work.
+  exempt so Railway probes still work. Rotation is zero-outage: set
+  `EDGE_SECRET_PREVIOUS` to the outgoing value on Railway alongside the
+  new `EDGE_SECRET`, switch both Pages projects to the new value, then
+  remove `EDGE_SECRET_PREVIOUS` (see `docs/environment-configuration.md`).
 - **Admin SPA** needs `admin/public/_redirects` (`/* /index.html 200`,
   already shipped). Leave `ADMIN_API_BASE` unset — it defaults to
   same-origin `/api`, which the admin project's own Pages Function proxy
@@ -154,10 +157,14 @@ table and the browser-safe allowlist.
    `API_ORIGIN` (Railway URL) and `EDGE_SECRET` (same value as Railway)
    under each project's Settings → Environment variables — these are not
    build vars and never enter a bundle.
-4. **Direct upload (alternative):**
-   `CF_PAGES_PROJECT=... go run ./server/tools/publish`; useful for
-   AI/CI-driven publishing. A Pages **deploy hook** URL set as Railway's
-   `CF_DEPLOY_HOOK_URL` lets publish actions trigger a Pages rebuild.
+4. **Publish trigger (alternative):**
+   `go run ./server/tools/publish` renders `dist/` as a pre-check
+   (aborting on failure with the existing dist preserved), then POSTs
+   the Pages **deploy hook** URL from `CF_DEPLOY_HOOK_URL`, which makes
+   Pages rebuild from the connected Git branch — that build runs
+   `make site` and renders from the production database. No dist upload
+   happens. Admin publish actions only flip content state in the
+   database; run `tools/publish` from CI or manually to take them live.
 
 ## Repository map
 
