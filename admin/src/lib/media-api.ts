@@ -15,6 +15,32 @@ function getAuthToken(): string {
   return getAccessToken()
 }
 
+// readError extracts the public message from the shared response envelope
+// ({ok:false, error:{code,message}}), tolerating the legacy {"error":"msg"}
+// shape during mixed-version deploys.
+async function readError(res: Response, fallback: string): Promise<string> {
+  const body = await res.text()
+  try {
+    const obj = JSON.parse(body)
+    if (obj?.error && typeof obj.error === 'object') {
+      return obj.error.message || fallback
+    }
+    if (typeof obj?.error === 'string') {
+      return obj.error
+    }
+  } catch { /* keep default */ }
+  return fallback
+}
+
+// unwrap returns the payload inside the response envelope ({ok:true,data:T}),
+// tolerating a legacy bare payload while Pages and the origin roll separately.
+function unwrap<T>(body: unknown): T {
+  if (body !== null && typeof body === 'object' && 'ok' in body) {
+    return (body as { data?: T }).data as T
+  }
+  return body as T
+}
+
 /** Call POST /api/media/presign to get a presigned R2 upload URL. */
 export async function presignUpload(req: PresignRequest, signal?: AbortSignal): Promise<PresignResponse> {
   const headers: Record<string, string> = {
@@ -32,15 +58,9 @@ export async function presignUpload(req: PresignRequest, signal?: AbortSignal): 
     signal,
   })
   if (!res.ok) {
-    const body = await res.text()
-    let msg = `presign failed: ${res.status}`
-    try {
-      const obj = JSON.parse(body)
-      msg = obj.error || msg
-    } catch { /* keep default */ }
-    throw new Error(msg)
+    throw new Error(await readError(res, `presign failed: ${res.status}`))
   }
-  return res.json()
+  return unwrap<PresignResponse>(await res.json())
 }
 
 /**
@@ -90,13 +110,7 @@ export async function verifyUpload(
     signal,
   })
   if (!res.ok) {
-    const body = await res.text()
-    let msg = `verify failed: ${res.status}`
-    try {
-      const obj = JSON.parse(body)
-      msg = obj.error || msg
-    } catch { /* keep default */ }
-    throw new Error(msg)
+    throw new Error(await readError(res, `verify failed: ${res.status}`))
   }
-  return res.json()
+  return unwrap<VerifyResponse>(await res.json())
 }

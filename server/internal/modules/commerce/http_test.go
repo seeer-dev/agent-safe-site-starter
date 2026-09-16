@@ -67,18 +67,24 @@ func TestCreateOrderHTTPReturnsOrderWrapper(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
-	var body map[string]json.RawMessage
-	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+	var env struct {
+		OK   bool                     `json:"ok"`
+		Data map[string]json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if _, ok := body["order"]; !ok {
-		t.Fatalf("body = %s, want top-level order wrapper", rec.Body.String())
+	if !env.OK {
+		t.Fatalf("body = %s, want ok envelope", rec.Body.String())
 	}
-	if _, ok := body["id"]; ok {
-		t.Fatalf("body = %s, raw order fields must not appear at top level", rec.Body.String())
+	if _, ok := env.Data["order"]; !ok {
+		t.Fatalf("body = %s, want order wrapper inside data", rec.Body.String())
+	}
+	if _, ok := env.Data["id"]; ok {
+		t.Fatalf("body = %s, raw order fields must not appear inside data", rec.Body.String())
 	}
 	var order Order
-	if err := json.Unmarshal(body["order"], &order); err != nil {
+	if err := json.Unmarshal(env.Data["order"], &order); err != nil {
 		t.Fatalf("unmarshal order: %v", err)
 	}
 	if order.ID == "" {
@@ -113,9 +119,13 @@ func TestGetProductBySlugHTTPReturnsWrapper(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	product, ok := body["product"]
+	data, ok := body["data"].(map[string]any)
 	if !ok {
-		t.Fatalf("response missing \"product\" key; body = %s", rec.Body.String())
+		t.Fatalf("response missing \"data\" envelope; body = %s", rec.Body.String())
+	}
+	product, ok := data["product"]
+	if !ok {
+		t.Fatalf("response missing \"product\" key inside data; body = %s", rec.Body.String())
 	}
 	productMap, ok := product.(map[string]any)
 	if !ok {
@@ -181,13 +191,15 @@ func TestListPublishedProductsHTTPIncludesLowAndOutOfStock(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 	var body struct {
-		Products []map[string]any `json:"products"`
+		Data struct {
+			Products []map[string]any `json:"products"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
 	skus := map[string]bool{}
-	for _, p := range body.Products {
+	for _, p := range body.Data.Products {
 		if sku, ok := p["sku"].(string); ok {
 			skus[sku] = true
 		}
@@ -247,7 +259,9 @@ func TestUpdateOrderStatusHTTPStaleVersionReturns409(t *testing.T) {
 		t.Fatalf("create order status = %d, body=%s", createRec.Code, createRec.Body.String())
 	}
 	var created struct {
-		Order Order `json:"order"`
+		Data struct {
+			Order Order `json:"order"`
+		} `json:"data"`
 	}
 	if err := json.Unmarshal(createRec.Body.Bytes(), &created); err != nil {
 		t.Fatalf("unmarshal created order: %v", err)
@@ -257,7 +271,7 @@ func TestUpdateOrderStatusHTTPStaleVersionReturns409(t *testing.T) {
 	advanceReq := httptest.NewRequest(http.MethodPatch, "/api/admin/orders/{id}/fulfillment", strings.NewReader(`{"expected_version":1,"new_status":"processing"}`))
 	advanceReq.Header.Set("Content-Type", "application/json")
 	advanceReq.Header.Set("Authorization", "Bearer dev-token")
-	advanceReq.SetPathValue("id", created.Order.ID)
+	advanceReq.SetPathValue("id", created.Data.Order.ID)
 	advanceRec := httptest.NewRecorder()
 	h.UpdateOrderStatus(advanceRec, advanceReq)
 	if advanceRec.Code != http.StatusOK {
@@ -268,7 +282,7 @@ func TestUpdateOrderStatusHTTPStaleVersionReturns409(t *testing.T) {
 	staleReq := httptest.NewRequest(http.MethodPatch, "/api/admin/orders/{id}/fulfillment", strings.NewReader(`{"expected_version":1,"new_status":"shipped"}`))
 	staleReq.Header.Set("Content-Type", "application/json")
 	staleReq.Header.Set("Authorization", "Bearer dev-token")
-	staleReq.SetPathValue("id", created.Order.ID)
+	staleReq.SetPathValue("id", created.Data.Order.ID)
 	staleRec := httptest.NewRecorder()
 	h.UpdateOrderStatus(staleRec, staleReq)
 
@@ -601,11 +615,15 @@ func TestCommerceHTTPAuthErrorSeparation(t *testing.T) {
 	if rec2.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503; body=%s", rec2.Code, rec2.Body.String())
 	}
-	var body map[string]string
+	var body struct {
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
 	if err := json.Unmarshal(rec2.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if body["error"] != "service unavailable" {
-		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	if body.Error.Message != "service unavailable" {
+		t.Errorf("error.message = %q, want 'service unavailable'", body.Error.Message)
 	}
 }

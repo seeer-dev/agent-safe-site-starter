@@ -8,8 +8,26 @@ export class ApiRequestError extends Error {
 }
 
 async function readErrorMessage(res: Response, fallback: string): Promise<string> {
-  const err = await res.json().catch(() => ({ error: res.statusText }))
-  return err.error || `${fallback}: ${res.status}`
+  const err = await res.json().catch(() => null)
+  if (err && typeof err === 'object') {
+    // Shared envelope error: { ok:false, error:{ code, message } }; the
+    // legacy shape was a plain { error: "msg" } string.
+    const e = (err as { error?: unknown }).error
+    if (e && typeof e === 'object' && typeof (e as { message?: unknown }).message === 'string') {
+      return (e as { message: string }).message
+    }
+    if (typeof e === 'string' && e) return e
+  }
+  return `${fallback}: ${res.status}`
+}
+
+// Shared response envelope: success bodies are { ok:true, data:T }. Tolerate
+// a legacy bare payload while Pages and the origin deploy independently.
+function unwrap<T>(body: unknown): T {
+  if (body !== null && typeof body === 'object' && 'ok' in body) {
+    return (body as { data?: T }).data as T
+  }
+  return body as T
 }
 
 // Get API base from the <html data-api-base="..."> attribute.
@@ -63,7 +81,7 @@ function mapProduct(raw: any): Product {
 export async function fetchProducts(): Promise<Product[]> {
   const res = await fetch(apiUrl('/api/products'))
   if (!res.ok) throw new Error(`fetchProducts: ${res.status}`)
-  const data = await res.json()
+  const data = unwrap<{ products?: unknown[] }>(await res.json())
   return (data.products || []).map(mapProduct)
 }
 
@@ -72,7 +90,7 @@ export async function fetchProductBySlug(slug: string): Promise<Product | null> 
   const res = await fetch(apiUrl(`/api/products/${encodeURIComponent(slug)}`))
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`fetchProductBySlug: ${res.status}`)
-  const data = await res.json()
+  const data = unwrap<{ product: unknown }>(await res.json())
   return mapProduct(data.product)
 }
 
@@ -89,7 +107,7 @@ export interface ShippingMethodResult {
 export async function fetchShippingMethods(): Promise<ShippingMethodResult[]> {
   const res = await fetch(apiUrl('/api/shipping-methods'))
   if (!res.ok) throw new Error(`fetchShippingMethods: ${res.status}`)
-  const data = await res.json()
+  const data = unwrap<{ shipping_methods?: any[] }>(await res.json())
   return (data.shipping_methods || []).map((m: any) => ({
     id: m.id,
     label: m.label || '',
@@ -111,7 +129,7 @@ export interface PaymentMethodResult {
 export async function fetchPaymentMethods(): Promise<PaymentMethodResult[]> {
   const res = await fetch(apiUrl('/api/payment-methods'))
   if (!res.ok) throw new Error(`fetchPaymentMethods: ${res.status}`)
-  const data = await res.json()
+  const data = unwrap<{ payment_methods?: any[] }>(await res.json())
   return (data.payment_methods || []).map((m: any) => ({
     id: m.id,
     method: m.method || '',
@@ -133,7 +151,7 @@ export interface SiteContentBlock {
 export async function fetchPublishedSiteContent(): Promise<SiteContentBlock[]> {
   const res = await fetch(apiUrl('/api/site-content/published'))
   if (!res.ok) throw new Error(`fetchPublishedSiteContent: ${res.status}`)
-  const data = await res.json()
+  const data = unwrap<{ items?: any[] }>(await res.json())
   return (data.items || []).map((c: any) => ({
     id: c.id,
     key: c.key,
@@ -210,10 +228,9 @@ export async function fetchQuote(
     }),
   })
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || `fetchQuote: ${res.status}`)
+    throw new Error(await readErrorMessage(res, 'fetchQuote'))
   }
-  return res.json()
+  return unwrap<QuoteResult>(await res.json())
 }
 
 // Create an order via the Go API. Returns the created order object.
@@ -244,7 +261,7 @@ export async function createOrder(input: OrderInput): Promise<{ order: any }> {
   if (!res.ok) {
     throw new ApiRequestError(res.status, await readErrorMessage(res, 'createOrder'))
   }
-  return res.json()
+  return unwrap<{ order: any }>(await res.json())
 }
 
 // Create an order as an authenticated member. The MemberID is derived
@@ -276,9 +293,9 @@ export async function createOrderForMember(
   if (!res.ok) {
     throw new ApiRequestError(res.status, await readErrorMessage(res, 'createOrderForMember'))
   }
-  const data = await res.json()
+  const data = unwrap<any>(await res.json())
   // Go returns the Order object directly. Normalize to the same
-  // { order } envelope the checkout consumer already requires.
+  // { order } wrapper the checkout consumer already requires.
   if (data && typeof data === 'object' && data.order && typeof data.order === 'object') {
     return data
   }
@@ -298,7 +315,7 @@ export async function prepareECPayPayment(orderId: string, accessToken: string):
   if (!res.ok) {
     throw new ApiRequestError(res.status, await readErrorMessage(res, 'prepareECPayPayment'))
   }
-  const data = await res.json()
+  const data = unwrap<ECPayLaunchForm>(await res.json())
   if (!data || typeof data.action !== 'string' || !data.action || !data.fields || typeof data.fields !== 'object') {
     throw new Error('綠界付款初始化回應格式不完整')
   }
@@ -334,10 +351,9 @@ export async function getGuestOrder(
   })
   if (res.status === 404) return null
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || `getGuestOrder: ${res.status}`)
+    throw new Error(await readErrorMessage(res, 'getGuestOrder'))
   }
-  return res.json()
+  return unwrap<any>(await res.json())
 }
 
 // List the authenticated member's own orders. PII is masked. Requires a
@@ -352,7 +368,7 @@ export async function listMyOrders(
   if (!res.ok) {
     throw new ApiRequestError(res.status, await readErrorMessage(res, 'listMyOrders'))
   }
-  return res.json()
+  return unwrap<unknown>(await res.json())
 }
 
 // Get a single order for the authenticated member by ID. Cross-user
@@ -368,5 +384,5 @@ export async function getMyOrder(
   if (!res.ok) {
     throw new ApiRequestError(res.status, await readErrorMessage(res, 'getMyOrder'))
   }
-  return res.json()
+  return unwrap<unknown>(await res.json())
 }

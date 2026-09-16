@@ -10,14 +10,82 @@ import (
 	"regexp"
 )
 
-func JSON(w http.ResponseWriter, status int, value any) {
+// Envelope is the single wire shape for every JSON API response. Success
+// carries the endpoint payload under Data; failure carries a machine-readable
+// Code plus the public Message under Error. `ok` mirrors status < 400 so the
+// discriminator can never disagree with the transport status.
+type Envelope struct {
+	OK    bool       `json:"ok"`
+	Data  any        `json:"data,omitempty"`
+	Error *ErrorBody `json:"error,omitempty"`
+}
+
+// ErrorBody is the public error payload. Code is a stable machine token
+// derived from the HTTP status; Message is the human-readable text callers
+// have always received.
+type ErrorBody struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
+}
+
+func writeEnvelope(w http.ResponseWriter, status int, env Envelope) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(value)
+	_ = json.NewEncoder(w).Encode(env)
+}
+
+func JSON(w http.ResponseWriter, status int, value any) {
+	writeEnvelope(w, status, Envelope{OK: status < http.StatusBadRequest, Data: value})
 }
 
 func Error(w http.ResponseWriter, status int, message string) {
-	JSON(w, status, map[string]string{"error": message})
+	writeEnvelope(w, status, errorEnvelope(status, message))
+}
+
+// errorEnvelope builds the failure body. Kept separate so Error can share
+// JSON's write path without exposing internals.
+func errorEnvelope(status int, message string) Envelope {
+	return Envelope{OK: false, Error: &ErrorBody{Code: codeForStatus(status), Message: message}}
+}
+
+// codeForStatus maps an HTTP status to the stable machine code carried in
+// error.code. Unknown statuses fall back to "error" rather than inventing
+// per-endpoint codes.
+func codeForStatus(status int) string {
+	switch status {
+	case http.StatusBadRequest:
+		return "bad_request"
+	case http.StatusUnauthorized:
+		return "unauthorized"
+	case http.StatusForbidden:
+		return "forbidden"
+	case http.StatusNotFound:
+		return "not_found"
+	case http.StatusMethodNotAllowed:
+		return "method_not_allowed"
+	case http.StatusConflict:
+		return "conflict"
+	case http.StatusGone:
+		return "gone"
+	case http.StatusRequestEntityTooLarge:
+		return "payload_too_large"
+	case http.StatusUnsupportedMediaType:
+		return "unsupported_media_type"
+	case http.StatusUnprocessableEntity:
+		return "unprocessable_entity"
+	case http.StatusTooManyRequests:
+		return "too_many_requests"
+	case http.StatusInternalServerError:
+		return "internal_error"
+	case http.StatusBadGateway:
+		return "bad_gateway"
+	case http.StatusServiceUnavailable:
+		return "service_unavailable"
+	case http.StatusGatewayTimeout:
+		return "gateway_timeout"
+	default:
+		return "error"
+	}
 }
 
 func DecodeJSON(r *http.Request, dst any) error {

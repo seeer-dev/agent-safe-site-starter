@@ -174,4 +174,40 @@ describe('media-api request URL construction and operations', () => {
       )
     })
   })
+
+  describe('response envelope', () => {
+    it('unwraps { ok:true, data } for presign', async () => {
+      const fetchMock = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({
+              ok: true,
+              data: { url: 'https://r2.example.com/u', method: 'PUT', key: 'k', headers: {} },
+            }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      )
+      globalThis.fetch = fetchMock
+
+      const res = await presignUpload({ filename: 'a.webp', content_type: 'image/webp', purpose: 'product_image' })
+      expect(res.key).toBe('k')
+    })
+
+    it('reads error.message from { ok:false, error:{code,message} }', async () => {
+      const fetchMock = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ ok: false, error: { code: 'service_unavailable', message: 'media storage is not configured' } }),
+            { status: 503, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      )
+      globalThis.fetch = fetchMock
+
+      await expect(
+        verifyUpload({ key: 'k' }),
+      ).rejects.toThrow('media storage is not configured')
+    })
+  })
 })

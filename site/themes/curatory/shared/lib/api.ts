@@ -28,26 +28,42 @@ export async function api<T>(path: string, options?: ApiOptions): Promise<T> {
     body: options?.body !== undefined ? JSON.stringify(options.body) : undefined,
   })
 
-  let data: unknown = null
+  let body: unknown = null
   try {
-    data = await res.json()
+    body = await res.json()
   } catch {
     /* no body */
   }
 
   if (!res.ok) {
-    const message =
-      (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string'
-        ? (data as { error: string }).error
-        : null) ??
-      (data && typeof data === 'object' && 'message' in data && typeof (data as { message: unknown }).message === 'string'
-        ? (data as { message: string }).message
-        : null) ??
-      `請求失敗（${res.status}）`
+    const message = errorMessage(body) ?? `請求失敗（${res.status}）`
     throw new ApiError(message, res.status)
   }
 
-  return data as T
+  // Shared response envelope: { ok: true, data: T }. Tolerate a legacy bare
+  // payload while Pages and the origin deploy independently.
+  if (body !== null && typeof body === 'object' && 'ok' in body) {
+    const env = body as { ok: boolean; data?: T; error?: { message?: string } }
+    if (!env.ok) {
+      throw new ApiError(env.error?.message ?? `請求失敗（${res.status}）`, res.status)
+    }
+    return env.data as T
+  }
+  return body as T
+}
+
+// errorMessage reads the public message from the shared envelope
+// ({ok:false, error:{code,message}}) or the legacy {"error":"msg"} /
+// {"message":"msg"} shapes.
+function errorMessage(body: unknown): string | null {
+  if (body === null || typeof body !== 'object') return null
+  const error = (body as { error?: unknown }).error
+  if (error && typeof error === 'object' && typeof (error as { message?: unknown }).message === 'string') {
+    return (error as { message: string }).message
+  }
+  if (typeof error === 'string') return error
+  const message = (body as { message?: unknown }).message
+  return typeof message === 'string' ? message : null
 }
 
 export const apiGet = <T>(path: string, headers?: Record<string, string>) => api<T>(path, { headers })

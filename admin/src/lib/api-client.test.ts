@@ -165,4 +165,41 @@ describe('api-client request URL construction and HTTP methods', () => {
 
     await expect(api.get('/admin/secret')).rejects.toThrow(ApiError)
   })
+
+  it('unwraps the shared response envelope on success', async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ ok: true, data: { order: { id: 'TW-1' } } }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+    globalThis.fetch = fetchMock
+
+    const res = await api.get<{ order: { id: string } }>('/admin/orders/TW-1')
+    expect(res).toEqual({ order: { id: 'TW-1' } })
+  })
+
+  it('surfaces envelope error code and message on failure', async () => {
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(
+          JSON.stringify({ ok: false, error: { code: 'conflict', message: 'stale version' } }),
+          { status: 409, headers: { 'Content-Type': 'application/json' } },
+        ),
+      ),
+    )
+    globalThis.fetch = fetchMock
+
+    try {
+      await api.patch('/admin/orders/TW-1/status', { expected_version: 1 })
+      expect.unreachable('should have thrown')
+    } catch (e) {
+      expect(e).toBeInstanceOf(ApiError)
+      expect((e as ApiError).status).toBe(409)
+      expect((e as ApiError).code).toBe('conflict')
+      expect((e as ApiError).message).toBe('stale version')
+    }
+  })
 })

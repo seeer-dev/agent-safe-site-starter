@@ -330,11 +330,13 @@ func TestPublicShippingMethodsHTTPEmptyAndStoreFailure(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), `"shipping_methods":[]`) && !strings.Contains(rec.Body.String(), `"shipping_methods": []`) {
 		// encoding/json emits no space
-		var body map[string]json.RawMessage
+		var body struct {
+			Data map[string]json.RawMessage `json:"data"`
+		}
 		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 			t.Fatalf("unmarshal: %v body=%s", err, rec.Body.String())
 		}
-		if string(body["shipping_methods"]) != "[]" {
+		if string(body.Data["shipping_methods"]) != "[]" {
 			t.Fatalf("body = %s, want empty array", rec.Body.String())
 		}
 	}
@@ -416,10 +418,13 @@ func TestAdminShippingMethodsHTTPAuthAndContracts(t *testing.T) {
 	if rec.Code != http.StatusCreated {
 		t.Fatalf("create status = %d, want 201; body=%s", rec.Code, rec.Body.String())
 	}
-	var created ShippingMethod
-	if err := json.Unmarshal(rec.Body.Bytes(), &created); err != nil {
+	var createdEnv struct {
+		Data ShippingMethod `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &createdEnv); err != nil {
 		t.Fatal(err)
 	}
+	created := createdEnv.Data
 
 	dup := adminReq(http.MethodPost, "/api/admin/shipping-methods", `{"method":"home_delivery","label":"宅配2","fee":0,"enabled":false,"sort_order":0}`)
 	rec = httptest.NewRecorder()
@@ -436,10 +441,13 @@ func TestAdminShippingMethodsHTTPAuthAndContracts(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("update status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var updated ShippingMethod
-	if err := json.Unmarshal(rec.Body.Bytes(), &updated); err != nil {
+	var updatedEnv struct {
+		Data ShippingMethod `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &updatedEnv); err != nil {
 		t.Fatal(err)
 	}
+	updated := updatedEnv.Data
 	if updated.Method != "home_delivery" || updated.Label != "宅配到府" || updated.Version != 2 {
 		t.Fatalf("updated = %#v", updated)
 	}

@@ -31,12 +31,20 @@ func TestWriteErrorUnauthorized(t *testing.T) {
 	if rec.Code != http.StatusUnauthorized {
 		t.Fatalf("status = %d, want 401", rec.Code)
 	}
-	var body map[string]string
+	var body struct {
+		OK    bool `json:"ok"`
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal body: %v", err)
 	}
-	if body["error"] != "unauthorized" {
-		t.Errorf("error = %q, want unauthorized", body["error"])
+	if body.OK {
+		t.Error("ok = true on error response")
+	}
+	if body.Error.Message != "unauthorized" {
+		t.Errorf("error.message = %q, want unauthorized", body.Error.Message)
 	}
 }
 
@@ -48,12 +56,20 @@ func TestWriteErrorUnavailable(t *testing.T) {
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503", rec.Code)
 	}
-	var body map[string]string
+	var body struct {
+		OK    bool `json:"ok"`
+		Error struct {
+			Message string `json:"message"`
+		} `json:"error"`
+	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal body: %v", err)
 	}
-	if body["error"] != "service unavailable" {
-		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	if body.OK {
+		t.Error("ok = true on error response")
+	}
+	if body.Error.Message != "service unavailable" {
+		t.Errorf("error.message = %q, want 'service unavailable'", body.Error.Message)
 	}
 }
 

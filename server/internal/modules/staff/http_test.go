@@ -57,12 +57,14 @@ func TestListStaffHTTPAllowsReadCap(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var body map[string]json.RawMessage
+	var body struct {
+		Data map[string]json.RawMessage `json:"data"`
+	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if _, ok := body["members"]; !ok {
-		t.Fatalf("body = %s, want members array", rec.Body.String())
+	if _, ok := body.Data["members"]; !ok {
+		t.Fatalf("body = %s, want members array inside data", rec.Body.String())
 	}
 }
 
@@ -83,11 +85,12 @@ func TestListStaffHTTPReturns503OnDependencyUnavailable(t *testing.T) {
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503; body=%s", rec.Code, rec.Body.String())
 	}
-	var body map[string]string
+	var body map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if body["error"] != "service unavailable" {
-		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	errObj, _ := body["error"].(map[string]any)
+	if errObj["message"] != "service unavailable" {
+		t.Errorf("error.message = %q, want 'service unavailable'", errObj["message"])
 	}
 }

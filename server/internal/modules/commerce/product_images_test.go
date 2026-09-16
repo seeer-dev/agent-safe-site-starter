@@ -533,9 +533,13 @@ func TestAdminHTTPResponseContainsProductImagesButPublicDoesNot(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &adminBody); err != nil {
 		t.Fatalf("unmarshal admin response: %v", err)
 	}
-	imgs, ok := adminBody["product_images"].([]any)
+	adminData, ok := adminBody["data"].(map[string]any)
+	if !ok {
+		t.Fatalf("admin response missing data envelope; body = %s", rec.Body.String())
+	}
+	imgs, ok := adminData["product_images"].([]any)
 	if !ok || len(imgs) != 1 {
-		t.Fatalf("admin response product_images = %#v, want 1 element", adminBody["product_images"])
+		t.Fatalf("admin response product_images = %#v, want 1 element", adminData["product_images"])
 	}
 	imgMap := imgs[0].(map[string]any)
 	if imgMap["object_key"] != "verified/admin/k.jpg" {
@@ -556,9 +560,10 @@ func TestAdminHTTPResponseContainsProductImagesButPublicDoesNot(t *testing.T) {
 	if err := json.Unmarshal(pubRec.Body.Bytes(), &pubBody); err != nil {
 		t.Fatalf("unmarshal public response: %v", err)
 	}
-	product, _ := pubBody["product"].(map[string]any)
+	pubData, _ := pubBody["data"].(map[string]any)
+	product, _ := pubData["product"].(map[string]any)
 	if product == nil {
-		t.Fatal("public response missing product key")
+		t.Fatal("public response missing product key inside data")
 	}
 	if _, exists := product["product_images"]; exists {
 		t.Error("public response must NOT contain product_images")
@@ -990,16 +995,20 @@ func TestAdminResponseDoesNotContainLegacyImageFields(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
+	data, _ := body["data"].(map[string]any)
+	if data == nil {
+		t.Fatalf("admin response missing data envelope; body = %s", rec.Body.String())
+	}
 	// Admin response must NOT contain legacy image/images fields.
-	if _, exists := body["image"]; exists {
+	if _, exists := data["image"]; exists {
 		t.Error("admin response must NOT contain legacy 'image' field")
 	}
-	if _, exists := body["images"]; exists {
+	if _, exists := data["images"]; exists {
 		t.Error("admin response must NOT contain legacy 'images' field")
 	}
 	// Admin response MUST contain product_images.
-	imgs, ok := body["product_images"].([]any)
+	imgs, ok := data["product_images"].([]any)
 	if !ok || len(imgs) != 1 {
-		t.Fatalf("admin product_images = %#v, want 1 element", body["product_images"])
+		t.Fatalf("admin product_images = %#v, want 1 element", data["product_images"])
 	}
 }

@@ -49,7 +49,8 @@ func TestVerifyHTTPCorruptJPEGReturns400WithFixedMessage(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	msg, _ := body["error"].(string)
+	errObj, _ := body["error"].(map[string]any)
+	msg, _ := errObj["message"].(string)
 	if msg != ErrValidationDecodeFailed.Error() {
 		t.Fatalf("error message = %q, want fixed sentinel %q", msg, ErrValidationDecodeFailed.Error())
 	}
@@ -82,7 +83,8 @@ func TestVerifyHTTPCorruptGIFReturns400WithFixedMessage(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	msg, _ := body["error"].(string)
+	errObj, _ := body["error"].(map[string]any)
+	msg, _ := errObj["message"].(string)
 	if msg != ErrValidationDecodeFailed.Error() {
 		t.Fatalf("error message = %q, want fixed sentinel %q", msg, ErrValidationDecodeFailed.Error())
 	}
@@ -112,7 +114,8 @@ func TestVerifyHTTPProviderFailureReturns503Generic(t *testing.T) {
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	msg, _ := body["error"].(string)
+	errObj, _ := body["error"].(map[string]any)
+	msg, _ := errObj["message"].(string)
 	if msg != "verification temporarily unavailable" {
 		t.Fatalf("error message = %q, want generic 503 message", msg)
 	}
@@ -198,11 +201,12 @@ func TestVerifyHTTPAuthErrorSeparation(t *testing.T) {
 	if rec2.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503; body=%s", rec2.Code, rec2.Body.String())
 	}
-	var body map[string]string
+	var body map[string]any
 	if err := json.Unmarshal(rec2.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if body["error"] != "service unavailable" {
-		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	errObj, _ := body["error"].(map[string]any)
+	if errObj["message"] != "service unavailable" {
+		t.Errorf("error.message = %q, want 'service unavailable'", errObj["message"])
 	}
 }

@@ -184,15 +184,17 @@ func TestApproveHTTPSuccess(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("approve status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var result SiteContent
-	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+	var env struct {
+		Data SiteContent `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if result.ApproverUserID != "approver-id" {
-		t.Errorf("approver_user_id = %q, want approver-id", result.ApproverUserID)
+	if env.Data.ApproverUserID != "approver-id" {
+		t.Errorf("approver_user_id = %q, want approver-id", env.Data.ApproverUserID)
 	}
-	if result.ApprovedVersion != 1 {
-		t.Errorf("approved_version = %d, want 1", result.ApprovedVersion)
+	if env.Data.ApprovedVersion != 1 {
+		t.Errorf("approved_version = %d, want 1", env.Data.ApprovedVersion)
 	}
 }
 
@@ -299,12 +301,14 @@ func TestPublishHTTPSuccess(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Errorf("publish status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	var result SiteContent
-	if err := json.Unmarshal(rec.Body.Bytes(), &result); err != nil {
+	var env struct {
+		Data SiteContent `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if result.Status != "published" {
-		t.Errorf("status = %q, want published", result.Status)
+	if env.Data.Status != "published" {
+		t.Errorf("status = %q, want published", env.Data.Status)
 	}
 }
 
@@ -521,11 +525,12 @@ func TestSiteContentHTTPUnavailableOnAuthFailure(t *testing.T) {
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503; body=%s", rec.Code, rec.Body.String())
 	}
-	var body map[string]string
+	var body map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if body["error"] != "service unavailable" {
-		t.Errorf("error = %q, want 'service unavailable'", body["error"])
+	errObj, _ := body["error"].(map[string]any)
+	if errObj["message"] != "service unavailable" {
+		t.Errorf("error.message = %q, want 'service unavailable'", errObj["message"])
 	}
 }

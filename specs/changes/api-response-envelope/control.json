@@ -1,0 +1,100 @@
+{
+  "change_id": "api-response-envelope",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner directed on 2026-09-16 that the API's heterogeneous bare-payload responses be replaced by a unified status/response envelope, that the implementation be carried through to a commit, and that Resend and R2 provider paths carry executable readiness evidence.",
+  "repository_baseline": "1665e08327a4656a0e3457058f4ee7c5fd8ac182",
+  "supersedes": [],
+  "applies_to": [
+    "server/internal/httpx/httpx.go",
+    "server/internal/httpx/httpx_test.go",
+    "server/internal/platform/mail/resend_test.go",
+    "server/internal/platform/storage/r2_test.go",
+    "admin/src/lib/api-client.ts",
+    "admin/src/lib/api-client.test.ts",
+    "admin/src/lib/media-api.ts",
+    "admin/src/lib/media-api.test.ts",
+    "site/themes/curatory/shared/lib/api.ts",
+    "site/themes/minimal-cart/shared/lib/api.ts",
+    "server/internal/auth/auth_test.go",
+    "server/internal/modules/commerce/http_test.go",
+    "server/internal/modules/commerce/model_test.go",
+    "server/internal/modules/commerce/product_images_test.go",
+    "server/internal/modules/commerce/service_security_test.go",
+    "server/internal/modules/commerce/service_test.go",
+    "server/internal/modules/commerce/shipping_methods_test.go",
+    "server/internal/modules/media/verify_http_test.go",
+    "server/internal/modules/sitecontent/http_test.go",
+    "server/internal/modules/staff/http_test.go",
+    "specs/changes/api-response-envelope/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "httpx.JSON now emits {ok:status<400,data:value} and httpx.Error/ErrorWithCause emit {ok:false,error:{code:codeForStatus(status),message}} through a shared writeEnvelope; every handler (~280 call sites), auth.WriteError, and the edge guard produce the shape without per-call edits. httpx_test.go pins both shapes, the non-2xx ok:false guard, the 15-entry status-to-code map plus the 'error' fallback, and cause non-disclosure. Mutation-verified: dropping Data from JSON turned TestJSONSuccessEnvelope and TestJSONNon2xxKeepsOkFalse red; restored green.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "admin api-client request() unwraps env.data and throws ApiError(status, error.message, error.code) — the exported ApiResponse<T> interface now describes the wire envelope; media-api presign/verify unwrap via shared unwrap/readError helpers; curatory api() unwraps and reads errorMessage() across envelope+legacy shapes; minimal-cart api.ts gained the same unwrap/readErrorMessage helpers applied to all twelve call sites. All four tolerate legacy bare bodies and legacy string errors for mixed-version deploys.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "The exempt paths never touch httpx.JSON: /healthz writes plain text at bootstrap/app.go:112, the ECPay acknowledgement body writes text at ecpay_http.go:59-61, and CORS OPTIONS writes a bare 204 at app.go:275. The selected diff contains no app.go or ecpay_http.go changes, so their wire formats are byte-identical.",
+      "status": "passed"
+    },
+    "REQ-004": {
+      "observed_revision": 1,
+      "proof": "mail/resend_test.go (new) drives the real resend-go SDK against an httptest server via the client's exported BaseURL: TestResendSendRequestContract asserts POST /emails, Bearer auth, and from/to/subject/html/text fields; TestResendSendProviderError proves a provider 422 surfaces as an error. storage/r2_test.go gained TestPresignPutProducesSignedR2URL proving offline SigV4 presigning: virtual-hosted URL media-bucket.acct123.r2.cloudflarestorage.com, object key path, AWS4-HMAC-SHA256 algorithm, signature present, credential scope, X-Amz-Expires=600, and the Content-Type header. Mutations verified red (wrong To, wrong BaseEndpoint) then restored green.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "TestJSONSuccessEnvelope decodes {ok:true,data:{order:{id:'TW-1'}}} with no error key; TestJSONNon2xxKeepsOkFalse proves a 409 JSON write emits ok:false with the payload under data; TestErrorEnvelope asserts {ok:false,error:{code:'forbidden',message:'forbidden'}} at status 403; TestErrorCodeMapping pins all fifteen status codes plus the 599 fallback.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "Public messages are unchanged end-to-end: TestWriteErrorUnauthorized/Unavailable assert error.message equals 'unauthorized'/'service unavailable' plus ok:false; the media verify tests assert the fixed sentinels and the generic 503 message land in error.message; the stale-version commerce test still finds 'stale version' in the body.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "api-client.test.ts: legacy {error:'forbidden action'} mock still rejects via ApiError (existing test), the new 'unwraps the shared response envelope' test resolves {ok:true,data:{order}} to the inner payload, and 'surfaces envelope error code and message' asserts ApiError(status=409, code='conflict', message='stale version'). media-api.test.ts adds envelope unwrap for presign and error.message extraction for verify; existing legacy mocks keep passing. 252 vitest tests green; vue-tsc clean in admin and both themes; admin build succeeds.",
+      "status": "passed"
+    },
+    "AC-004": {
+      "observed_revision": 1,
+      "proof": "app.go and ecpay_http.go are absent from the selected diff; /healthz remains a plain-text 200, the ECPay callback returns its text/plain ack body, and OPTIONS returns an empty 204 — verified by source inspection at app.go:112/275 and ecpay_http.go:59-61, all outside httpx's write path.",
+      "status": "passed"
+    },
+    "AC-005": {
+      "observed_revision": 1,
+      "proof": "go test ./server/internal/platform/mail -v ran TestResendSendRequestContract and TestResendSendProviderError: the httptest server observed POST /emails with Authorization 'Bearer re_test_key' and the full field set; the 422 stub produced a wrapped 'resend send' error. Mutation: sending To=[wrong@example.com] turned the contract test red; restored and re-passed.",
+      "status": "passed"
+    },
+    "AC-006": {
+      "observed_revision": 1,
+      "proof": "go test ./server/internal/platform/storage -run TestPresignPutProducesSignedR2URL passed with dummy credentials and zero network: the presigned URL parses as media-bucket.acct123.r2.cloudflarestorage.com/uploads/u1/temp.webp with X-Amz-Algorithm=AWS4-HMAC-SHA256, non-empty X-Amz-Signature, X-Amz-Credential scoped to fake-access-key, X-Amz-Expires=600, and Headers Content-Type image/webp. Mutation: pointing BaseEndpoint at example.com turned the host assertion red; restored and re-passed.",
+      "status": "passed"
+    }
+  }
+}
