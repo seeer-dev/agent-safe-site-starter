@@ -17,8 +17,9 @@ func decodeBody(t *testing.T, w *httptest.ResponseRecorder) map[string]any {
 	return body
 }
 
-// TestJSONSuccessEnvelope pins the success wire shape: {"ok":true,"data":...}
-// with the endpoint payload preserved verbatim inside data.
+// TestJSONSuccessEnvelope pins the success wire shape:
+// {"status":"success","data":...} with the endpoint payload preserved
+// verbatim inside data and no ok key present.
 func TestJSONSuccessEnvelope(t *testing.T) {
 	w := httptest.NewRecorder()
 	JSON(w, http.StatusOK, map[string]any{"order": map[string]any{"id": "TW-1"}})
@@ -26,8 +27,11 @@ func TestJSONSuccessEnvelope(t *testing.T) {
 		t.Fatalf("status = %d, want 200", w.Code)
 	}
 	body := decodeBody(t, w)
-	if body["ok"] != true {
-		t.Fatalf("ok = %v, want true", body["ok"])
+	if body["status"] != "success" {
+		t.Fatalf("status = %v, want success", body["status"])
+	}
+	if _, present := body["ok"]; present {
+		t.Fatalf("ok key present on success: %v", body["ok"])
 	}
 	data, ok := body["data"].(map[string]any)
 	if !ok {
@@ -42,15 +46,15 @@ func TestJSONSuccessEnvelope(t *testing.T) {
 	}
 }
 
-// TestJSONNon2xxKeepsOkFalse proves the ok discriminator mirrors the status:
-// a value written with a non-2xx status via JSON still emits ok:false so the
-// flag can never disagree with the transport status.
-func TestJSONNon2xxKeepsOkFalse(t *testing.T) {
+// TestJSONNon2xxKeepsErrorStatus proves the status discriminator mirrors the
+// HTTP status: a value written with a non-2xx status via JSON still emits
+// "error" so the flag can never disagree with the transport status.
+func TestJSONNon2xxKeepsErrorStatus(t *testing.T) {
 	w := httptest.NewRecorder()
 	JSON(w, http.StatusConflict, map[string]any{"expected_version": 3})
 	body := decodeBody(t, w)
-	if body["ok"] != false {
-		t.Fatalf("ok = %v, want false for non-2xx", body["ok"])
+	if body["status"] != "error" {
+		t.Fatalf("status = %v, want error for non-2xx", body["status"])
 	}
 	data, ok := body["data"].(map[string]any)
 	if !ok || data["expected_version"] != float64(3) {
@@ -59,7 +63,7 @@ func TestJSONNon2xxKeepsOkFalse(t *testing.T) {
 }
 
 // TestErrorEnvelope pins the failure wire shape:
-// {"ok":false,"error":{"code":<status code>,"message":<public msg>}}.
+// {"status":"error","error":{"code":<status code>,"message":<public msg>}}.
 func TestErrorEnvelope(t *testing.T) {
 	w := httptest.NewRecorder()
 	Error(w, http.StatusForbidden, "forbidden")
@@ -70,8 +74,11 @@ func TestErrorEnvelope(t *testing.T) {
 		t.Fatalf("content-type = %q", ct)
 	}
 	body := decodeBody(t, w)
-	if body["ok"] != false {
-		t.Fatalf("ok = %v, want false", body["ok"])
+	if body["status"] != "error" {
+		t.Fatalf("status = %v, want error", body["status"])
+	}
+	if _, present := body["ok"]; present {
+		t.Fatalf("ok key present on error: %v", body["ok"])
 	}
 	errObj, ok := body["error"].(map[string]any)
 	if !ok {
@@ -85,6 +92,32 @@ func TestErrorEnvelope(t *testing.T) {
 	}
 	if _, present := body["data"]; present {
 		t.Fatalf("data key present on error: %v", body["data"])
+	}
+}
+
+// TestMetaSerialization pins the pagination contract: meta is a top-level
+// sibling of data when set and absent otherwise.
+func TestMetaSerialization(t *testing.T) {
+	w := httptest.NewRecorder()
+	writeEnvelope(w, http.StatusOK, Envelope{
+		Status: "success",
+		Data:   map[string]any{"items": []any{1}},
+		Meta:   map[string]any{"page": 1, "per_page": 20, "total": 137, "total_pages": 7},
+	})
+	body := decodeBody(t, w)
+	meta, ok := body["meta"].(map[string]any)
+	if !ok {
+		t.Fatalf("meta missing or wrong type: %v", body["meta"])
+	}
+	if meta["page"] != float64(1) || meta["per_page"] != float64(20) || meta["total"] != float64(137) || meta["total_pages"] != float64(7) {
+		t.Fatalf("meta = %v, want pagination fields", meta)
+	}
+
+	w = httptest.NewRecorder()
+	JSON(w, http.StatusOK, map[string]any{"items": []any{1}})
+	body = decodeBody(t, w)
+	if _, present := body["meta"]; present {
+		t.Fatalf("meta present when unset: %v", body["meta"])
 	}
 }
 

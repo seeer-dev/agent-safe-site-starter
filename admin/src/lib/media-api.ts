@@ -16,8 +16,8 @@ function getAuthToken(): string {
 }
 
 // readError extracts the public message from the shared response envelope
-// ({ok:false, error:{code,message}}), tolerating the legacy {"error":"msg"}
-// shape during mixed-version deploys.
+// ({status:"error", error:{code,message}}), tolerating the legacy
+// {"error":"msg"} shape during mixed-version deploys.
 async function readError(res: Response, fallback: string): Promise<string> {
   const body = await res.text()
   try {
@@ -32,11 +32,16 @@ async function readError(res: Response, fallback: string): Promise<string> {
   return fallback
 }
 
-// unwrap returns the payload inside the response envelope ({ok:true,data:T}),
-// tolerating a legacy bare payload while Pages and the origin roll separately.
+// unwrap returns the payload inside the response envelope
+// ({status:"success", data:T}), tolerating a legacy bare payload while Pages
+// and the origin roll separately. Detection is value-based so a bare payload
+// carrying its own status field is never mistaken for the envelope.
 function unwrap<T>(body: unknown): T {
-  if (body !== null && typeof body === 'object' && 'ok' in body) {
-    return (body as { data?: T }).data as T
+  if (body !== null && typeof body === 'object') {
+    const env = body as { status?: unknown; data?: T }
+    if (env.status === 'success') {
+      return env.data as T
+    }
   }
   return body as T
 }

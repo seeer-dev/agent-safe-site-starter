@@ -169,7 +169,7 @@ describe('api-client request URL construction and HTTP methods', () => {
   it('unwraps the shared response envelope on success', async () => {
     const fetchMock = vi.fn().mockImplementation(() =>
       Promise.resolve(
-        new Response(JSON.stringify({ ok: true, data: { order: { id: 'TW-1' } } }), {
+        new Response(JSON.stringify({ status: 'success', data: { order: { id: 'TW-1' } } }), {
           status: 200,
           headers: { 'Content-Type': 'application/json' },
         }),
@@ -185,7 +185,7 @@ describe('api-client request URL construction and HTTP methods', () => {
     const fetchMock = vi.fn().mockImplementation(() =>
       Promise.resolve(
         new Response(
-          JSON.stringify({ ok: false, error: { code: 'conflict', message: 'stale version' } }),
+          JSON.stringify({ status: 'error', error: { code: 'conflict', message: 'stale version' } }),
           { status: 409, headers: { 'Content-Type': 'application/json' } },
         ),
       ),
@@ -201,5 +201,22 @@ describe('api-client request URL construction and HTTP methods', () => {
       expect((e as ApiError).code).toBe('conflict')
       expect((e as ApiError).message).toBe('stale version')
     }
+  })
+
+  it('passes through a bare payload carrying its own status field', async () => {
+    // A legacy payload like {status:"pending"} is not the envelope; only the
+    // literal "success"/"error" values are. It must resolve unchanged.
+    const fetchMock = vi.fn().mockImplementation(() =>
+      Promise.resolve(
+        new Response(JSON.stringify({ status: 'pending', detail: 'waiting' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        }),
+      ),
+    )
+    globalThis.fetch = fetchMock
+
+    const res = await api.get<{ status: string; detail: string }>('/orders/TW-1/track')
+    expect(res).toEqual({ status: 'pending', detail: 'waiting' })
   })
 })

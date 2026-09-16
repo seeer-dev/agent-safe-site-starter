@@ -32,16 +32,16 @@ func TestWriteErrorUnauthorized(t *testing.T) {
 		t.Fatalf("status = %d, want 401", rec.Code)
 	}
 	var body struct {
-		OK    bool `json:"ok"`
-		Error struct {
+		Status string `json:"status"`
+		Error  struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal body: %v", err)
 	}
-	if body.OK {
-		t.Error("ok = true on error response")
+	if body.Status != "error" {
+		t.Errorf("status = %q, want error", body.Status)
 	}
 	if body.Error.Message != "unauthorized" {
 		t.Errorf("error.message = %q, want unauthorized", body.Error.Message)
@@ -57,16 +57,16 @@ func TestWriteErrorUnavailable(t *testing.T) {
 		t.Fatalf("status = %d, want 503", rec.Code)
 	}
 	var body struct {
-		OK    bool `json:"ok"`
-		Error struct {
+		Status string `json:"status"`
+		Error  struct {
 			Message string `json:"message"`
 		} `json:"error"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
 		t.Fatalf("unmarshal body: %v", err)
 	}
-	if body.OK {
-		t.Error("ok = true on error response")
+	if body.Status != "error" {
+		t.Errorf("status = %q, want error", body.Status)
 	}
 	if body.Error.Message != "service unavailable" {
 		t.Errorf("error.message = %q, want 'service unavailable'", body.Error.Message)

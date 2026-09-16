@@ -40,20 +40,24 @@ export async function api<T>(path: string, options?: ApiOptions): Promise<T> {
     throw new ApiError(message, res.status)
   }
 
-  // Shared response envelope: { ok: true, data: T }. Tolerate a legacy bare
-  // payload while Pages and the origin deploy independently.
-  if (body !== null && typeof body === 'object' && 'ok' in body) {
-    const env = body as { ok: boolean; data?: T; error?: { message?: string } }
-    if (!env.ok) {
+  // Shared response envelope: { status: 'success', data: T }. Tolerate a
+  // legacy bare payload while Pages and the origin deploy independently.
+  // Detection is value-based so a bare payload carrying its own status field
+  // is never mistaken for the envelope.
+  if (body !== null && typeof body === 'object') {
+    const env = body as { status?: unknown; data?: T; error?: { message?: string } }
+    if (env.status === 'error') {
       throw new ApiError(env.error?.message ?? `請求失敗（${res.status}）`, res.status)
     }
-    return env.data as T
+    if (env.status === 'success') {
+      return env.data as T
+    }
   }
   return body as T
 }
 
 // errorMessage reads the public message from the shared envelope
-// ({ok:false, error:{code,message}}) or the legacy {"error":"msg"} /
+// ({status:"error", error:{code,message}}) or the legacy {"error":"msg"} /
 // {"message":"msg"} shapes.
 function errorMessage(body: unknown): string | null {
   if (body === null || typeof body !== 'object') return null

@@ -10,14 +10,18 @@ import (
 	"regexp"
 )
 
-// Envelope is the single wire shape for every JSON API response. Success
-// carries the endpoint payload under Data; failure carries a machine-readable
-// Code plus the public Message under Error. `ok` mirrors status < 400 so the
-// discriminator can never disagree with the transport status.
+// Envelope is the single wire shape for every JSON API response. Status is
+// the discriminator — "success" when the HTTP status is below 400, "error"
+// otherwise — so the flag can never disagree with the transport status.
+// Success carries the endpoint payload under Data; failure carries a
+// machine-readable Code plus the public Message under Error. Meta is a
+// reserved top-level sibling of Data for non-resource metadata such as
+// pagination {page, per_page, total, total_pages}.
 type Envelope struct {
-	OK    bool       `json:"ok"`
-	Data  any        `json:"data,omitempty"`
-	Error *ErrorBody `json:"error,omitempty"`
+	Status string     `json:"status"`
+	Data   any        `json:"data,omitempty"`
+	Error  *ErrorBody `json:"error,omitempty"`
+	Meta   any        `json:"meta,omitempty"`
 }
 
 // ErrorBody is the public error payload. Code is a stable machine token
@@ -35,7 +39,7 @@ func writeEnvelope(w http.ResponseWriter, status int, env Envelope) {
 }
 
 func JSON(w http.ResponseWriter, status int, value any) {
-	writeEnvelope(w, status, Envelope{OK: status < http.StatusBadRequest, Data: value})
+	writeEnvelope(w, status, Envelope{Status: statusLabel(status), Data: value})
 }
 
 func Error(w http.ResponseWriter, status int, message string) {
@@ -45,7 +49,16 @@ func Error(w http.ResponseWriter, status int, message string) {
 // errorEnvelope builds the failure body. Kept separate so Error can share
 // JSON's write path without exposing internals.
 func errorEnvelope(status int, message string) Envelope {
-	return Envelope{OK: false, Error: &ErrorBody{Code: codeForStatus(status), Message: message}}
+	return Envelope{Status: statusLabel(status), Error: &ErrorBody{Code: codeForStatus(status), Message: message}}
+}
+
+// statusLabel derives the discriminator from the HTTP status so the two can
+// never disagree.
+func statusLabel(status int) string {
+	if status < http.StatusBadRequest {
+		return "success"
+	}
+	return "error"
 }
 
 // codeForStatus maps an HTTP status to the stable machine code carried in

@@ -10,8 +10,8 @@ export class ApiRequestError extends Error {
 async function readErrorMessage(res: Response, fallback: string): Promise<string> {
   const err = await res.json().catch(() => null)
   if (err && typeof err === 'object') {
-    // Shared envelope error: { ok:false, error:{ code, message } }; the
-    // legacy shape was a plain { error: "msg" } string.
+    // Shared envelope error: { status:"error", error:{ code, message } };
+    // the legacy shape was a plain { error: "msg" } string.
     const e = (err as { error?: unknown }).error
     if (e && typeof e === 'object' && typeof (e as { message?: unknown }).message === 'string') {
       return (e as { message: string }).message
@@ -21,11 +21,16 @@ async function readErrorMessage(res: Response, fallback: string): Promise<string
   return `${fallback}: ${res.status}`
 }
 
-// Shared response envelope: success bodies are { ok:true, data:T }. Tolerate
-// a legacy bare payload while Pages and the origin deploy independently.
+// Shared response envelope: success bodies are { status:"success", data:T }.
+// Tolerate a legacy bare payload while Pages and the origin deploy
+// independently. Detection is value-based so a bare payload carrying its own
+// status field is never mistaken for the envelope.
 function unwrap<T>(body: unknown): T {
-  if (body !== null && typeof body === 'object' && 'ok' in body) {
-    return (body as { data?: T }).data as T
+  if (body !== null && typeof body === 'object') {
+    const env = body as { status?: unknown; data?: T }
+    if (env.status === 'success') {
+      return env.data as T
+    }
   }
   return body as T
 }

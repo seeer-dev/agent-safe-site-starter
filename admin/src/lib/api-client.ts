@@ -2,12 +2,14 @@ import { getAccessToken } from '@/lib/auth/token'
 import { getApiBase } from './api-config'
 
 // ApiResponse is the wire envelope every JSON API response shares:
-// { ok: true, data: T } on success, { ok: false, error: { code, message } }
-// on failure. request() unwraps it; callers always receive T directly.
+// { status: 'success', data: T } on success,
+// { status: 'error', error: { code, message } } on failure.
+// request() unwraps it; callers always receive T directly.
 export interface ApiResponse<T> {
-  ok: boolean
+  status: 'success' | 'error'
   data?: T
   error?: ApiErrorBody
+  meta?: unknown
 }
 
 export interface ApiErrorBody {
@@ -64,12 +66,16 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const ct = res.headers.get('content-type') || ''
   if (ct.includes('application/json')) {
     const body = (await res.json()) as ApiResponse<T> | T
-    if (body !== null && typeof body === 'object' && 'ok' in body) {
+    if (body !== null && typeof body === 'object') {
       const env = body as ApiResponse<T>
-      if (!env.ok) {
+      // Value-based detection: only the literal discriminator values count,
+      // so a bare payload carrying its own status field is never mistaken.
+      if (env.status === 'success') {
+        return env.data as T
+      }
+      if (env.status === 'error') {
         throw new ApiError(res.status, env.error?.message ?? `API ${res.status}`, env.error?.code)
       }
-      return env.data as T
     }
     // Legacy bare payload (mixed-version deploy window).
     return body as T

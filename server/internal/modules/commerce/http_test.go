@@ -68,14 +68,14 @@ func TestCreateOrderHTTPReturnsOrderWrapper(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusCreated, rec.Body.String())
 	}
 	var env struct {
-		OK   bool                     `json:"ok"`
-		Data map[string]json.RawMessage `json:"data"`
+		Status string                     `json:"status"`
+		Data   map[string]json.RawMessage `json:"data"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &env); err != nil {
 		t.Fatalf("unmarshal: %v", err)
 	}
-	if !env.OK {
-		t.Fatalf("body = %s, want ok envelope", rec.Body.String())
+	if env.Status != "success" {
+		t.Fatalf("body = %s, want success envelope", rec.Body.String())
 	}
 	if _, ok := env.Data["order"]; !ok {
 		t.Fatalf("body = %s, want order wrapper inside data", rec.Body.String())

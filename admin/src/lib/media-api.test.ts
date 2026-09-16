@@ -176,12 +176,12 @@ describe('media-api request URL construction and operations', () => {
   })
 
   describe('response envelope', () => {
-    it('unwraps { ok:true, data } for presign', async () => {
+    it('unwraps { status:"success", data } for presign', async () => {
       const fetchMock = vi.fn().mockImplementation(() =>
         Promise.resolve(
           new Response(
             JSON.stringify({
-              ok: true,
+              status: 'success',
               data: { url: 'https://r2.example.com/u', method: 'PUT', key: 'k', headers: {} },
             }),
             { status: 200, headers: { 'Content-Type': 'application/json' } },
@@ -194,11 +194,11 @@ describe('media-api request URL construction and operations', () => {
       expect(res.key).toBe('k')
     })
 
-    it('reads error.message from { ok:false, error:{code,message} }', async () => {
+    it('reads error.message from { status:"error", error:{code,message} }', async () => {
       const fetchMock = vi.fn().mockImplementation(() =>
         Promise.resolve(
           new Response(
-            JSON.stringify({ ok: false, error: { code: 'service_unavailable', message: 'media storage is not configured' } }),
+            JSON.stringify({ status: 'error', error: { code: 'service_unavailable', message: 'media storage is not configured' } }),
             { status: 503, headers: { 'Content-Type': 'application/json' } },
           ),
         ),
@@ -208,6 +208,21 @@ describe('media-api request URL construction and operations', () => {
       await expect(
         verifyUpload({ key: 'k' }),
       ).rejects.toThrow('media storage is not configured')
+    })
+
+    it('passes through a bare payload carrying its own status field', async () => {
+      const fetchMock = vi.fn().mockImplementation(() =>
+        Promise.resolve(
+          new Response(
+            JSON.stringify({ status: 'processing', key: 'k' }),
+            { status: 200, headers: { 'Content-Type': 'application/json' } },
+          ),
+        ),
+      )
+      globalThis.fetch = fetchMock
+
+      const res = await verifyUpload({ key: 'k' })
+      expect((res as unknown as { status: string }).status).toBe('processing')
     })
   })
 })

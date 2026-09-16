@@ -1,0 +1,68 @@
+{
+  "change_id": "api-envelope-status-discriminator",
+  "revision": 1,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Repository owner directed on 2026-09-16 that the `ok` boolean discriminator shipped by `api-response-envelope` be replaced by a conventional status discriminator per OpenAPI-era API conventions (JSend-style `status` + `data`/`error`), and that the pagination metadata contract be planned into the envelope.",
+  "repository_baseline": "418957ac65531ab80f1cb0728d07a37a562f97a4",
+  "supersedes": [
+    "api-response-envelope"
+  ],
+  "applies_to": [
+    "server/internal/httpx/httpx.go",
+    "server/internal/httpx/httpx_test.go",
+    "admin/src/lib/api-client.ts",
+    "admin/src/lib/api-client.test.ts",
+    "admin/src/lib/media-api.ts",
+    "admin/src/lib/media-api.test.ts",
+    "site/themes/curatory/shared/lib/api.ts",
+    "site/themes/minimal-cart/shared/lib/api.ts",
+    "server/internal/auth/auth_test.go",
+    "server/internal/modules/commerce/http_test.go",
+    "specs/changes/api-envelope-status-discriminator/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {},
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 1,
+      "proof": "Envelope.OK was replaced by Status string derived via statusLabel (success below 400, error otherwise) so the discriminator can never disagree with transport status; Envelope gains Meta serialized as top-level meta only when set. httpx_test.go pins success status, non-2xx error status, the error body shape, absence of the ok key, and meta serialization. Mutation-verified: forcing statusLabel to always return error turned TestJSONSuccessEnvelope red; restored green.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 1,
+      "proof": "All four client surfaces detect the envelope by status value, not key presence: api-client request() returns env.data on success and throws ApiError on error; media-api unwrap() returns data only when status is the literal success; curatory api() and minimal-cart unwrap() apply the same value check. Bare payloads carrying their own status field (e.g. pending) fall through to the legacy path unchanged, proven by new collision tests in api-client.test.ts and media-api.test.ts.",
+      "status": "passed"
+    },
+    "REQ-003": {
+      "observed_revision": 1,
+      "proof": "Envelope.Meta is declared with omitempty and documented as the reserved sibling of data for the offset-pagination contract {page, per_page, total, total_pages}; no endpoint adopts pagination in this change, so Meta is only ever written through the in-package writeEnvelope path pinned by TestMetaSerialization.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 1,
+      "proof": "TestJSONSuccessEnvelope decodes {status:success,data:{order:{id:TW-1}}} and asserts no ok key; TestJSONNon2xxKeepsErrorStatus proves a 409 JSON write emits error status with the payload under data; TestErrorEnvelope asserts {status:error,error:{code:forbidden,message:forbidden}} at 403 with no ok key; TestErrorCodeMapping still pins the fifteen-entry status map plus the 599 fallback.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 1,
+      "proof": "api-client.test.ts: the legacy {error:forbidden action} mock still rejects via ApiError, the envelope success test resolves {status:success,data:{order}} to the inner payload, the envelope error test asserts ApiError(status=409, code=conflict, message=stale version), and the new collision test proves a bare {status:pending} payload resolves unchanged. media-api.test.ts mirrors this for presign/verify including its own {status:processing} passthrough. 254 vitest tests green; vue-tsc clean in admin and both themes; admin build succeeds.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 1,
+      "proof": "TestMetaSerialization writes an envelope with Meta via writeEnvelope and asserts top-level meta {page:1,per_page:20,total:137,total_pages:7} appears beside data, then writes a normal JSON response and asserts meta is absent.",
+      "status": "passed"
+    }
+  }
+}
