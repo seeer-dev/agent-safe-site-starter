@@ -58,9 +58,36 @@ type PublicPaymentMethod struct {
 	Fee       int    `json:"fee"`
 }
 
+// paymentMethodRuntimeAvailable applies the runtime half of payment-method
+// readiness. Most starter payment methods are configuration-only examples and
+// need no additional runtime adapter. ECPay is different: a database row can
+// be administratively marked ready while the server has no signing secrets or
+// is configured for the other provider environment. In those cases the server
+// must fail closed rather than advertise a checkout option that can only end in
+// a 503 at payment launch.
+func (s Service) paymentMethodRuntimeAvailable(m PaymentMethod) bool {
+	if !m.Enabled || m.ReadinessStatus != "ready" {
+		return false
+	}
+	if !strings.EqualFold(strings.TrimSpace(m.Method), "ecpay") {
+		return true
+	}
+	if s.ecpay == nil {
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(s.ecpay.Environment)) {
+	case "stage":
+		return strings.EqualFold(strings.TrimSpace(m.Environment), "sandbox")
+	case "production":
+		return strings.EqualFold(strings.TrimSpace(m.Environment), "production")
+	default:
+		return false
+	}
+}
+
 // ListPublicPaymentMethods returns the admin-managed payment methods that
-// are enabled and ready for customer use. Methods that are disabled or not
-// yet set up are excluded.
+// are enabled and ready for customer use. Methods that are disabled, not yet
+// set up, or missing their required runtime provider configuration are excluded.
 func (s Service) ListPublicPaymentMethods(ctx context.Context) ([]PublicPaymentMethod, error) {
 	methods, err := s.store.ListPaymentMethods(ctx)
 	if err != nil {
@@ -68,7 +95,7 @@ func (s Service) ListPublicPaymentMethods(ctx context.Context) ([]PublicPaymentM
 	}
 	var out []PublicPaymentMethod
 	for _, m := range methods {
-		if !m.Enabled || m.ReadinessStatus != "ready" {
+		if !s.paymentMethodRuntimeAvailable(m) {
 			continue
 		}
 		out = append(out, PublicPaymentMethod{
@@ -83,12 +110,12 @@ func (s Service) ListPublicPaymentMethods(ctx context.Context) ([]PublicPaymentM
 }
 
 // resolvePaymentMethod validates the payment method against the
-// admin-managed payment_methods table. It rejects empty or unknown methods
-// with ErrInvalidPaymentMethod. It rejects methods that are disabled or
-// not ready (readiness_status != "ready") with ErrInvalidPaymentMethod.
-// The server is the authority for payment method availability — the
-// browser must not decide which payment methods are available. On success
-// it returns the method row so callers can derive the server-side fee.
+// admin-managed payment_methods table and the runtime provider state. It
+// rejects empty, unknown, disabled, not-ready, or runtime-unavailable
+// methods with ErrInvalidPaymentMethod. The server is the authority for
+// payment method availability — the browser must not decide which payment
+// methods are usable. On success it returns the method row so callers can
+// derive the server-side fee.
 func (s Service) resolvePaymentMethod(ctx context.Context, methodID string) (PaymentMethod, error) {
 	methodID = strings.TrimSpace(methodID)
 	if methodID == "" {
@@ -96,11 +123,11 @@ func (s Service) resolvePaymentMethod(ctx context.Context, methodID string) (Pay
 	}
 	methods, err := s.store.ListPaymentMethods(ctx)
 	if err != nil {
-		return PaymentMethod{}, fmt.Errorf("validate payment method: %w", err)
+		return PaymentMethod{}, fmt.Errorf("resolve payment method: %w", err)
 	}
 	for _, m := range methods {
 		if m.ID == methodID || m.Method == methodID {
-			if !m.Enabled || m.ReadinessStatus != "ready" {
+			if !s.paymentMethodRuntimeAvailable(m) {
 				return PaymentMethod{}, ErrInvalidPaymentMethod
 			}
 			return m, nil

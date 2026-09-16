@@ -101,60 +101,8 @@ func main() {
 	}
 
 	// ----- Commerce seed ----------------------------------------------------
-	commerceStore := commerce.NewSQLStore(db, dialect)
-	commerceService := commerce.NewService(commerceStore)
-	if siteTheme == "curatory" {
-		// 註冊種子圖為已驗證 media objects，讓商品圖走與 API 相同的
-		// verified-key 邊界（產品圖不接受裸 URL）。
-		seedCuratoryMedia(ctx, db)
-		commerceService = commerceService.WithMediaVerifier(devMediaVerifier{
-			registry: media.NewSQLRegistryStore(db, dialect),
-		})
-	}
-	existingProducts, err := commerceService.ListProducts(ctx, commerce.ProductFilter{})
-	if err != nil {
+	if err := seedCommerce(ctx, db, dialect, cfg); err != nil {
 		log.Fatal(err)
-	}
-	if len(existingProducts) == 0 {
-		products := seedProductsForTheme(siteTheme)
-		for _, p := range products {
-			if _, err := commerceService.CreateProduct(ctx, devPrincipal, p); err != nil {
-				log.Fatalf("seed product %s: %v", p.SKU, err)
-			}
-		}
-		if siteTheme == "curatory" {
-			// sold_count 由訂單狀態機衍生、不接受輸入；種子用 SQL 直接補，
-			// 讓「熱銷」排序與已售數顯示有真實資料可看。
-			for sku, sold := range curatorySeedSoldCount {
-				if _, err := db.ExecContext(ctx, `UPDATE products SET sold_count = ? WHERE sku = ?`, sold, sku); err != nil {
-					log.Fatalf("seed sold_count %s: %v", sku, err)
-				}
-			}
-		}
-		log.Printf("seed: %d commerce products", len(products))
-	}
-
-	// Payment methods: there is no create service method, so seed via the
-	// store directly using PaymentMethod structs with generated IDs.
-	existingPMs, err := commerceStore.ListPaymentMethods(ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	if len(existingPMs) == 0 {
-		paymentMethods := seedPaymentMethodsForTheme(siteTheme)
-		now := time.Now().Unix()
-		for i := range paymentMethods {
-			id, err := randomID()
-			if err != nil {
-				log.Fatalf("seed payment method: %v", err)
-			}
-			paymentMethods[i].ID = id
-			paymentMethods[i].UpdatedUnix = now
-			if err := commerceStore.UpsertPaymentMethod(ctx, paymentMethods[i]); err != nil {
-				log.Fatalf("seed payment method %s: %v", paymentMethods[i].Method, err)
-			}
-		}
-		log.Printf("seed: %d payment methods", len(paymentMethods))
 	}
 
 	// ----- Site content seed ------------------------------------------------
@@ -213,7 +161,7 @@ func main() {
 	}
 
 	if siteTheme == "curatory" {
-		seedCuratory(ctx, commerceService, sitecontentService, content.NewService(store))
+		seedCuratory(ctx, commerce.NewService(commerce.NewSQLStore(db, dialect)), sitecontentService, content.NewService(store))
 	}
 
 	// ----- Render -----------------------------------------------------------

@@ -2,7 +2,7 @@
 
 Change ID: commerce-boolean-adapter-and-live-evidence
 Revision: 1
-Status: Verifying
+Status: Accepted
 
 Normative specification: [`spec.md`](spec.md)
 

@@ -1,7 +1,7 @@
 {
   "change_id": "ephemeral-postgres-local-gate",
   "revision": 1,
-  "status": "Verifying",
+  "status": "Accepted",
   "decision_authority": "Repository owner/user",
   "approval_basis": "User authorized Agy to implement and Codex to independently validate the local PostgreSQL environment on 2026-08-15.",
   "repository_baseline": "7e5aa90b92d23c8c316d44ca935be7af8d150a1c",

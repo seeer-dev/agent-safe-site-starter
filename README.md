@@ -9,20 +9,23 @@ The architecture/governance foundation and the reference commerce purchase flow 
 **Completed for the current v1 boundary:**
 
 - beginner single-site architecture, explicit bootstrap/module boundaries, and fail-closed architecture checks;
-- controlled spec/evidence workflow, frontend contract checks, migration parity, live PostgreSQL tests, concurrency stress, and `go vet` CI;
+- controlled spec/evidence workflow, migration parity, live PostgreSQL tests, concurrency stress, and `go vet` CI;
+- current Go runtime ↔ OpenAPI truth for all 56 registered HTTP operations, with a dependency-free symmetric route/method parity gate plus guarded observable status/schema checks in `make verify-contracts`;
 - commerce catalog, cart rehydration, server-authoritative quote, shipping/payment configuration, promotions, guest/member checkout, idempotent order creation, stock transaction, order lookup, returns, and per-item restock;
-- ECPay AIO v5 credit-card handoff with server-owned `CheckMacValue`, durable ReturnURL reconciliation, amount/identity verification, callback replay protection, atomic paid transition, and browser-return re-query rather than browser-authoritative payment state.
+- ECPay AIO v5 credit-card handoff with server-owned `CheckMacValue`, durable real-success ReturnURL reconciliation, replay protection, and browser-return re-query rather than browser-authoritative payment state;
+- source-level ECPay conformance against pinned official `ECPay/ECPay-API-Skill@ae964f75…`, including callback `TradeAmt`, `SimulatePaid` non-authority, Go apostrophe CMV encoding, official SHA256 vectors, and standard HTTPS port-443 handling.
 
 **Still required before calling the starter deploy-ready:**
 
-1. review the ECPay implementation against the current official `ECPay/ECPay-API-Skill` references;
-2. run the documented sample-commerce acceptance walkthrough from a fresh database;
-3. verify the production-shaped Railway / Cloudflare Pages / PostgreSQL / Supabase / R2 / Resend configuration;
-4. on a public HTTPS deployment, complete one ECPay stage transaction and record callback/payment-state acceptance.
+1. run the documented sample-commerce acceptance walkthrough from a fresh database;
+2. verify the production-shaped Railway / Cloudflare Pages / PostgreSQL / Supabase / R2 / Resend configuration and decide rate-limit enforcement from the real deployment topology/trusted client-IP source;
+3. on a public HTTPS deployment, complete one ECPay stage transaction and record callback/payment-state/browser-return acceptance.
+
+A real ECPay stage transaction is intentionally still required before production use. Source/protocol conformance cannot prove that the provider can reach the deployed ReturnURL.
 
 Refunds, electronic invoices, logistics-provider integration, reconciliation jobs, and full commerce operations are **not blockers for starter v1**. They are optional outcome-driven extensions and should not turn this small starter into a full commerce framework by default.
 
-See [`docs/project-status.md`](docs/project-status.md) for the canonical completion matrix and v1 boundary, and [`docs/commerce-acceptance.md`](docs/commerce-acceptance.md) for the exact distinction between source-level completion and deployment/go-live acceptance.
+See [`docs/project-status.md`](docs/project-status.md) for the canonical completion matrix and v1 boundary, [`docs/review-status.md`](docs/review-status.md) for the current interpretation of historical architecture reviews and controlled-change lifecycle debt, [`docs/commerce-acceptance.md`](docs/commerce-acceptance.md) for the source/deployment acceptance boundary, and [`docs/ecpay-official-conformance.md`](docs/ecpay-official-conformance.md) for the pinned official ECPay audit.
 
 **Default path**
 
@@ -186,7 +189,7 @@ site/
 db/migrations/
   sqlite/
   postgres/
-contracts/openapi.yaml   HTTP contract
+contracts/openapi.yaml   current HTTP contract, parity-gated against registered Go operations
 skills/
   site/                  user-intent router skill
   expand-implementation/ proposal-to-blueprint expansion skill
@@ -239,21 +242,23 @@ go run ./server/tools/speccheck
 go run ./server/tools/verify
 ```
 
-Frontend contract checks run separately:
+Frontend/HTTP contract checks run separately:
 
 ```bash
 make verify-contracts
 ```
 
-It runs `admin/scripts/check-resource-contracts.mjs` and
-`site/themes/minimal-cart/scripts/check-openapi-contracts.mjs` against
-`contracts/openapi.yaml`, and CI runs the same command as a required gate.
-It needs **Node 20.11 or newer** — `check-resource-contracts.mjs` uses
-`import.meta.dirname` — but no `npm install`, because both scripts import only
-Node standard-library modules.
+It runs, in order:
 
-`go run ./server/tools/verify` stays Go-only and never invokes Node, so a
-contributor without a Node toolchain is not blocked by the repository verifier.
+- `contracts/check-runtime-openapi.mjs` — symmetric path/method parity for all registered Go operations plus guarded observable status/schema boundaries;
+- `admin/scripts/check-resource-contracts.mjs` — admin resource/payload invariants;
+- `site/themes/minimal-cart/scripts/check-openapi-contracts.mjs` — public theme/OpenAPI invariants.
+
+The runtime/OpenAPI checker currently proves all **56 registered operations** are represented and mutation evidence under `restore-http-contract-truth` shows both route omission and guarded success-status drift turn the gate red. The ECPay callback component is additionally guarded for official `TradeAmt` and optional `SimulatePaid` fields. These scripts import only Node standard-library modules, so there is no install step for the checkers themselves. CI runs `make verify-contracts` as a required gate.
+
+It needs **Node 20.11 or newer** — `check-resource-contracts.mjs` uses `import.meta.dirname` — and the repository reports a plain version error before running the scripts when Node is too old.
+
+`go run ./server/tools/verify` stays Go-only and never invokes Node, so a contributor without a Node toolchain is not blocked by the repository verifier.
 
 Pull-request CI runs the same gate against the event's base commit and accepts only an `Accepted` spec that is part of the current comparison diff. Merged Accepted/Superseded specs are immutable and cannot authorize later changes. This makes missing specs, artifact drift, stale-spec reuse, unapproved states, uncovered protected paths, duplicate spec ownership, and false `Accepted` claims fail mechanically instead of relying only on agent instructions.
 
