@@ -20,7 +20,7 @@ const markSize = computed(() => (props.compact ? 30 : props.size))
 
 <template>
   <span class="inline-flex items-center gap-2.5">
-    <LogoMark :size="markSize" :animate="animate" />
+    <LogoMark :size="markSize" :light="light" />
     <span class="flex flex-col gap-1 leading-none">
       <span
         :class="cn('font-serif font-semibold tracking-[0.24em]', compact ? 'text-base' : markSize > 30 ? 'text-lg' : 'text-base')"

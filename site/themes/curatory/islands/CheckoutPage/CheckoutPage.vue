@@ -325,7 +325,7 @@ onMounted(() => void loadBootstrap().catch(() => undefined))
     <!-- 處理中 overlay -->
     <Transition name="fade">
       <div v-if="processing" class="fixed inset-0 z-[150] flex flex-col items-center justify-center gap-8 bg-ink/95 backdrop-blur-sm" role="alertdialog" aria-label="正在處理您的訂單">
-        <LogoMark :size="52" class="animate-pulse-soft text-cream" />
+        <LogoMark :size="52" light />
         <p class="text-sm tracking-[0.3em] text-cream/70">正在處理您的訂單…</p>
       </div>
     </Transition>

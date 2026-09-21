@@ -164,13 +164,13 @@ onUnmounted(() => {
           <Menu class="size-5" />
         </button>
         <a href="/" class="hidden items-center gap-2.5 md:flex" aria-label="回到首頁">
-          <LogoLockup :store-name="storeName" />
+          <LogoLockup :store-name="storeName" :light="!scrolled" />
         </a>
       </div>
 
       <!-- 手機置中 logo -->
       <a href="/" class="absolute left-1/2 -translate-x-1/2 md:hidden" aria-label="回到首頁">
-        <LogoLockup :store-name="storeName" compact />
+        <LogoLockup :store-name="storeName" :light="!scrolled" compact />
       </a>
 
       <!-- 桌面導覽 -->

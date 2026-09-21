@@ -72,7 +72,7 @@ export function navigate(path: string) {
     }
     window.setTimeout(() => {
       window.location.href = path
-    }, 420)
+    }, 800)
   } else {
     window.location.href = path
   }

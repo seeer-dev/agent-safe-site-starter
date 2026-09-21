@@ -1,0 +1,90 @@
+{
+  "change_id": "curatory-bloom-mark-and-curtain",
+  "revision": 3,
+  "status": "Accepted",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "On 2026-09-20, the user selected the approved flower-and-butterfly 02 direction, approved the restrained colour accent, asked to keep shared Logo locations still, then identified http://127.0.0.1:4187/curatory-logo-motion.html as the required animation reference for the Logo inside the page-transition curtain.",
+  "repository_baseline": "bac7c78fd6c5b4793e6705cefbdc7cabb56095bb",
+  "supersedes": [
+    "curatory-storefront-port"
+  ],
+  "applies_to": [
+    "specs/changes/curatory-bloom-mark-and-curtain/**",
+    "site/assets/images/curatory-bloom-mark.svg",
+    "site/assets/images/curatory-bloom-curtain-motion.svg",
+    "site/themes/curatory/shared/components/LogoMark.vue",
+    "site/themes/curatory/shared/components/LogoLockup.vue",
+    "site/themes/curatory/shared/components/LogoLoading.vue",
+    "site/themes/curatory/islands/CheckoutPage/CheckoutPage.vue",
+    "site/themes/curatory/islands/SiteHeader/SiteHeader.vue",
+    "site/themes/curatory/shared/lib/transition.ts",
+    "site/themes/curatory/shared/styles/globals.css",
+    "site/themes/curatory/templates/partials.html"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": [
+      "walkthrough"
+    ],
+    "AC-002": [
+      "walkthrough"
+    ],
+    "AC-003": [
+      "walkthrough"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "status": "passed",
+      "proof": "Shared header, footer, loader, checkout, and rendered fallback keep using the static flower-and-butterfly mark. Receipts: receipts/curatory-curtain-motion-walkthrough.md.",
+      "observed_revision": 3
+    },
+    "REQ-002": {
+      "status": "passed",
+      "proof": "An eligible header navigation activates the curtain-only animated lockup matching the supplied motion reference — cream-and-terracotta mark with independently folding wings and swaying flower, baked 質選所/CURATORY wordmark, and the reference brand line. Receipts: receipts/curatory-curtain-motion-walkthrough.md.",
+      "observed_revision": 3
+    },
+    "AC-001": {
+      "status": "passed",
+      "proof": "Shared chrome and its rendered fallback use only the static mark asset. Receipts: receipts/curatory-curtain-motion-walkthrough.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/curatory-curtain-motion-walkthrough.md"
+        }
+      ]
+    },
+    "AC-002": {
+      "status": "passed",
+      "proof": "A real /about/ to /shop/ header navigation set curtain-cover, lifted on arrival via curtain-reveal, and displayed the reference lockup (0.52s cover, 0.68s reveal, live wing/flower keyframes verified across frames) with brand line 慢一點，遇見好物。 Receipts: receipts/curatory-curtain-motion-walkthrough.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/curatory-curtain-motion-walkthrough.md"
+        }
+      ]
+    },
+    "AC-003": {
+      "status": "passed",
+      "proof": "Reduced motion still bypasses the extended transition; the lockup asset freezes its internal wing/flower animation via prefers-reduced-motion and the curtain falls back to curtain-fade. Receipts: receipts/curatory-curtain-motion-walkthrough.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "walkthrough",
+          "path": "receipts/curatory-curtain-motion-walkthrough.md"
+        }
+      ]
+    }
+  }
+}

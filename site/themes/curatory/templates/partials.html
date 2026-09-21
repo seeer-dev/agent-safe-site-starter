@@ -36,15 +36,8 @@
 {{/* 頁面轉場簾幕（對應 reference 墨色轉場層）。theme-init.js 偵測到
      轉場標記時 <html> 會有 curtain-reveal，此 div 自動播揭幕。 */}}
 <div id="page-curtain" aria-hidden="true">
-  <div class="curtain-brand">
-    <svg width="40" height="40" viewBox="0 0 72 72" aria-hidden="true">
-      <circle cx="36" cy="36" r="33" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" />
-      <path d="M 36 15.5 A 20.5 20.5 0 1 1 23.5 20.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" />
-      <circle cx="23.5" cy="20.5" r="1.5" fill="currentColor" />
-      <text x="36" y="38" text-anchor="middle" dominant-baseline="central" font-size="24" style="font-family: var(--font-noto-serif), serif; font-weight: 500; letter-spacing: 0.02em" fill="currentColor">質</text>
-    </svg>
-    <span class="curtain-brand-en">{{with index .Settings "storeNameEn"}}{{.}}{{else}}CURATORY{{end}}</span>
-  </div>
+  <img class="curtain-logo" src="/assets/images/curatory-bloom-curtain-motion.svg?v=20260920-4" width="730" height="1070" alt="" aria-hidden="true">
+  <p class="curtain-caption">慢一點，遇見好物。</p>
 </div>
 
 <div data-vue-island="PageLoader"></div>
@@ -66,6 +59,7 @@
   <header class="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-xl">
     <div class="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 md:px-6">
       <a href="/" class="flex items-center gap-2.5" aria-label="回到首頁">
+        <img src="/assets/images/curatory-bloom-mark.svg" alt="" aria-hidden="true" class="size-9 object-contain dark:brightness-0 dark:invert">
         <span class="font-serif text-lg font-semibold tracking-[0.24em]">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
       </a>
       <nav class="hidden items-center gap-7 md:flex" aria-label="主選單">
@@ -88,6 +82,7 @@
     <div class="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8">
       <div class="grid gap-10 md:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1.2fr]">
         <div>
+          <img src="/assets/images/curatory-bloom-mark.svg" alt="" aria-hidden="true" class="mb-3 block size-10 brightness-0 invert">
           <span class="font-serif text-xl font-semibold tracking-[0.24em] text-cream">{{with index .Settings "storeName"}}{{.}}{{else}}質選所{{end}}</span>
           <p class="mt-4 max-w-xs text-sm leading-relaxed text-cream/55">
             {{with index .Settings "tagline"}}{{.}}{{else}}為日常，嚴選美好{{end}}——我們走訪窯場、工坊與工作室，只把親手摸過、真心喜歡的物件帶回來。

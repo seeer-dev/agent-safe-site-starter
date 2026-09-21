@@ -406,9 +406,9 @@
 
 /* ─── 頁面轉場簾幕（MPA 版 page-transition） ────────────────
    #page-curtain 由模板常駐輸出；預設停在視窗外（translateY(100%)）。
-   - 導航攔截器加 .curtain-cover：簾幕 0.34s 升起覆蓋後跳轉。
+   - 導航攔截器加 .curtain-cover：簾幕 0.52s 升起覆蓋後跳轉。
    - theme-init.js 偵測轉場標記加 .curtain-reveal 於 <html>：
-     新頁面的簾幕從覆蓋位置 0.4s 向上滑出揭幕。 */
+     新頁面的簾幕從覆蓋位置 0.68s 向上滑出揭幕。 */
 #page-curtain {
   position: fixed;
   inset: 0;
@@ -417,9 +417,8 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
-  background: var(--ink);
-  color: var(--cream);
+  background: #302b25;
+  color: #eee7db;
   transform: translateY(100%);
   pointer-events: none;
   visibility: hidden;
@@ -427,54 +426,61 @@
 #page-curtain.curtain-cover {
   visibility: visible;
   pointer-events: auto;
-  transform: translateY(0);
-  transition: transform 0.34s cubic-bezier(0.76, 0, 0.24, 1);
+  animation: curtain-cover 0.52s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-#page-curtain .curtain-brand {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-  color: var(--cream);
-  opacity: 0;
-  transition: opacity 0.22s ease-out 0.14s;
+/* 簾幕內品牌 lockup：花蝶標記 + 質選所/CURATORY 字標烘焙為單一 SVG，
+   與 reference curatory-logo-motion.html 同比例等比縮放。 */
+#page-curtain .curtain-logo {
+  width: min(47vw, 280px);
+  height: auto;
+  max-height: 64dvh;
 }
-#page-curtain .curtain-brand-en {
-  font-family: var(--font-display), sans-serif;
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.5em;
-  /* letter-spacing 會在最後一字元後留白，補左 padding 維持視覺置中 */
-  padding-left: 0.5em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--cream) 40%, transparent);
+.curtain-caption {
+  margin-top: 2.2rem;
+  color: #bcaf9e;
+  font-size: 11px;
+  letter-spacing: 0.28em;
 }
-#page-curtain.curtain-cover .curtain-brand {
-  opacity: 1;
+@media (max-width: 760px) {
+  #page-curtain .curtain-logo {
+    width: 61vw;
+  }
 }
 html.curtain-reveal #page-curtain {
   visibility: visible;
-  transform: translateY(0);
-  animation: curtain-lift 0.4s cubic-bezier(0.76, 0, 0.24, 1) 0.05s forwards;
+  animation: curtain-reveal 0.68s cubic-bezier(0.65, 0, 0.25, 1) both;
 }
-html.curtain-reveal #page-curtain .curtain-brand {
-  opacity: 1;
-  animation: curtain-brand-out 0.14s ease-out forwards;
+@keyframes curtain-cover {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
 }
-@keyframes curtain-lift {
+@keyframes curtain-reveal {
+  from {
+    transform: translateY(0);
+  }
   to {
     transform: translateY(-100%);
   }
 }
-@keyframes curtain-brand-out {
-  to {
+@keyframes curtain-fade {
+  from {
     opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  /* lockup SVG 內建 reduced-motion 規則，蝶翼/花枝動畫自行凍結 */
   #page-curtain.curtain-cover,
   html.curtain-reveal #page-curtain {
-    transition: none;
-    animation-duration: 0.01s;
+    animation: curtain-fade 0.15s ease both;
+  }
+  html.curtain-reveal #page-curtain {
+    animation-direction: reverse;
   }
 }
