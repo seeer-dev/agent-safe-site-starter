@@ -86,20 +86,26 @@ Sensitive values, private recipients, complete order IDs/tokens, database URIs, 
 - `docs/deployment-guide.html` and `docs/environment-configuration.md`: Railway origin, workspace/project/service/deployment UUIDs, and the installation bucket name replaced with `<railway-*>`, `<*-pages-deployment-id>`, `<r2-bucket-name>` placeholders (29 substitutions). `pages.dev` test URLs retained and already labelled as intentional public proof.
 - Residual scan over `docs/`, `README.md`, `skills/`, env examples, contracts, functions, server, site sources, admin sources: no UUIDs, Railway origins, Resend IDs, `r2.dev` public hostnames, or private recipients remain (hits are generic placeholders and test fixtures).
 
-## Holder-authorized live checklist (not yet executed)
+## Holder-authorized live checklist — round 1 executed
 
-These read or mutate provider state and require action-time authorization:
+Live round executed against `849678a` (staging → Railway + both Pages):
 
-1. Deploy `staging` to Railway + both Pages projects, then verify:
-   - `GET /api/products` via each Pages origin → 200; direct origin without edge credential → 403.
-   - Exceed one limiter bucket (e.g., 4 contact POSTs) → 429 + `Retry-After`, consistent across replicas; no mail/persistence side effect.
-   - Missing `X-Edge-Client-Key` path → 403 when edge auth configured.
-   - Turnstile-absent form POST → 403; valid token → success (single-use).
-   - `manual_test` absent from payment methods while `MANUAL_TEST_CHECKOUT_UNTIL` unset.
-   - Admin root + deep link responses carry the generated `_headers` CSP/nosniff/frame policy; Supabase login still works.
-   - `/track/` on the live storefront: legacy localStorage token strip + code-required lookup.
-2. R2 custom domain (REQ-007/AC-008): create the custom domain + optional transform for `nosniff`, point `R2_PUBLIC_BASE_URL` at it, run bounded HEAD/GET twice for Content-Type/immutable/nosniff/cache transition, then update the storefront CSP origin.
-3. Set or leave `MANUAL_TEST_CHECKOUT_UNTIL` expired/unset for release; run the final acceptance replay (REQ-009/AC-010).
+- `GET https://agent-safe-site-starter.pages.dev/api/products` → 200 (edge proxy + Go origin healthy).
+- `GET /api/storefront/bootstrap` → 200 and carries the new `turnstile_site_key` field → confirms the new build is serving.
+- Storefront `_headers` live: CSP `default-src 'self'`, `script-src 'self'`, `img-src 'self' data: <r2 origin>`, `connect-src 'self' <site> <supabase>`; `challenges.cloudflare.com` correctly absent while `TURNSTILE_SITE_KEY` is unset in the build env.
+- Admin `_headers` live: CSP `default-src 'self'`, `connect-src 'self' <supabase>`, `frame-ancestors 'none'`, `object-src 'none'`, `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`.
+- Admin deep link `GET /login` → 200; unauthenticated `GET /api/admin/me` → 401.
+- `manual_test` absent from `payment_methods` and bootstrap payload while `MANUAL_TEST_CHECKOUT_UNTIL` unset (fail-closed ✓).
+- Unguarded `POST /api/orders/fake-id/payments/ecpay` → 400 (handler reached; DB reachable).
+- Guarded POSTs (`/api/contact`, `/api/quote`) → uniform 503 `service_unavailable`; 65 sequential quote POSTs never returned 429.
+
+**Finding:** the guard is reaching `limiter.Allow` (identity resolves — missing/malformed key would be 403) but the shared store errors on every call → `abuse_buckets` is missing or unwritable in production Postgres, i.e. migration 019 did not apply during Railway `preDeployCommand`. This is the designed fail-closed posture (public writes are refused, zero side effects), but it currently takes contact/comment/quote/order endpoints offline. Holder action required: check the Railway deploy log's `migrate` step output, or re-run `railway run migrate` / apply `db/migrations/postgres/019_abuse_control.sql` via Supabase SQL editor, then re-run the 429 checks.
+
+**Still pending (holder/provider actions):**
+
+- Post-migration replay: 4+ contact POSTs → 429 + `Retry-After`; Turnstile absent-token → 403 (requires `TURNSTILE_SECRET_KEY` on Railway + `TURNSTILE_SITE_KEY` in the Pages build env); direct-origin hit without edge credential → 403.
+- R2 custom domain (REQ-007/AC-008): create the custom domain + optional transform for `nosniff`, point `R2_PUBLIC_BASE_URL` at it, run bounded HEAD/GET twice for Content-Type/immutable/nosniff/cache transition, then update the storefront CSP origin.
+- `MANUAL_TEST_CHECKOUT_UNTIL` remains unset for release; final acceptance replay (REQ-009/AC-010) after the above.
 
 ## Acceptance evidence
 
@@ -113,11 +119,11 @@ These read or mutate provider state and require action-time authorization:
 | REQ-006 | passed | vitest 5.0.1/vite 7.3.6/plugin-vue 6.0.9; happy-dom >=20.8.9 override; audit 0 vulns; 254 tests pass. |
 | REQ-007 | pending | R2 custom domain + nosniff transform are holder/provider actions; live checklist item 2. |
 | REQ-008 | passed | 29 placeholder substitutions in docs; residual scan clean; pages.dev retained as documented proof. |
-| REQ-009 | pending | Local gates green (verify ok); live checks await holder authorization. |
+| REQ-009 | pending | Local gates green (verify ok); live round 1 executed — admin CSP live, fail-closed posture confirmed; 429 replay blocked on prod migration 019 (holder action). |
 | AC-001 | passed | Shared-instance limiter test + stamped-identity/peer-hash guard tests + Turnstile-required tests pass; replica-consistent via shared DB. Live multi-replica spot-check listed. Security review receipt: receipts/security-review.md. |
 | AC-002 | passed | Rejection-before-persistence tests for contact/comment/order; 429+Retry-After; 503 on store/verifier failure. Security review receipt: receipts/security-review.md. |
 | AC-003 | passed | Absent/malformed/expired/over-cap windows disable manual_test in tests; inside-window availability verified; value never bundled. Security review receipt: receipts/security-review.md. Consumer reachability receipt: receipts/consumer-reachability.md. |
-| AC-004 | pending | Build emits _headers (inspected); deployed admin header/login/401 checks are live checklist item 1. |
+| AC-004 | passed | Build emits _headers (inspected); live round: admin pages.dev serves CSP/nosniff/frame-deny/referrer headers, deep link 200, unauth /api/admin/me 401. Security review receipt: receipts/security-review.md. Walkthrough receipt: receipts/walkthrough.md. |
 | AC-005 | passed | Write + render sanitize tests incl. legacy-row render proof; no raw fallback path exists. Security review receipt: receipts/security-review.md. |
 | AC-006 | passed | Vitest strip/re-save tests + browser walkthrough: later session shows metadata only and requires the query code. Security review receipt: receipts/security-review.md. Walkthrough receipt: receipts/walkthrough.md. |
 | AC-007 | passed | npm audit 0 high/critical; tests/typecheck/build pass; no advisories suppressed. Security review receipt: receipts/security-review.md. |

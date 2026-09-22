@@ -146,7 +146,7 @@
     },
     "REQ-009": {
       "status": "pending",
-      "proof": "Local gates green (verify ok); live checks await holder authorization.",
+      "proof": "Local gates green (verify ok); live round 1 executed — admin CSP live, fail-closed posture confirmed; 429 replay blocked on prod migration 019 (holder action).",
       "observed_revision": 3
     },
     "AC-001": {
@@ -187,9 +187,19 @@
       ]
     },
     "AC-004": {
-      "status": "pending",
-      "proof": "Build emits _headers (inspected); deployed admin header/login/401 checks are live checklist item 1.",
-      "observed_revision": 3
+      "status": "passed",
+      "proof": "Build emits _headers (inspected); live round: admin pages.dev serves CSP/nosniff/frame-deny/referrer headers, deep link 200, unauth /api/admin/me 401. Security review receipt: receipts/security-review.md. Walkthrough receipt: receipts/walkthrough.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        },
+        {
+          "kind": "walkthrough",
+          "path": "receipts/walkthrough.md"
+        }
+      ]
     },
     "AC-005": {
       "status": "passed",
