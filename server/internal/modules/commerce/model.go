@@ -289,6 +289,9 @@ type CommentInput struct {
 	Nickname string `json:"nickname"`
 	Content  string `json:"content"`
 	Rating   *int   `json:"rating"`
+	// TurnstileToken is the Cloudflare Turnstile response token for the
+	// "comment" widget action. Verified before any persistence.
+	TurnstileToken string `json:"turnstile_token"`
 }
 
 // NotificationTemplate is a staff-managed mail template for an order
@@ -526,6 +529,9 @@ type OrderInput struct {
 	InvoiceType     string `json:"invoice_type"`
 	InvoiceTaxID    string `json:"invoice_tax_id"`
 	BuyerNote       string `json:"buyer_note"`
+	// TurnstileToken is the Cloudflare Turnstile response token for the
+	// "order" widget action. Verified before any persistence or stock change.
+	TurnstileToken string `json:"turnstile_token"`
 }
 
 // OrderFilter narrows order listings by status, payment status, and/or member.

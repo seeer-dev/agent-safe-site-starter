@@ -8,10 +8,12 @@ import Skeleton from '@/shared/components/Skeleton.vue'
 import { apiGet, apiPost } from '@/shared/lib/api'
 import { relativeTime } from '@/shared/lib/format'
 import { toast } from '@/shared/lib/toast'
+import { useTurnstile } from '@/shared/lib/turnstile'
 import { cn } from '@/shared/lib/utils'
 import type { CommentDTO } from '@/shared/lib/types'
 
 const props = defineProps<{ slug: string }>()
+const turnstile = useTurnstile('comment')
 
 interface Summary {
   count: number
@@ -57,12 +59,18 @@ async function submit() {
     toast.error('內容至少 5 個字')
     return
   }
+  const turnstileToken = turnstile.tokenForSubmit()
+  if (turnstileToken === null) {
+    toast.error('請先完成驗證')
+    return
+  }
   submitting.value = true
   try {
     await apiPost(`/api/products/${props.slug}/comments`, {
       nickname: nickname.value.trim(),
       content: content.value.trim(),
       rating: rating.value ?? undefined,
+      turnstile_token: turnstileToken || undefined,
     })
     toast.success('已送出，待店家審核後顯示', {
       description: '感謝分享你的想法，留言將於審核後出現在此頁面',
@@ -74,6 +82,9 @@ async function submit() {
   } catch (e) {
     toast.error(e instanceof Error ? e.message : '留言送出失敗，請稍後再試')
   } finally {
+    // A submitted token is single-use whether it passed or failed; mint a
+    // fresh one for the next attempt.
+    if (turnstileToken) turnstile.reset()
     submitting.value = false
   }
 }
@@ -247,6 +258,7 @@ onMounted(load)
             <p class="text-right text-[11px] text-muted-foreground/70">{{ content.length }} / 500</p>
           </div>
 
+          <div :ref="turnstile.setEl" />
           <button
             type="button"
             :disabled="submitting"

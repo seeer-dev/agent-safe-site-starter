@@ -37,15 +37,17 @@
 
     <section class="shell section" id="contact">
       <h2>聯絡</h2>
-      <form class="contact" data-contact-form>
+      <form class="contact" data-contact-form{{if .TurnstileSiteKey}} data-turnstile-sitekey="{{.TurnstileSiteKey}}"{{end}}>
         <label>姓名<input name="name" required maxlength="120"></label>
         <label>Email<input name="email" type="email" required maxlength="254"></label>
         <label>訊息<textarea name="message" required maxlength="5000"></textarea></label>
+        {{if .TurnstileSiteKey}}<div class="cf-turnstile" data-sitekey="{{.TurnstileSiteKey}}" data-action="contact"></div>{{end}}
         <button type="submit">送出</button>
         <p data-form-status aria-live="polite"></p>
       </form>
     </section>
   </main>
+  {{if .TurnstileSiteKey}}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" defer></script>{{end}}
   <script src="/assets/site.js" defer></script>
 </body>
 </html>

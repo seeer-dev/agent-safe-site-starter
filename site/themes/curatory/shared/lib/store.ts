@@ -84,39 +84,54 @@ export function shippingIsFree(subtotal: number, freeShippingCoupon = false): bo
   return threshold > 0 && subtotal >= threshold
 }
 
-// ─── 最近查詢的訂單（localStorage） ─────────────────────────
+// ─── 最近查詢的訂單（localStorage，僅非敏感中繼資料） ──────────
+//
+// REQ-005：訂單查詢碼（access token）不得持久化於 localStorage。歷史紀錄
+// 只保留 orderId + date；剛成立的訂單憑證留在 sessionStorage
+// （curatory_last_order），僅供同次瀏覽工作階段連續性使用。
 
 export interface RecentOrder {
   orderId: string
-  token: string
   date: string
 }
 
 const RECENT_KEY = 'curatory_recent_orders'
 
+// loadRecentOrders 讀取歷史紀錄並剝除舊版寫入的 token 欄位；若曾含
+// token，立即以去識別後的清單回寫，避免舊憑證殘留。
 export function loadRecentOrders(): RecentOrder[] {
   try {
     const raw = localStorage.getItem(RECENT_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as RecentOrder[]
-      if (Array.isArray(parsed)) return parsed.slice(0, 5)
+    if (!raw) return []
+    const parsed = JSON.parse(raw) as Array<Record<string, unknown>>
+    if (!Array.isArray(parsed)) return []
+    let hadToken = false
+    const list = parsed
+      .filter((r) => typeof r.orderId === 'string' && r.orderId !== '')
+      .map((r) => {
+        if (typeof r.token === 'string' && r.token !== '') hadToken = true
+        return { orderId: r.orderId as string, date: typeof r.date === 'string' ? r.date : '' }
+      })
+      .slice(0, 5)
+    if (hadToken) {
+      try {
+        localStorage.setItem(RECENT_KEY, JSON.stringify(list))
+      } catch {
+        /* ignore */
+      }
     }
+    return list
   } catch {
-    /* ignore */
+    return []
   }
-  return []
 }
 
-export function rememberOrder(orderId: string, token: string) {
+export function rememberOrder(orderId: string) {
   try {
     const list = loadRecentOrders().filter((r) => r.orderId !== orderId)
-    list.unshift({ orderId, token, date: new Date().toISOString() })
+    list.unshift({ orderId, date: new Date().toISOString() })
     localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, 5)))
   } catch {
     /* ignore */
   }
-}
-
-export function findRecentToken(orderId: string): string | null {
-  return loadRecentOrders().find((r) => r.orderId === orderId)?.token ?? null
 }

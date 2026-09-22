@@ -2,14 +2,14 @@
 // 訂單成功／詳情頁 — 對應 reference order-view.tsx。
 // 差異：本站查單採 access-token 模型（GET /api/orders/{id} +
 // X-Order-Access-Token），不以「單號＋Email」查詢。憑證來源依序：
-//   1. sessionStorage curatory_last_order（剛下單跳轉）
-//   2. localStorage curatory_recent_orders（rememberOrder 寫入）
-//   3. 手動輸入查詢碼（訂單完成頁／通知信中提供）
+//   1. sessionStorage curatory_last_order（剛下單跳轉，僅本次瀏覽工作階段）
+//   2. 手動輸入查詢碼（訂單完成頁／通知信中提供）
+//   localStorage 的最近訂單紀錄只保留訂單編號，不儲存查詢碼。
 import { computed, onMounted, ref } from 'vue'
 import { KeyRound, Loader2, MailSearch, PackageSearch, SearchX } from 'lucide-vue-next'
 import OrderDetailCard from '@/shared/components/OrderDetailCard.vue'
 import { apiGet } from '@/shared/lib/api'
-import { bootstrap, findRecentToken, loadBootstrap } from '@/shared/lib/store'
+import { bootstrap, loadBootstrap } from '@/shared/lib/store'
 import { navigate } from '@/shared/lib/transition'
 import type { OrderDTO } from '@/shared/lib/types'
 
@@ -45,7 +45,6 @@ onMounted(() => {
       }
     }
   } catch { /* ignore */ }
-  token.value ??= findRecentToken(orderId.value)
   if (token.value) void fetchOrder()
 })
 

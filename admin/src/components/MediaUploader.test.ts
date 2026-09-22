@@ -60,7 +60,7 @@ function installFakeWorker() {
   workerCtorSpy = vi.fn()
   globalThis.Worker = workerCtorSpy as unknown as typeof globalThis.Worker
 
-  workerCtorSpy.mockImplementation(() => {
+  workerCtorSpy.mockImplementation(function () {
     const target = new EventTarget() as FakeWorker
     target.postMessage = vi.fn()
     target.terminate = vi.fn()

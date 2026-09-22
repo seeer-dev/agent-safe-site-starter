@@ -230,6 +230,13 @@ type Config struct {
 	// buildHeaders returns an error and renderToStaging fails-closed.
 	SupabaseURL string
 
+	// TurnstileSiteKey is the public Cloudflare Turnstile site key. It is
+	// safe to embed in rendered HTML; when non-empty the CSP gains the
+	// challenges.cloudflare.com script/frame/connect origins the managed
+	// widget needs. When empty the CSP stays self-only and the widget
+	// is not rendered (local development uses the permissive verifier).
+	TurnstileSiteKey string
+
 	// ArticleDir is the output directory for article detail pages.
 	// Empty defaults to "articles". Themes that brand the news section
 	// differently (e.g. "news") set this to match their template links.
@@ -261,6 +268,9 @@ type chromeFields struct {
 	Settings       map[string]any
 	DarkMode       bool
 	IslandsCSSHash string
+	// TurnstileSiteKey is the public widget site key; templates render the
+	// managed widget only when it is non-empty.
+	TurnstileSiteKey string
 }
 
 type homeData struct {
@@ -474,19 +484,20 @@ func (r Renderer) RenderSite(in Input) error {
 func (r Renderer) chrome(in Input, islandsCSSHash, title, description, pagePath string) chromeFields {
 	base := strings.TrimRight(r.cfg.PublicSiteURL, "/")
 	return chromeFields{
-		SiteName:       r.cfg.SiteName,
-		PublicSiteURL:  base,
-		APIBase:        strings.TrimRight(r.cfg.PublicAPIBase, "/"),
-		Title:          title,
-		Description:    description,
-		PagePath:       pagePath,
-		OGType:         "website",
-		OGImage:        absoluteURL(base, defaultOGImage),
-		FooterContent:  in.ContentBlocks,
-		CategoryList:   in.CategoryList,
-		Settings:       in.Settings,
-		DarkMode:       r.cfg.DarkMode,
-		IslandsCSSHash: islandsCSSHash,
+		SiteName:         r.cfg.SiteName,
+		PublicSiteURL:    base,
+		APIBase:          strings.TrimRight(r.cfg.PublicAPIBase, "/"),
+		Title:            title,
+		Description:      description,
+		PagePath:         pagePath,
+		OGType:           "website",
+		OGImage:          absoluteURL(base, defaultOGImage),
+		FooterContent:    in.ContentBlocks,
+		CategoryList:     in.CategoryList,
+		Settings:         in.Settings,
+		DarkMode:         r.cfg.DarkMode,
+		IslandsCSSHash:   islandsCSSHash,
+		TurnstileSiteKey: r.cfg.TurnstileSiteKey,
 	}
 }
 
@@ -534,9 +545,10 @@ func (r Renderer) renderToStaging(fn func(stagingDir string) error) error {
 	// render fn. If this fails, the render fails-closed -- the existing
 	// dist is preserved with its previous _headers.
 	headersContent, err := buildHeaders(HeadersConfig{
-		R2PublicBaseURL: r.cfg.R2PublicBaseURL,
-		PublicAPIBase:   r.cfg.PublicAPIBase,
-		SupabaseURL:     r.cfg.SupabaseURL,
+		R2PublicBaseURL:  r.cfg.R2PublicBaseURL,
+		PublicAPIBase:    r.cfg.PublicAPIBase,
+		SupabaseURL:      r.cfg.SupabaseURL,
+		TurnstileSiteKey: r.cfg.TurnstileSiteKey,
 	})
 	if err != nil {
 		_ = os.RemoveAll(stagingDir)
@@ -617,7 +629,7 @@ func (r Renderer) renderHomeAndArticles(outputDir string, in Input) error {
 		if err := writeTemplate(filepath.Join(articleDir, "index.html"), articleTpl, articleData{
 			chromeFields: r.chrome(in, islandsCSSHash, article.Title, article.Excerpt, "/"+r.articleDir()+"/"+article.Slug+"/"),
 			Article:      article,
-			Body:         template.HTML(article.BodyHTML), // #nosec G203 -- trusted CMS contract
+			Body:         template.HTML(content.SanitizeBodyHTML(article.BodyHTML)), // #nosec G203 -- allowlist-sanitized
 		}); err != nil {
 			return err
 		}

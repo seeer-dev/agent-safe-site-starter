@@ -1,6 +1,7 @@
 package commerce
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -8,20 +9,46 @@ import (
 
 	"github.com/example/ai-site-starter/server/internal/auth"
 	"github.com/example/ai-site-starter/server/internal/httpx"
+	"github.com/example/ai-site-starter/server/internal/platform/turnstile"
 )
+
+// TurnstileVerifier is the smallest interface the commerce handlers need
+// from the turnstile platform package — bootstrap owns the concrete wiring.
+// Verify must fail closed: a nil token, provider error, or wrong
+// action/hostname is a rejection, never a pass.
+type TurnstileVerifier interface {
+	Verify(ctx context.Context, token, action string) error
+}
 
 // Handler exposes the commerce module over HTTP. Admin endpoints require an
 // authenticated principal with the relevant capability; public endpoints are
 // open. auth.Principal is always resolved at the handler boundary and passed
 // explicitly into the service — never via context.Context.
 type Handler struct {
-	service Service
-	auth    auth.Authenticator
+	service   Service
+	auth      auth.Authenticator
+	turnstile TurnstileVerifier
 }
 
 // NewHandler constructs a Handler.
 func NewHandler(service Service, authenticator auth.Authenticator) Handler {
 	return Handler{service: service, auth: authenticator}
+}
+
+// WithTurnstile wires the side-effect verifier for the public comment and
+// order endpoints. Bootstrap always supplies one; a nil verifier means the
+// check is skipped (unit tests that never wired it).
+func (h Handler) WithTurnstile(v TurnstileVerifier) Handler {
+	h.turnstile = v
+	return h
+}
+
+// verifyTurnstile runs the wired verifier for one protected submission.
+func (h Handler) verifyTurnstile(ctx context.Context, token, action string) error {
+	if h.turnstile == nil {
+		return nil
+	}
+	return h.turnstile.Verify(ctx, token, action)
 }
 
 // adminProductImage is the admin-facing product image DTO. It exposes
@@ -184,10 +211,25 @@ func (h Handler) ListPublicPaymentMethods(w http.ResponseWriter, r *http.Request
 	httpx.JSON(w, http.StatusOK, map[string]any{"payment_methods": methods})
 }
 
+// writeTurnstileError maps a verifier failure to the public refusal. A
+// rejected token is a 403; an unreachable or unconfigured verifier is a
+// 503 — both happen before any persistence, mail, or stock side effect.
+func writeTurnstileError(w http.ResponseWriter, err error) {
+	if errors.Is(err, turnstile.ErrUnavailable) {
+		httpx.Error(w, http.StatusServiceUnavailable, "service unavailable")
+		return
+	}
+	httpx.Error(w, http.StatusForbidden, "verification failed")
+}
+
 func (h Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var in OrderInput
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.verifyTurnstile(r.Context(), in.TurnstileToken, "order"); err != nil {
+		writeTurnstileError(w, err)
 		return
 	}
 	order, err := h.service.CreateOrder(r.Context(), in)
@@ -234,6 +276,10 @@ func (h Handler) CreateOrderForMember(w http.ResponseWriter, r *http.Request) {
 	var in OrderInput
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.verifyTurnstile(r.Context(), in.TurnstileToken, "order"); err != nil {
+		writeTurnstileError(w, err)
 		return
 	}
 	order, err := h.service.CreateOrderForMember(r.Context(), principal, in)
@@ -927,6 +973,10 @@ func (h Handler) SubmitProductComment(w http.ResponseWriter, r *http.Request) {
 	var in CommentInput
 	if err := httpx.DecodeJSON(r, &in); err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if err := h.verifyTurnstile(r.Context(), in.TurnstileToken, "comment"); err != nil {
+		writeTurnstileError(w, err)
 		return
 	}
 	comment, err := h.service.SubmitComment(r.Context(), product.ID, in)

@@ -74,15 +74,16 @@ func articleDirForTheme(siteTheme string) string {
 
 func rendererConfig(cfg config.Config, siteTheme string) siterender.Config {
 	return siterender.Config{
-		SiteName:        siteNameForTheme(siteTheme),
-		PublicSiteURL:   cfg.PublicSiteURL,
-		PublicAPIBase:   cfg.PublicAPIBase,
-		TemplateDir:     "site/templates",
-		AssetDir:        "site/assets",
-		OutputDir:       "dist",
-		SiteTheme:       siteTheme,
-		R2PublicBaseURL: cfg.R2PublicBaseURL,
-		SupabaseURL:     cfg.SupabaseURL,
-		ArticleDir:      articleDirForTheme(siteTheme),
+		SiteName:         siteNameForTheme(siteTheme),
+		PublicSiteURL:    cfg.PublicSiteURL,
+		PublicAPIBase:    cfg.PublicAPIBase,
+		TemplateDir:      "site/templates",
+		AssetDir:         "site/assets",
+		OutputDir:        "dist",
+		SiteTheme:        siteTheme,
+		R2PublicBaseURL:  cfg.R2PublicBaseURL,
+		SupabaseURL:      cfg.SupabaseURL,
+		TurnstileSiteKey: cfg.TurnstileSiteKey,
+		ArticleDir:       articleDirForTheme(siteTheme),
 	}
 }

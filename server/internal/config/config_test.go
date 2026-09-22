@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // Sentinel names used only by these tests. They are never real configuration
@@ -454,5 +455,52 @@ func TestValidateSupabaseJWKSConfiguration(t *testing.T) {
 				t.Errorf("Validate() error = %v, wantError = %v", err, tc.wantError)
 			}
 		})
+	}
+}
+
+func TestManualTestCheckoutWindow(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name        string
+		raw         string
+		appEnv      string
+		wantZero    bool
+		wantMaxWind time.Duration
+	}{
+		{"empty fails closed", "", "production", true, 0},
+		{"whitespace fails closed", "   ", "development", true, 0},
+		{"malformed fails closed", "tomorrow-ish", "development", true, 0},
+		{"valid production caps at 24h", "2027-01-01T00:00:00Z", "production", false, 24 * time.Hour},
+		{"valid non-production caps at 30d", "2027-01-01T00:00:00Z", "development", false, 30 * 24 * time.Hour},
+		{"offset normalized to UTC", "2027-01-01T08:00:00+08:00", "development", false, 30 * 24 * time.Hour},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := Config{ManualTestCheckoutUntil: tc.raw, AppEnv: tc.appEnv}
+			until, maxWindow := cfg.ManualTestCheckoutWindow()
+			if tc.wantZero {
+				if !until.IsZero() {
+					t.Errorf("until = %v, want zero (fail closed)", until)
+				}
+				return
+			}
+			if until.IsZero() {
+				t.Fatal("until is zero for a valid window")
+			}
+			if until.Location() != time.UTC {
+				t.Errorf("until location = %v, want UTC", until.Location())
+			}
+			if maxWindow != tc.wantMaxWind {
+				t.Errorf("maxWindow = %v, want %v", maxWindow, tc.wantMaxWind)
+			}
+		})
+	}
+
+	// The offset form must land on the same instant as its UTC equivalent.
+	cfg := Config{ManualTestCheckoutUntil: "2027-01-01T08:00:00+08:00", AppEnv: "development"}
+	until, _ := cfg.ManualTestCheckoutWindow()
+	if !until.Equal(time.Date(2027, 1, 1, 0, 0, 0, 0, time.UTC)) {
+		t.Errorf("offset normalization: got %v", until)
 	}
 }

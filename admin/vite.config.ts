@@ -36,7 +36,28 @@ export default defineConfig(({ mode }) => {
   )
 
   return {
-    plugins: [vue()],
+    plugins: [
+      vue(),
+      // Emit dist/_headers after the bundle is written. The policy is
+      // derived from the same validated env values that fed `define`.
+      isProduction && {
+        name: 'admin-security-headers',
+        apply: 'build' as const,
+        async closeBundle() {
+          const { buildAdminHeaders } = await import('./scripts/security-headers.mjs')
+          const { writeFileSync } = await import('node:fs')
+          const out = fileURLToPath(new URL('./dist/_headers', import.meta.url))
+          writeFileSync(
+            out,
+            buildAdminHeaders({
+              supabaseUrl: env.SUPABASE_URL ?? '',
+              adminApiBase: env.ADMIN_API_BASE ?? '',
+            }),
+          )
+          console.log(`[security-headers] wrote ${out}`)
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': fileURLToPath(new URL('./src', import.meta.url)),

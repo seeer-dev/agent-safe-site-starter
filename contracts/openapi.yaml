@@ -85,6 +85,9 @@ paths:
                 name: {type: string, maxLength: 120}
                 email: {type: string, format: email, maxLength: 254}
                 message: {type: string, maxLength: 5000}
+                turnstile_token:
+                  type: string
+                  description: Cloudflare Turnstile token for the "contact" action; required in production
       responses:
         '201':
           description: Accepted
@@ -96,6 +99,12 @@ paths:
                 properties:
                   ok: {type: boolean, const: true}
         '400': {description: Invalid inquiry}
+        '403': {description: Missing edge identity or failed Turnstile verification}
+        '429':
+          description: Shared abuse budget exhausted
+          headers:
+            Retry-After: {schema: {type: integer}, description: Seconds until the fixed window resets}
+        '503': {description: Abuse store or Turnstile provider unavailable; fails closed}
 
   /api/media/presign:
     post:
@@ -216,6 +225,9 @@ paths:
                   shipping_methods:
                     type: array
                     items: {$ref: '#/components/schemas/PublicShippingMethod'}
+                  turnstile_site_key:
+                    type: string
+                    description: Public Cloudflare Turnstile site key for the managed widgets; empty in local development
         '500': {description: Store failure; generic non-leaking error}
   /api/categories:
     get:
@@ -276,7 +288,13 @@ paths:
                 properties:
                   comment: {$ref: '#/components/schemas/ProductComment'}
         '400': {description: Invalid comment input}
+        '403': {description: Missing edge identity or failed Turnstile verification}
         '404': {description: Product not found}
+        '429':
+          description: Shared abuse budget exhausted
+          headers:
+            Retry-After: {schema: {type: integer}, description: Seconds until the fixed window resets}
+        '503': {description: Abuse store or Turnstile provider unavailable; fails closed}
   /api/coupons/validate:
     post:
       operationId: validateCoupon
@@ -371,7 +389,12 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/QuoteResult'}
         '400': {description: Invalid items, shipping/payment method, or promo code}
-        '503': {description: Shipping configuration or promo validation unavailable}
+        '403': {description: Missing edge identity}
+        '429':
+          description: Shared abuse budget exhausted
+          headers:
+            Retry-After: {schema: {type: integer}, description: Seconds until the fixed window resets}
+        '503': {description: Shipping configuration, promo validation, or abuse store unavailable}
 
   /api/orders:
     post:
@@ -392,8 +415,13 @@ paths:
                 properties:
                   order: {$ref: '#/components/schemas/Order'}
         '400': {description: Invalid request body, order data, shipping/payment method, promo code, or idempotency key}
+        '403': {description: Missing edge identity or failed Turnstile verification}
         '409': {description: Insufficient stock or idempotency conflict}
-        '503': {description: Shipping configuration or promo validation unavailable}
+        '429':
+          description: Shared abuse budget exhausted
+          headers:
+            Retry-After: {schema: {type: integer}, description: Seconds until the fixed window resets}
+        '503': {description: Shipping configuration, promo validation, abuse store, or Turnstile provider unavailable}
 
   /api/orders/{id}:
     get:
@@ -435,9 +463,13 @@ paths:
               schema: {$ref: '#/components/schemas/Order'}
         '400': {description: Invalid request body or order data}
         '401': {description: Unauthorized}
-        '403': {description: Member identity required or forbidden}
+        '403': {description: Member identity required, missing edge identity, or failed Turnstile verification}
         '409': {description: Insufficient stock or idempotency conflict}
-        '503': {description: Shipping configuration or promo validation unavailable}
+        '429':
+          description: Shared abuse budget exhausted
+          headers:
+            Retry-After: {schema: {type: integer}, description: Seconds until the fixed window resets}
+        '503': {description: Shipping configuration, promo validation, abuse store, or Turnstile provider unavailable}
     get:
       operationId: listMyOrders
       security: [{bearerAuth: []}]
@@ -2091,6 +2123,9 @@ components:
         promo_code:
           type: string
           description: Optional customer-entered code. Validated server-side; unknown, disabled, expired, or not-yet-active codes return 400. Valid codes are not publicly enumerated.
+        turnstile_token:
+          type: string
+          description: Cloudflare Turnstile token for the "order" action; required in production
         recipient_name: {type: string, maxLength: 100, description: 'Delivery recipient name; defaults to customer_name when omitted'}
         recipient_phone: {type: string, maxLength: 30, description: 'Delivery recipient phone; defaults to phone when omitted'}
         city: {type: string, maxLength: 50, description: 'Delivery city; required for home delivery in the storefront checkout UI'}
@@ -2314,6 +2349,9 @@ components:
         nickname: {type: string, maxLength: 40}
         content: {type: string, maxLength: 2000}
         rating: {type: integer, minimum: 1, maximum: 5, nullable: true}
+        turnstile_token:
+          type: string
+          description: Cloudflare Turnstile token for the "comment" action; required in production
     Promo:
       type: object
       required: [id, code, label, type, value, enabled, min_subtotal, used_count, starts_unix, expires_unix, updated_unix]

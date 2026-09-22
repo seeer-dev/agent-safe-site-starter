@@ -175,6 +175,12 @@ type Service struct {
 	publicBaseURL string             // R2 public base URL for deriving image URLs
 	ecpay         *ECPayConfig       // nil when ECPay is not configured
 	notifier      NotificationSender // nil when not wired — notifications logged as skipped
+	// manualTestUntil + manualTestMaxWindow bound the manual_test payment
+	// method's public availability. Zero until = always closed. now is
+	// injectable for fixed-clock tests; nil reads the real clock.
+	manualTestUntil     time.Time
+	manualTestMaxWindow time.Duration
+	now                 func() time.Time
 }
 
 // NewService constructs a Service backed by the given Store.
@@ -196,6 +202,44 @@ func (s Service) WithMediaVerifier(v MediaVerifier) Service {
 func (s Service) WithPublicBaseURL(baseURL string) Service {
 	s.publicBaseURL = strings.TrimRight(baseURL, "/")
 	return s
+}
+
+// WithManualTestWindow returns a Service whose manual_test payment method
+// is publicly available only while now < until and until - now <= maxWindow.
+// A zero until keeps the method unavailable regardless of its database row.
+// now is injectable for deterministic tests; nil uses the real clock.
+func (s Service) WithManualTestWindow(until time.Time, maxWindow time.Duration, now func() time.Time) Service {
+	s.manualTestUntil = until
+	s.manualTestMaxWindow = maxWindow
+	s.now = now
+	return s
+}
+
+// nowTime reads the service clock.
+func (s Service) nowTime() time.Time {
+	if s.now != nil {
+		return s.now()
+	}
+	return time.Now()
+}
+
+// manualTestAvailable is the single predicate governing the manual_test
+// method across public listing, quote, and both order paths. Missing,
+// malformed, past, or over-distant windows are already collapsed to a zero
+// or capped until by config; here a zero until or an expired or oversized
+// remaining window all fail closed.
+func (s Service) manualTestAvailable() bool {
+	if s.manualTestUntil.IsZero() {
+		return false
+	}
+	now := s.nowTime()
+	if !now.Before(s.manualTestUntil) {
+		return false
+	}
+	if s.manualTestMaxWindow > 0 && s.manualTestUntil.Sub(now) > s.manualTestMaxWindow {
+		return false
+	}
+	return true
 }
 
 // ----- Products -------------------------------------------------------------

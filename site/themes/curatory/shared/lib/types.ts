@@ -92,6 +92,8 @@ export interface BootstrapData {
   payment_methods: PaymentMethodDTO[]
   shipping_methods: ShippingMethodDTO[]
   announcements: ArticleDTO[]
+  /** Public Cloudflare Turnstile site key; empty in local development. */
+  turnstile_site_key?: string
 }
 
 export interface ArticleDTO {

@@ -74,7 +74,7 @@ func (s Service) Publish(ctx context.Context, principal auth.Principal, in Upser
 		Slug:        in.Slug,
 		Title:       in.Title,
 		Excerpt:     strings.TrimSpace(in.Excerpt),
-		BodyHTML:    in.BodyHTML,
+		BodyHTML:    SanitizeBodyHTML(in.BodyHTML),
 		Published:   in.Published,
 		Pinned:      in.Pinned,
 		PublishedAt: in.PublishedAt,

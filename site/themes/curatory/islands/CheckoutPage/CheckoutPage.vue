@@ -26,6 +26,7 @@ import { formatNTD } from '@/shared/lib/format'
 import { bootstrap, checkoutStore, loadBootstrap, rememberOrder } from '@/shared/lib/store'
 import { navigate } from '@/shared/lib/transition'
 import { toast } from '@/shared/lib/toast'
+import { useTurnstile } from '@/shared/lib/turnstile'
 import { cn } from '@/shared/lib/utils'
 import type { OrderDTO, PaymentMethodDTO, QuoteResult, ShippingMethodDTO } from '@/shared/lib/types'
 
@@ -55,6 +56,7 @@ const storeDialogOpen = ref(false)
 const storeCity = ref('台北市')
 const storeSearch = ref('')
 const idempotencyKey = crypto.randomUUID()
+const turnstile = useTurnstile('order')
 
 // ── 資料 ──
 const shippingMethods = computed(() => bootstrap.data?.shipping_methods ?? [])
@@ -253,6 +255,11 @@ function jumpStep(i: number) {
 // ── 送出訂單 ──
 async function placeOrder() {
   const f = form.value
+  const turnstileToken = turnstile.tokenForSubmit()
+  if (turnstileToken === null) {
+    toast.error('請先完成驗證', { description: '請稍候，安全驗證完成後再送出訂單。' })
+    return
+  }
   processing.value = true
   try {
     if (isCard.value || isLinePay.value) await sleep(1300) // 沙箱付款儀式感
@@ -278,9 +285,10 @@ async function placeOrder() {
       invoice_type: f.invoiceType,
       invoice_tax_id: f.invoiceType === 'company' ? f.invoiceTaxId : '',
       buyer_note: f.note.trim(),
+      turnstile_token: turnstileToken || undefined,
     })
     const order = res.order
-    if (order.access_token) rememberOrder(order.id, order.access_token)
+    if (order.access_token) rememberOrder(order.id)
     try {
       sessionStorage.setItem('curatory_last_order', JSON.stringify({ orderId: order.id, token: order.access_token ?? '' }))
     } catch { /* ignore */ }
@@ -291,6 +299,8 @@ async function placeOrder() {
   } catch (e) {
     toast.error('訂單建立失敗', { description: e instanceof Error ? e.message : '請確認資料後再試一次' })
   } finally {
+    // Turnstile tokens are single-use: a consumed token cannot back a retry.
+    if (turnstileToken) turnstile.reset()
     processing.value = false
   }
 }
@@ -779,6 +789,9 @@ onMounted(() => void loadBootstrap().catch(() => undefined))
                     </div>
                   </Transition>
                 </div>
+
+                <!-- 安全驗證 -->
+                <div :ref="turnstile.setEl" />
 
                 <!-- 同意條款 -->
                 <div class="flex items-start gap-3 rounded-xl border bg-muted/30 p-5">

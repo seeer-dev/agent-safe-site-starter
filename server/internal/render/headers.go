@@ -62,7 +62,18 @@ type HeadersConfig struct {
 	// non-empty and valid, the origin is included. When non-empty and
 	// invalid, buildHeaders returns an error.
 	SupabaseURL string
+
+	// TurnstileSiteKey enables the managed Cloudflare Turnstile widget.
+	// When non-empty the CSP gains challenges.cloudflare.com in
+	// script-src (api.js), frame-src (the widget iframe), and
+	// connect-src (token preflight). When empty the CSP stays self-only
+	// and no widget markup is rendered.
+	TurnstileSiteKey string
 }
+
+// turnstileOrigin is the single Cloudflare origin the managed widget
+// needs for its script, iframe, and API calls.
+const turnstileOrigin = "https://challenges.cloudflare.com"
 
 // buildHeaders builds the Cloudflare Pages _headers file content with
 // site-wide security headers and a strict CSP.
@@ -100,7 +111,11 @@ func buildHeaders(cfg HeadersConfig) (string, error) {
 	// Build CSP directive list.
 	var cspParts []string
 	cspParts = append(cspParts, "default-src 'self'")
-	cspParts = append(cspParts, "script-src 'self'")
+	scriptSrc := "'self'"
+	if cfg.TurnstileSiteKey != "" {
+		scriptSrc += " " + turnstileOrigin
+	}
+	cspParts = append(cspParts, "script-src "+scriptSrc)
 	cspParts = append(cspParts, "style-src 'self' 'unsafe-inline'")
 
 	// img-src: self, data:, and R2 origin (if valid).
@@ -119,7 +134,16 @@ func buildHeaders(cfg HeadersConfig) (string, error) {
 	if supabaseOrigin != "" && supabaseOrigin != apiOrigin {
 		connectSrc += " " + supabaseOrigin
 	}
+	if cfg.TurnstileSiteKey != "" {
+		connectSrc += " " + turnstileOrigin
+	}
 	cspParts = append(cspParts, "connect-src "+connectSrc)
+
+	// The managed widget embeds a Cloudflare iframe; without frame-src the
+	// default-src 'self' fallback would block it.
+	if cfg.TurnstileSiteKey != "" {
+		cspParts = append(cspParts, "frame-src "+turnstileOrigin)
+	}
 
 	cspParts = append(cspParts, "frame-ancestors 'none'")
 	cspParts = append(cspParts, "object-src 'none'")

@@ -54,6 +54,20 @@ type Config struct {
 	ResendFrom      string
 	ContactNotifyTo string
 
+	// TurnstileSecretKey is the Railway-only Cloudflare Turnstile secret.
+	// The public TurnstileSiteKey is safe to expose to the storefront; the
+	// secret never is. Production without a secret fails side-effecting
+	// forms closed rather than accepting unverified submissions.
+	TurnstileSecretKey string
+	TurnstileSiteKey   string
+
+	// ManualTestCheckoutUntil is the RFC3339 UTC deadline during which the
+	// manual_test payment method is publicly selectable. Empty, malformed,
+	// past, or unreasonably distant values keep the method unavailable even
+	// when its database row is enabled and ready. Production caps a single
+	// activation window at 24 hours.
+	ManualTestCheckoutUntil string
+
 	ECPayEnvironment string
 	ECPayMerchantID  string
 	ECPayHashKey     string
@@ -123,6 +137,10 @@ func Load() Config {
 		ResendFrom:      env("RESEND_FROM", "Site <hello@example.com>"),
 		ContactNotifyTo: os.Getenv("CONTACT_NOTIFY_TO"),
 
+		TurnstileSecretKey:      os.Getenv("TURNSTILE_SECRET_KEY"),
+		TurnstileSiteKey:        os.Getenv("TURNSTILE_SITE_KEY"),
+		ManualTestCheckoutUntil: strings.TrimSpace(os.Getenv("MANUAL_TEST_CHECKOUT_UNTIL")),
+
 		ECPayEnvironment: strings.ToLower(strings.TrimSpace(os.Getenv("ECPAY_ENVIRONMENT"))),
 		ECPayMerchantID:  strings.TrimSpace(os.Getenv("ECPAY_MERCHANT_ID")),
 		ECPayHashKey:     strings.TrimSpace(os.Getenv("ECPAY_HASH_KEY")),
@@ -189,6 +207,27 @@ func (c Config) ECPayEnabled() bool {
 
 func (c Config) R2Enabled() bool {
 	return c.R2AccountID != "" && c.R2AccessKeyID != "" && c.R2SecretAccessKey != "" && c.R2Bucket != ""
+}
+
+// ManualTestCheckoutWindow resolves the manual_test activation window.
+// It returns the parsed UTC deadline and the maximum allowed window size:
+// 24 hours in production, 30 days elsewhere so local testing can span a
+// longer window while remaining bounded. Empty or malformed settings
+// return a zero deadline — the gate is then always closed.
+func (c Config) ManualTestCheckoutWindow() (time.Time, time.Duration) {
+	raw := strings.TrimSpace(c.ManualTestCheckoutUntil)
+	if raw == "" {
+		return time.Time{}, 0
+	}
+	until, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return time.Time{}, 0
+	}
+	maxWindow := 24 * time.Hour
+	if !isProductionValue(c.AppEnv) {
+		maxWindow = 30 * 24 * time.Hour
+	}
+	return until.UTC(), maxWindow
 }
 
 // isProductionEnv reports whether the process environment — not any dotenv

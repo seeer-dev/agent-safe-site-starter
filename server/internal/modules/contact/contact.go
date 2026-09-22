@@ -3,6 +3,7 @@ package contact
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"html"
 	"net/http"
@@ -13,12 +14,16 @@ import (
 	"github.com/example/ai-site-starter/server/internal/httpx"
 	"github.com/example/ai-site-starter/server/internal/platform/database"
 	mailplatform "github.com/example/ai-site-starter/server/internal/platform/mail"
+	"github.com/example/ai-site-starter/server/internal/platform/turnstile"
 )
 
 type Input struct {
 	Name    string `json:"name"`
 	Email   string `json:"email"`
 	Message string `json:"message"`
+	// TurnstileToken is the Cloudflare Turnstile response token for the
+	// "contact" widget action. Verified before the inquiry is persisted.
+	TurnstileToken string `json:"turnstile_token"`
 }
 
 type Store struct {
@@ -74,17 +79,41 @@ func (s Service) Submit(ctx context.Context, in Input) error {
 	})
 }
 
+// TurnstileVerifier is the smallest interface the contact handler needs
+// from the turnstile platform package — bootstrap owns the concrete wiring.
+type TurnstileVerifier interface {
+	Verify(ctx context.Context, token, action string) error
+}
+
 type Handler struct {
-	service Service
+	service   Service
+	turnstile TurnstileVerifier
 }
 
 func NewHandler(service Service) Handler { return Handler{service: service} }
+
+// WithTurnstile wires the side-effect verifier. Bootstrap always supplies
+// one; a nil verifier means the check is skipped (unit tests only).
+func (h Handler) WithTurnstile(v TurnstileVerifier) Handler {
+	h.turnstile = v
+	return h
+}
 
 func (h Handler) Submit(w http.ResponseWriter, r *http.Request) {
 	var input Input
 	if err := httpx.DecodeJSON(r, &input); err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if h.turnstile != nil {
+		if err := h.turnstile.Verify(r.Context(), input.TurnstileToken, "contact"); err != nil {
+			if errors.Is(err, turnstile.ErrUnavailable) {
+				httpx.Error(w, http.StatusServiceUnavailable, "service unavailable")
+				return
+			}
+			httpx.Error(w, http.StatusForbidden, "verification failed")
+			return
+		}
 	}
 	if err := h.service.Submit(r.Context(), input); err != nil {
 		httpx.Error(w, http.StatusBadRequest, err.Error())

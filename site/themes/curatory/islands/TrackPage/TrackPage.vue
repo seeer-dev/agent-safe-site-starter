@@ -2,7 +2,7 @@
 // 訂單查詢頁 — 對應 reference track-view.tsx。
 // 差異：本站採 access-token 查單（GET /api/orders/{id} +
 // X-Order-Access-Token），表單為「訂單編號＋查詢碼」；本機下過單的裝置
-// 會顯示「最近訂單」chips，點擊即自動帶入憑證查詢。
+// 會顯示「最近訂單」chips，點擊僅帶入訂單編號，仍需輸入查詢碼。
 import { onMounted, ref } from 'vue'
 import { History, Loader2, PackageSearch, Search } from 'lucide-vue-next'
 import OrderDetailCard from '@/shared/components/OrderDetailCard.vue'
@@ -22,17 +22,15 @@ const order = ref<OrderDTO | null>(null)
 const pending = ref(false)
 const attempted = ref(false)
 
+const tokenInput = ref<HTMLInputElement | null>(null)
+
 onMounted(() => {
   void loadBootstrap().catch(() => undefined)
   recent.value = loadRecentOrders()
-  // 若 URL 帶 id（例如從訂單頁連回來），自動用已知憑證查
+  // 若 URL 帶 id（例如從訂單頁連回來），帶入訂單編號；查詢碼一律手動輸入
   try {
     const q = new URLSearchParams(window.location.search).get('id')
-    if (q) {
-      orderId.value = q
-      const hit = recent.value.find((r) => r.orderId === q)
-      if (hit) void lookup(q, hit.token)
-    }
+    if (q) orderId.value = q
   } catch { /* ignore */ }
 })
 
@@ -63,9 +61,11 @@ function submit() {
 
 function applyRecent(r: RecentOrder) {
   orderId.value = r.orderId
-  token.value = r.token
+  token.value = ''
   errors.value = {}
-  void lookup(r.orderId, r.token)
+  attempted.value = false
+  order.value = null
+  tokenInput.value?.focus()
 }
 </script>
 
@@ -96,6 +96,7 @@ function applyRecent(r: RecentOrder) {
           <label for="track-token" class="text-sm font-medium">訂單查詢碼 <span class="text-primary">*</span></label>
           <input
             id="track-token"
+            ref="tokenInput"
             v-model="token"
             type="text"
             placeholder="下單時取得的查詢碼"

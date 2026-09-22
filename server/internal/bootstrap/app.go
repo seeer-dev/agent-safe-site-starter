@@ -17,9 +17,11 @@ import (
 	"github.com/example/ai-site-starter/server/internal/modules/media"
 	"github.com/example/ai-site-starter/server/internal/modules/sitecontent"
 	"github.com/example/ai-site-starter/server/internal/modules/staff"
+	"github.com/example/ai-site-starter/server/internal/platform/abuse"
 	"github.com/example/ai-site-starter/server/internal/platform/database"
 	mailplatform "github.com/example/ai-site-starter/server/internal/platform/mail"
 	"github.com/example/ai-site-starter/server/internal/platform/storage"
+	"github.com/example/ai-site-starter/server/internal/platform/turnstile"
 )
 
 type App struct {
@@ -77,9 +79,30 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 		objectStore = r2
 	}
 
+	// Deployment-wide abuse boundary: a shared fixed-window counter in the
+	// application database, keyed by the edge-stamped opaque client key.
+	// It guards public mutation/expensive endpoints before side effects.
+	abuseLimiter := abuse.NewLimiter(db, dialect, nil)
+	// The stamped identity is trusted only when an edge credential is
+	// configured; without one (local dev/tests) the transport peer is hashed
+	// instead. The stamped header is never trusted on its own.
+	edgeBound := cfg.EdgeSecret != "" || cfg.EdgeSecretPrevious != ""
+	guard := func(bucket string, next http.HandlerFunc) http.HandlerFunc {
+		return abuseGuard(abuseLimiter, edgeBound, bucket, next)
+	}
+
+	// Turnstile: production verifies every side-effecting public submission
+	// against Cloudflare Siteverify; a missing secret there fails closed.
+	production := strings.EqualFold(strings.TrimSpace(cfg.AppEnv), "production")
+	turnstileVerifier := turnstile.NewVerifier(
+		cfg.TurnstileSecretKey,
+		turnstile.ExpectedHostname(cfg.PublicSiteURL),
+		production,
+	)
+
 	contentStore := content.NewSQLStore(db, dialect)
 	contentHandler := content.NewHandler(content.NewService(contentStore), authenticator)
-	contactHandler := contact.NewHandler(contact.NewService(contact.NewStore(db, dialect), mailer, cfg.ContactNotifyTo))
+	contactHandler := contact.NewHandler(contact.NewService(contact.NewStore(db, dialect), mailer, cfg.ContactNotifyTo)).WithTurnstile(turnstileVerifier)
 	mediaHandler := media.NewHandler(media.NewService(objectStore), authenticator)
 
 	// B4: media verification registry store is shared between the media
@@ -90,10 +113,12 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	verifyHandler := media.NewVerifyHandler(media.NewVerifyService(objectStore, mediaRegistry), authenticator)
 
 	commerceStore := commerce.NewSQLStore(db, dialect)
+	manualTestUntil, manualTestMaxWindow := cfg.ManualTestCheckoutWindow()
 	commerceService := commerce.NewService(commerceStore).
 		WithMediaVerifier(mediaVerifierAdapter{registry: mediaRegistry}).
 		WithPublicBaseURL(cfg.R2PublicBaseURL).
-		WithNotifier(mailer)
+		WithNotifier(mailer).
+		WithManualTestWindow(manualTestUntil, manualTestMaxWindow, nil)
 	if cfg.ECPayEnabled() {
 		ecpayConfig, err := commerce.NewECPayConfig(cfg.ECPayEnvironment, cfg.PublicAPIBase, cfg.PublicSiteURL, cfg.ECPayMerchantID, cfg.ECPayHashKey, cfg.ECPayHashIV)
 		if err != nil {
@@ -101,7 +126,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 		}
 		commerceService = commerceService.WithECPay(ecpayConfig)
 	}
-	commerceHandler := commerce.NewHandler(commerceService, authenticator)
+	commerceHandler := commerce.NewHandler(commerceService, authenticator).WithTurnstile(turnstileVerifier)
 
 	siteContentStore := sitecontent.NewSQLStore(db, dialect)
 	siteContentHandler := sitecontent.NewHandler(sitecontent.NewService(siteContentStore), authenticator)
@@ -117,7 +142,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 
 	// Public content endpoints
 	mux.HandleFunc("GET /api/articles", contentHandler.ListPublished)
-	mux.HandleFunc("POST /api/contact", contactHandler.Submit)
+	mux.HandleFunc("POST /api/contact", guard("contact", contactHandler.Submit))
 	mux.HandleFunc("POST /api/media/presign", mediaHandler.Presign)
 	mux.HandleFunc("POST /api/media/verify", verifyHandler.Verify)
 
@@ -147,7 +172,7 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 
 	// Storefront bootstrap: one round trip for settings, categories,
 	// site-content blocks, and customer-usable payment/shipping methods.
-	storefrontHandler := newStorefrontHandler(commerceService, content.NewService(contentStore), sitecontent.NewService(siteContentStore))
+	storefrontHandler := newStorefrontHandler(commerceService, content.NewService(contentStore), sitecontent.NewService(siteContentStore), cfg.TurnstileSiteKey)
 	mux.HandleFunc("GET /api/storefront/bootstrap", storefrontHandler.Get)
 
 	// Public commerce endpoints (no auth)
@@ -155,13 +180,13 @@ func NewWithDB(ctx context.Context, cfg config.Config, db *sql.DB, dialect datab
 	mux.HandleFunc("GET /api/products/{slug}", commerceHandler.GetProductBySlug)
 	mux.HandleFunc("GET /api/categories", commerceHandler.ListPublicCategories)
 	mux.HandleFunc("GET /api/products/{slug}/comments", commerceHandler.ListProductComments)
-	mux.HandleFunc("POST /api/products/{slug}/comments", commerceHandler.SubmitProductComment)
+	mux.HandleFunc("POST /api/products/{slug}/comments", guard("comment", commerceHandler.SubmitProductComment))
 	mux.HandleFunc("POST /api/coupons/validate", commerceHandler.ValidateCoupon)
 	mux.HandleFunc("GET /api/shipping-methods", commerceHandler.ListPublicShippingMethods)
 	mux.HandleFunc("GET /api/payment-methods", commerceHandler.ListPublicPaymentMethods)
-	mux.HandleFunc("POST /api/quote", commerceHandler.Quote)
-	mux.HandleFunc("POST /api/orders", commerceHandler.CreateOrder)
-	mux.HandleFunc("POST /api/orders/mine", commerceHandler.CreateOrderForMember)
+	mux.HandleFunc("POST /api/quote", guard("quote", commerceHandler.Quote))
+	mux.HandleFunc("POST /api/orders", guard("order", commerceHandler.CreateOrder))
+	mux.HandleFunc("POST /api/orders/mine", guard("order", commerceHandler.CreateOrderForMember))
 	mux.HandleFunc("GET /api/orders/{id}", commerceHandler.GetOrderForGuest)
 	mux.HandleFunc("GET /api/orders/mine", commerceHandler.ListMyOrders)
 	mux.HandleFunc("GET /api/orders/mine/{id}", commerceHandler.GetMyOrder)

@@ -1,0 +1,257 @@
+{
+  "change_id": "prelaunch-security-hardening",
+  "revision": 3,
+  "status": "Applying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "Requested after the 2026-09-21 bounded red-team review. On 2026-09-21 the repository owner selected PostgreSQL-backed authoritative limits, trusted Pages edge identity, server-validated Turnstile on side-effecting public forms, and optional Cloudflare WAF as a coarse prefilter. The owner also selected retention of intentional public pages.dev test URLs for the open-source proof while excluding production domains, Railway origins, full provider identifiers, private recipients, credentials, database URIs, and deployment receipts. On 2026-09-22 deployment-dashboard-ledger reached a terminal clean handoff (Accepted at revision 25, commits a96f2a6 and c1c23db pushed to staging), clearing the REQ-008 scope dependency, and the owner delegated final adjudication and approved applying this change.",
+  "repository_baseline": "847c0253197ce4625ce9ab7ad52dadcf105c58aa",
+  "supersedes": [
+    "public-endpoint-rate-limit"
+  ],
+  "applies_to": [
+    ".env.example",
+    ".env.development.example",
+    ".env.production.example",
+    "contracts/openapi.yaml",
+    "go.mod",
+    "go.sum",
+    "db/migrations/sqlite/019_abuse_control.sql",
+    "db/migrations/postgres/019_abuse_control.sql",
+    "functions/api/**",
+    "server/internal/bootstrap/**",
+    "server/internal/config/**",
+    "server/internal/modules/contact/**",
+    "server/internal/modules/commerce/**",
+    "server/internal/modules/content/**",
+    "server/internal/platform/abuse/**",
+    "server/internal/platform/turnstile/**",
+    "server/internal/render/**",
+    "admin/package.json",
+    "admin/package-lock.json",
+    "admin/vite.config.ts",
+    "admin/scripts/security-headers.mjs",
+    "admin/scripts/security-headers.test.mjs",
+    "admin/src/components/MediaUploader.test.ts",
+    "server/tools/render/main.go",
+    "site/templates/home.html",
+    "site/themes/curatory/**",
+    "site/assets/site.js",
+    "README.md",
+    "docs/**",
+    "skills/site-deployment-browser/**",
+    "specs/changes/prelaunch-security-hardening/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004",
+    "REQ-005",
+    "REQ-006",
+    "REQ-007",
+    "REQ-008",
+    "REQ-009"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008",
+    "AC-009",
+    "AC-010"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-001": [
+      "security-review"
+    ],
+    "AC-002": [
+      "security-review"
+    ],
+    "AC-003": [
+      "security-review",
+      "consumer-reachability"
+    ],
+    "AC-004": [
+      "security-review",
+      "walkthrough"
+    ],
+    "AC-005": [
+      "security-review"
+    ],
+    "AC-006": [
+      "security-review",
+      "walkthrough"
+    ],
+    "AC-007": [
+      "security-review"
+    ],
+    "AC-008": [
+      "security-review",
+      "walkthrough"
+    ],
+    "AC-009": [
+      "security-review",
+      "production-content-audit"
+    ],
+    "AC-010": [
+      "security-review",
+      "walkthrough"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "status": "passed",
+      "proof": "Shared-DB limiter + HMAC edge identity + Turnstile Siteverify wired; named tests pass; mutations observed.",
+      "observed_revision": 3
+    },
+    "REQ-002": {
+      "status": "passed",
+      "proof": "MANUAL_TEST_CHECKOUT_UNTIL parsed at startup; single predicate gates list/quote/orders; bounded windows tested.",
+      "observed_revision": 3
+    },
+    "REQ-003": {
+      "status": "passed",
+      "proof": "dist/_headers emitted each prod build; strict origin validation fails closed; 15/15 node tests; no wildcards.",
+      "observed_revision": 3
+    },
+    "REQ-004": {
+      "status": "passed",
+      "proof": "bluemonday allowlist at write+render boundaries; 21 named tests pass; dual mutation evidence.",
+      "observed_revision": 3
+    },
+    "REQ-005": {
+      "status": "passed",
+      "proof": "RecentOrder metadata-only; legacy tokens stripped+resaved; sessionStorage keeps fresh token; vitest 5/5 + walkthrough.",
+      "observed_revision": 3
+    },
+    "REQ-006": {
+      "status": "passed",
+      "proof": "vitest 5.0.1/vite 7.3.6/plugin-vue 6.0.9; happy-dom >=20.8.9 override; audit 0 vulns; 254 tests pass.",
+      "observed_revision": 3
+    },
+    "REQ-007": {
+      "status": "pending",
+      "proof": "R2 custom domain + nosniff transform are holder/provider actions; live checklist item 2.",
+      "observed_revision": 3
+    },
+    "REQ-008": {
+      "status": "passed",
+      "proof": "29 placeholder substitutions in docs; residual scan clean; pages.dev retained as documented proof.",
+      "observed_revision": 3
+    },
+    "REQ-009": {
+      "status": "pending",
+      "proof": "Local gates green (verify ok); live checks await holder authorization.",
+      "observed_revision": 3
+    },
+    "AC-001": {
+      "status": "passed",
+      "proof": "Shared-instance limiter test + stamped-identity/peer-hash guard tests + Turnstile-required tests pass; replica-consistent via shared DB. Live multi-replica spot-check listed. Security review receipt: receipts/security-review.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "AC-002": {
+      "status": "passed",
+      "proof": "Rejection-before-persistence tests for contact/comment/order; 429+Retry-After; 503 on store/verifier failure. Security review receipt: receipts/security-review.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "AC-003": {
+      "status": "passed",
+      "proof": "Absent/malformed/expired/over-cap windows disable manual_test in tests; inside-window availability verified; value never bundled. Security review receipt: receipts/security-review.md. Consumer reachability receipt: receipts/consumer-reachability.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        },
+        {
+          "kind": "consumer-reachability",
+          "path": "receipts/consumer-reachability.md"
+        }
+      ]
+    },
+    "AC-004": {
+      "status": "pending",
+      "proof": "Build emits _headers (inspected); deployed admin header/login/401 checks are live checklist item 1.",
+      "observed_revision": 3
+    },
+    "AC-005": {
+      "status": "passed",
+      "proof": "Write + render sanitize tests incl. legacy-row render proof; no raw fallback path exists. Security review receipt: receipts/security-review.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "AC-006": {
+      "status": "passed",
+      "proof": "Vitest strip/re-save tests + browser walkthrough: later session shows metadata only and requires the query code. Security review receipt: receipts/security-review.md. Walkthrough receipt: receipts/walkthrough.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        },
+        {
+          "kind": "walkthrough",
+          "path": "receipts/walkthrough.md"
+        }
+      ]
+    },
+    "AC-007": {
+      "status": "passed",
+      "proof": "npm audit 0 high/critical; tests/typecheck/build pass; no advisories suppressed. Security review receipt: receipts/security-review.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "AC-008": {
+      "status": "pending",
+      "proof": "Holder must create R2 custom domain and run bounded header/cache checks (checklist item 2).",
+      "observed_revision": 3
+    },
+    "AC-009": {
+      "status": "passed",
+      "proof": "Fresh-tree scans find no installation identifiers; instructions keep per-installation placeholders; pages.dev URLs documented as proof. Security review receipt: receipts/security-review.md. Production content audit receipt: receipts/production-content-audit.md.",
+      "observed_revision": 3,
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        },
+        {
+          "kind": "production-content-audit",
+          "path": "receipts/production-content-audit.md"
+        }
+      ]
+    },
+    "AC-010": {
+      "status": "pending",
+      "proof": "Local loop verified; final live acceptance awaits holder authorization.",
+      "observed_revision": 3
+    }
+  }
+}

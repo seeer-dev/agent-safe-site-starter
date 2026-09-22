@@ -14,13 +14,14 @@ import (
 // commerce, content, and sitecontent services here in the bootstrap layer
 // so no business module imports another module.
 type storefrontHandler struct {
-	commerce    commerce.Service
-	content     content.Service
-	sitecontent sitecontent.Service
+	commerce         commerce.Service
+	content          content.Service
+	sitecontent      sitecontent.Service
+	turnstileSiteKey string
 }
 
-func newStorefrontHandler(commerceService commerce.Service, contentService content.Service, siteContentService sitecontent.Service) storefrontHandler {
-	return storefrontHandler{commerce: commerceService, content: contentService, sitecontent: siteContentService}
+func newStorefrontHandler(commerceService commerce.Service, contentService content.Service, siteContentService sitecontent.Service, turnstileSiteKey string) storefrontHandler {
+	return storefrontHandler{commerce: commerceService, content: contentService, sitecontent: siteContentService, turnstileSiteKey: turnstileSiteKey}
 }
 
 // Get returns everything the storefront shell needs in one round trip:
@@ -81,11 +82,12 @@ func (h storefrontHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"settings":         settings,
-		"categories":       categories,
-		"site_content":     blocks,
-		"payment_methods":  paymentMethods,
-		"shipping_methods": shippingMethods,
-		"announcements":    announcements,
+		"settings":           settings,
+		"categories":         categories,
+		"site_content":       blocks,
+		"payment_methods":    paymentMethods,
+		"shipping_methods":   shippingMethods,
+		"announcements":      announcements,
+		"turnstile_site_key": h.turnstileSiteKey,
 	})
 }

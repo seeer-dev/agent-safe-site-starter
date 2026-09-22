@@ -1312,3 +1312,65 @@ func TestRenderStaticFooterEmptyContent(t *testing.T) {
 		}
 	}
 }
+
+// TestRenderArticleSanitizesLegacyRow proves that an article row written
+// before the write-time sanitizer existed is still sanitized at the render
+// boundary: active content and unsafe URLs never reach trusted template
+// HTML, while semantic markup survives.
+func TestRenderArticleSanitizesLegacyRow(t *testing.T) {
+	// Do NOT call t.Parallel() — this test changes CWD to the repo root.
+	origWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(origWd) })
+
+	root, err := filepath.Abs(filepath.Join("..", "..", ".."))
+	if err != nil {
+		t.Fatalf("resolve repo root: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir repo root: %v", err)
+	}
+
+	outputDir := filepath.Join(t.TempDir(), "dist")
+	r := New(Config{
+		SiteName:      "Test",
+		PublicSiteURL: "http://localhost:4173",
+		OutputDir:     outputDir,
+		TemplateDir:   "site/templates",
+		AssetDir:      "site/assets",
+		SiteTheme:     "minimal-cart",
+	})
+
+	// Unsanitized legacy row: simulates data stored before write-time
+	// sanitization existed.
+	legacy := `<p>safe-paragraph</p>` +
+		`<script>EVILSCRIPT()</script>` +
+		`<p onclick="EVILHANDLER()">x</p>` +
+		`<a href="javascript:EVILURL()">link</a>` +
+		`<iframe src="https://EVILHOST.example"></iframe>` +
+		`<img src="x" onerror="EVILONERROR()">`
+	articles := []content.Article{{
+		Slug: "legacy-article", Title: "Legacy", BodyHTML: legacy, Published: true,
+	}}
+	products := []ProductData{{Slug: "p1", Name: "P", Category: "apparel", Price: 1, Stock: 1}}
+
+	if err := r.RenderAllFull(articles, products, []string{"apparel"}, map[string]string{"apparel": "Apparel"}, map[string][]ProductData{"apparel": products}, nil); err != nil {
+		t.Fatalf("RenderAllFull: %v", err)
+	}
+
+	html, err := os.ReadFile(filepath.Join(outputDir, "articles", "legacy-article", "index.html"))
+	if err != nil {
+		t.Fatalf("read article page: %v", err)
+	}
+	page := string(html)
+	for _, banned := range []string{"EVILSCRIPT", "EVILHANDLER", "EVILURL", "EVILHOST", "EVILONERROR", "javascript:", "onerror="} {
+		if strings.Contains(page, banned) {
+			t.Errorf("unsafe payload %q reached rendered article page", banned)
+		}
+	}
+	if !strings.Contains(page, "safe-paragraph") {
+		t.Errorf("safe markup missing from rendered article page")
+	}
+}

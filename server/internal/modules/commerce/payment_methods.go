@@ -69,6 +69,13 @@ func (s Service) paymentMethodRuntimeAvailable(m PaymentMethod) bool {
 	if !m.Enabled || m.ReadinessStatus != "ready" {
 		return false
 	}
+	// manual_test is a test-only method: an enabled+ready row is necessary
+	// but never sufficient — the server-only activation window must also be
+	// open. This is checked here so public listing, quote, and both order
+	// paths share one decision and no endpoint can bypass it.
+	if strings.EqualFold(strings.TrimSpace(m.Method), "manual_test") {
+		return s.manualTestAvailable()
+	}
 	if !strings.EqualFold(strings.TrimSpace(m.Method), "ecpay") {
 		return true
 	}
