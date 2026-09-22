@@ -1,129 +1,38 @@
 ---
 name: site-deployment-browser
-description: Run this starter's provider-dashboard deployment setup or audit with user login handoff, safe screenshots, and environment-variable mapping for Supabase, Cloudflare, Railway, Resend, and optional ECPay.
+description: Deploy or audit this single-site starter through Supabase, Railway, Cloudflare Pages/R2, and Resend with agent-guided dashboard handoffs and end-to-end proof. Use for a fresh deployment, provider-value refresh, or release recovery; not for generic hosting advice.
 ---
 
-# Project deployment browser
+# Deploy this starter with an agent
 
-Use this skill only for this repository's deployment path:
+The agent owns the sequence, provider navigation, non-secret settings, verification, and a clear handoff for values only the credential holder can enter. This skill is reusable across installations: **never save a particular owner's account, UID, project ID, bucket, branch, hostname, email, token name, or deployment receipt here**. Record actual non-secret identifiers and observations in the installation's deployment ledger instead.
 
-- public static site on Cloudflare Pages from `dist/`;
-- admin Vue SPA on a second Cloudflare Pages project from `admin/dist`;
-- Go API on Railway;
-- Supabase PostgreSQL and Auth;
-- Cloudflare R2 for media;
-- Resend for transactional email;
-- optional ECPay stage/production payment setup.
+Read `architecture.yaml`, `skills/site/SKILL.md`, `skills/site/references/architecture-boundaries.md`, [the field-by-field runbook](references/deployment-value-refresh.md), and the current implementation before operating. `docs/environment-configuration.md` and `docs/deployment-guide.html` contain this installation's historical/current examples; do not copy their values into another installation. Respect the repository's controlled-change gate before editing protected skills.
 
-Read `docs/deployment-guide.html` and `docs/environment-configuration.md`
-before opening provider dashboards. Inspect current repo configuration when the
-guide and implementation could have drifted.
+## Architecture and target
 
-## Current deployment target
+- Static storefront: Cloudflare Pages from `dist/`. Admin Vue SPA: a separate Pages project from `admin/dist`. The approved `functions/api/[[path]].js` proxy exists independently on both. Go on Railway is the only application backend; Supabase provides PostgreSQL/Auth, R2 media, Resend mail, and ECPay is optional.
+- Start with the actual `https://<storefront>.pages.dev` and `https://<admin>.pages.dev` as temporary end-to-end test URLs. Railway's public HTTPS origin remains behind the Pages Function. An R2 `r2.dev` development URL may serve temporary test images. Custom site/media domains and payment are not required for no-payment commerce proof; an **owned DNS-controlled** sending domain is required for Resend delivery.
+- Mark every capability `absent`, `staged`, `live`, or `proved`. Named variables, successful builds, and public 200s do not alone prove a full deployment.
 
-For the active deployment walkthrough, preserve these real identifiers in
-notes and the guide: Supabase organization `ailazytech` (ref
-`ntrysovsjzjiqfbobdai`), project `agent-safe-site-starter` (ref
-`wcjqrwchajqdyarhsriw`), project URL
-`https://wcjqrwchajqdyarhsriw.supabase.co`, and region `Southeast Asia
-(Singapore)` (`ap-southeast-1`). Do not replace these identifiers with
-anonymized placeholders. Keep passwords, connection strings, API tokens,
-deploy-hook URLs, and other credentials out of the skill, guide, screenshots,
-chat, and reports; record only their variable names, source locations, and
-destinations.
+## Inventory and handoff
 
-## Live setup ledger
+From the active dashboards, capture the Git repository and chosen release branch; HEAD/remote SHA; selected Railway account/workspace/project/environment/service, source branch, Auto Deploy, latest GitHub deployment and public origin; both Pages projects' names, production branches/builds, Function-origin variable names, and `pages.dev` URLs; Supabase project; R2 bucket/public-origin/CORS/token **status only**; Resend domain/key **status only**; and outstanding blocks. A previous workspace/service/branch is not evidence for another one. Never reveal secret literals when inspecting a variable table.
 
-The following non-secret identifiers and checkpoints were observed during the
-2026-09-15 deployment walkthrough. Keep these values intact when continuing
-this project:
+The release branch is an installation choice. Align Railway and both Pages projects independently, compare deployed Git commits, and keep source alignment separate from route health. If Railway's branch list fails, check selected account/workspace, GitHub App repository access, and project-member GitHub contributor access. Do not use `railway up` as proof of GitHub source alignment.
 
-- Supabase Auth user: `ailazytech@gmail.com`, UID
-  `68a03370-56ee-413a-8097-950e629ee46a`; the user list confirms the account
-  exists and the project has automatic RLS enabled, Data API disabled, and
-  automatic exposure of new tables disabled.
-- Cloudflare account ID: `304aea33c544c2730e9fcd141dba420a`; R2 bucket
-  `agent-safe-site-starter-assets` exists in APAC with public access disabled
-  and no custom domain configured.
-- Railway workspace: `ailazytech's Projects`; project `zealous-connection`
-  (ID `359501a3-fd3e-4669-ab1e-547df21a5b56`), production environment
-  (ID `6fbe5189-1322-4075-a1c0-ed874b8857b3`), service
-  `agent-safe-site-starter` (ID `30a26c3a-4160-4dae-99d8-d8da64c2acea`).
-  The first GitHub deployment is `Deployment successful`; the service is
-  still unexposed, uses US West, and has one replica.
-- Safe screenshots were captured for the Railway successful deployment and
-  the Supabase Auth user list. Screenshots remain session evidence and are not
-  persisted in the repository.
+Use a controllable visible task browser or clean user-provided provider tab; do not inspect unrelated tabs. Hand sign-in, MFA, CAPTCHA, and password-manager steps to the user. Before credential creation, DNS changes, new resources, production settings, deployment, test-data upload, owner creation, or external email, obtain the action-time authorization required by the browser/tool policy. Holder directly enters one-time values at destinations, never through chat or agent memory.
 
-## Browser rule
+In Cloudflare choose encrypted `Secret／秘密`, not `Text／文字`, for `DATABASE_URL` and `EDGE_SECRET`. A Text row may expose its literal in the page's accessibility tree or tool output without clicking “show.” Inspect **name and type only** through an observation path that suppresses/redacts values before output; if the tool automatically emits the full row, ask the holder to verify the type instead. If a credential was saved as Text, stop: holder generates a **new** value, removes the plaintext row, enters the replacement directly at all destinations, deploys, and re-proves. Do not retain the exposed old credential as `EDGE_SECRET_PREVIOUS`. Planned unexposed rotation is separate. Never print, screenshot, log, commit, or report secrets, private recipients, connection strings, presigned URLs, or one-time key results. No production `.env` file.
 
-Use a controllable browser session that is isolated from personal browsing as
-far as the available browser backend supports. Prefer, in order:
+## Dependency order
 
-1. A task-named browser session that is both controllable and visible.
-2. A user-opened clean Chrome profile/tab explicitly handed to the agent.
-3. A controllable agent tab marked for handoff when the backend cannot show it
-   on the desktop.
+1. **Source and database.** Confirm the chosen branch exists and source connections match. For the long-lived Railway Go process use Supabase **Shared pooler → Session mode → URI** (`Session pooler` in Connect); direct needs verified outbound IPv6 or the project's IPv4 option. Holder enters `DATABASE_URL` in Railway and storefront's render/build secret. Use only the Supabase publishable key for public Auth configuration. Migrations run through the deployment path.
+2. **Protected edge.** Holder creates one fresh `EDGE_SECRET` and enters it in Railway and each Pages project's separate Production Function environment as encrypted Secrets. Each `API_ORIGIN` is the active public Railway HTTPS origin. Deploy Railway, then redeploy **both** Pages. Prove origin `/healthz` = 200, uncredentialed direct `/api/products` = 403, and both Pages `/api/products` = 200. This is proxy proof, not media/mail or secret-storage proof.
+3. **Admin and commerce.** Supabase Auth is not staff authorization. With current authorization only, link the exact Auth UID to one active `public.staff_members` owner row; never infer role by email. Prove a fresh admin session, publish a labeled product, wait for hydrated live storefront catalog, add to cart, reach checkout's first step. That is a partial smoke, **not** a completed order loop. Read the live public checkout bootstrap: without an enabled, ready payment method, even a no-online-payment order cannot pass quote or checkout. Before an order intended to prove customer mail, also inspect the enabled `order_placed` notification template; the development seed is not production configuration. A normal customer template need not carry a test disclaimer, but must distinguish order creation from payment and fulfillment; enabling it affects every subsequent customer's order, not just the test recipient. Do not invent or enable a payment method or customer-facing template, enter contact/shipping data, or create an order without the owner's current choice and authorization; see the worksheet's [checkout readiness and authorized offline test](references/deployment-value-refresh.md#checkout-readiness-and-no-payment-test). Static SEO fallback refresh requires the repository publish/render and Pages deployment path.
+4. **R2.** Inspect bucket, exact admin-origin CORS, temporary public URL, bucket-limited Object Read & Write token. Holder enters access-key pair into Railway Secrets; non-secret account ID, bucket, public base URL go to Railway Text. Deploy Railway; put only `R2_PUBLIC_BASE_URL` into storefront Pages build and redeploy. Before test upload, check file magic bytes against extension and browser MIME; a misnamed demo image can fail presign validation even when R2 credentials are healthy. Correct a disposable upload copy's extension/MIME to match its actual encoding; do not weaken server validation or silently rewrite the source asset. Prove authenticated presign → browser PUT → API verify → product association → public image fetch with loaded dimensions. Never put keys in Pages/browser or log a presigned URL.
+5. **Resend.** Owner chooses an owned DNS-controlled sending domain/subdomain; `pages.dev` is not one. Add only current Resend-generated DNS records with authorization, wait for Verified, create domain-restricted Sending-access key. Holder enters Railway `RESEND_API_KEY` Secret and private `CONTACT_NOTIFY_TO`; `RESEND_FROM` is Railway server-only Text. Deploy. A labeled external delivery test needs separate current authorization **and explicit confirmation of the actual destination recipient** (without recording it in skill, docs, or tool output). If the address cannot be confirmed without exposing a provider secret, ask the holder to check it directly; do not submit the contact form. One contact POST only: `201` means the handler returned success after persistence and its configured sender call, **not** Resend event or inbox delivery proof (an empty API key selects the log sender). Inspect Resend event and ask the owner to check inbox **and spam** for the unique test marker; a matching message in spam proves mailbox arrival but also records an inbox-placement concern, not normal-inbox success. For spam placement, inspect that message's Resend **Insights** and the receiver's authentication results before changing code or DNS; a `Delivered` event is not inbox placement. Verify a DMARC TXT record on the actual From domain, and use the [worksheet's DMARC recovery](references/deployment-value-refresh.md#resend-交易信--email) only with explicit DNS-change authorization. If the dashboard is unavailable, leave provider-event proof pending. Check events/inquiries before any retry; inquiry is persisted before send.
+6. **Test acceptance.** Confirm fresh deployments after value changes. For dashboard-staged Railway variables, verify the exact project/environment/service and change count before the authorized Deploy action; wait until that new deployment is Active. In each Pages project, retry the latest successful **Production deployment of the chosen branch/commit** to apply changed build/Function variables, then wait for success before testing its stable `.pages.dev` URL. A temporary 403 during the Pages build is not final proof. Verify actual Pages test URLs, admin deep link/role, product/cart/checkout, R2 image, and authorized mail event independently. Keep order creation and payment distinct: if only checkout's first step was proved, report a partial commerce flow; if the owner requests a no-gateway order, prove the configured offline option, authoritative quote, one identified holder-submitted order, authorized admin readback, stock delta, and notification event separately. A buyer-note marker is helpful but may be absent; use the holder's exact order page and a narrow latest-order count/time comparison without copying a full ID or PII. `notification_logs.status=skipped` is failure, and `sent:mail` is only the sender call's success; match the specific order subject to a Resend event, then ask the holder to distinguish inbox from spam. When all test-URL commerce and mail steps are proved, call it a **no-gateway `.pages.dev` test loop**, with any spam placement stated as a deliverability gap; do not equate that result with normal-inbox success, payment, fulfillment, custom-domain cutover, or release of still-local source fixes. Report every block; do not call a partial proxy smoke test “full deployment.”
+7. **Production cutover when the owner is ready.** Choose owned site/admin/media domains, bind them to the matching Pages/R2 projects, wait for HTTPS, replace the storefront origin in Railway and storefront build values, replace both Pages Function origins only if Railway's public origin changes, update exact R2 admin-origin CORS, and redeploy/reprove all affected layers. Keep the already verified Resend sender domain; configure ECPay only as a separately requested payment release. Record the production URLs and rollback target in installation docs, never in this reusable skill.
 
-Do not inspect unrelated user tabs. If the only controllable browser exposes
-personal tabs, stop before screenshots or authenticated work and ask the user
-to hand over a clean provider tab. Login, MFA, CAPTCHA, password-manager use,
-and password entry are user-only steps.
-
-## Safe operating loop
-
-For each provider:
-
-1. Open the provider dashboard or claim the clean tab the user provided.
-2. Hand off for sign-in/MFA/CAPTCHA. Resume only after the user says the
-   provider is authenticated.
-3. Navigate to the exact settings page named in the guide.
-4. Retrieve required values into short-lived task memory only. Classify each
-   as public configuration, server-only secret, or one-time secret.
-5. Ask action-time confirmation before creating accounts/projects/resources,
-   creating keys, saving environment variables, triggering deploys, changing
-   DNS, changing payment settings, uploading files, or sending test email.
-6. Capture screenshots only on pages where secrets are hidden or absent.
-7. Verify a non-secret status page or endpoint, then clear any secret from
-   task memory.
-
-Never print, persist, screenshot, commit, or report secret values. Report
-variable names, destinations, and verification results only.
-
-Production values belong in provider dashboards. Do not create or populate
-`.env.production`. Local `.env.development.local` is in scope only when the
-user explicitly asks for local development values.
-
-## Provider map
-
-| Provider | Open | Retrieve / configure | Destination |
-|---|---|---|---|
-| Supabase | `https://supabase.com/dashboard` | Project region, transaction-pooler `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, admin user, Data API/RLS settings | Railway; Pages build variables where the guide says so |
-| Cloudflare R2 | `https://dash.cloudflare.com` -> R2 | Bucket, `R2_ACCOUNT_ID`, scoped Object Read/Write token pair, `R2_PUBLIC_BASE_URL` | Railway; Pages build variable for public base URL |
-| Resend | `https://resend.com` | Verified domain, `RESEND_API_KEY`, `RESEND_FROM`, `CONTACT_NOTIFY_TO` | Railway |
-| Railway | `https://railway.app` | Go service deploy, public Railway origin, production variables, `/healthz` status | Railway service variables |
-| Cloudflare Pages | `https://dash.cloudflare.com` -> Workers & Pages | Storefront project, admin project, build commands, `Settings -> Variables and Secrets` runtime Function variables `API_ORIGIN` and `EDGE_SECRET`, and `Settings -> Builds -> Add deploy hook` | Cloudflare Pages projects; deploy hook URL returns to Railway |
-| DNS / edge proof | Cloudflare DNS and public site URL | Custom domains, `/api/products` via Pages, direct Railway origin rejection after `EDGE_SECRET` | Cloudflare DNS and verification report |
-| ECPay optional | Stage first: `https://vendor-stage.ecpay.com.tw` | `MerchantID`, `HashKey`, `HashIV`, callback settings, one stage transaction | Railway variables and ECPay dashboard |
-
-For Supabase transaction pooler URLs, append
-`default_query_exec_mode=simple_protocol` as documented. For `EDGE_SECRET`
-rotation, use the documented overlap sequence with `EDGE_SECRET_PREVIOUS` on
-Railway before switching both Pages projects.
-
-Cloudflare's Pages build container starts clean. For the curatory storefront
-use `npm --prefix site/themes/curatory ci && make site` with output directory
-`dist`; `make site` alone fails before `vite` is installed. For the admin
-project use `npm --prefix admin ci && npm --prefix admin run build:only` with
-output directory `admin/dist`.
-
-## Completion report
-
-Return a concise non-secret report:
-
-- provider checkpoints reached;
-- screenshots captured or skipped, with the reason;
-- variable names configured and their destination only;
-- endpoint/build/deploy verification results;
-- remaining user handoffs such as login, DNS propagation, production deploy,
-  or optional ECPay stage payment.
+Use the [operator worksheet and failure map](references/deployment-value-refresh.md) for exact field destinations, Chinese/English labels, and recovery. Update installation-specific docs with timestamp, non-secret targets, statuses, observed checks, and holder handoffs while keeping this skill de-identified.

@@ -90,24 +90,111 @@ An existing root `.env` still works and is still read — you do not have to mig
 
 **Step-by-step guide with signup links, every value to collect, and a
 progress checklist:** open [`docs/deployment-guide.html`](docs/deployment-guide.html)
-in a browser.
+in a browser. For the exact current source -> destination -> deploy sequence,
+read [`skills/site-deployment-browser/references/deployment-value-refresh.md`](skills/site-deployment-browser/references/deployment-value-refresh.md)
+and use its operator worksheet. The [deployment skill](skills/site-deployment-browser/SKILL.md)
+is de-identified so another agent can guide a new installation; the documents
+here record this installation's non-secret live/historical observations and
+must not be copied as another site's settings.
+
+**2026-09-20 live checkpoint:** the holder rotated the previously exposed
+edge credential, set the storefront and admin Pages Function rows to encrypted
+**Secret**, and confirmed the same new value in Railway. Nine Railway staged
+changes were deployed; the new Railway and both Pages `staging` deployments
+are successful. The four public proxy checks are now 200/403/200/200. Railway
+lists all five R2 and three Resend variable names, storefront Pages has the
+public R2 base URL, and the Resend sender domain is Verified. An authorized
+image upload through the admin completed presign, browser PUT, API verify,
+product association, and a loaded public R2 image on the storefront. The
+contact endpoint returned `201` to one authorized labeled smoke inquiry after
+a new Railway deployment. The holder found the matching message in spam, and
+the matching Resend **Emails** row now shows `Delivered`. Mailbox arrival and
+the provider event are proved; normal-inbox placement is not. Variable names
+and domain verification alone are not enough. Use the
+[current handoff checkpoint](docs/environment-configuration.md#current-provider-handoff-2026-09-20)
+for this site's remaining proof; the
+[operator worksheet](skills/site-deployment-browser/references/deployment-value-refresh.md#operator-worksheet)
+has reusable source and destination paths. The 2026-09-16 ledger below is history.
+
+**Temporary test URLs:** [storefront](https://agent-safe-site-starter.pages.dev/)
+and [admin](https://agent-safe-site-starter-admin.pages.dev/). Their API proxy
+and the earlier admin→product→cart→checkout-first-step smoke are proved after
+the credential cutover. The admin deep link also loaded once on the public
+site, but its local redirect-source repair has not been released. R2 image
+delivery is proved on these test URLs; the labeled mail reached the holder's
+spam folder and Resend shows `Delivered`. Inbox placement remains open.
+No gateway payment was run. The earlier shopping smoke was **not a completed
+order**: the live checkout initially had two available shipping methods but no
+payment method. With the owner's authorization, a visibly labeled
+`manual_test` option (sandbox, ready, zero fee, **not charged**) was added in
+the active Supabase database. The Pages API and server quote now accept it;
+one owner-entered order has since been created: it is pending/unpaid with one
+smoke item; stock fell from 3 to 2. Its order notification was **skipped**
+because production had no `order_placed` template at the time. The owner then
+approved a normal customer-facing template distinguishing order creation from
+payment/fulfillment; the admin now shows exactly one enabled `order_placed`
+row. The first order was not retroactively mailed. The holder then submitted
+a second controlled order: it is pending/unpaid for one smoke item (NT$61),
+stock fell from 2 to 1, and its single `order_placed` log is `sent:mail` with
+nonempty rendered content and no error. Resend independently shows the
+matching order subject as `Delivered`. A holder-provided mailbox screenshot
+then showed that order notification in **spam**, alongside both earlier
+contact-test messages. Thus mailbox arrival is confirmed, but normal-inbox
+placement is not. This public test method must be
+disabled or replaced before a real-payment launch. The storefront still has
+static copy claiming card/LINE Pay/COD support; those methods are not proved.
+
+**Test-loop verdict (2026-09-20):** On the two temporary `.pages.dev` origins,
+the authorized owner can sign in and publish the labeled product with its R2
+image; the storefront hydrates the live catalog, adds it to cart, obtains a
+server quote, and places an unpaid `manual_test` order. The database recorded
+the order and one-unit stock decrement; the enabled normal template produced
+one `sent:mail` log, Resend marked the matching email `Delivered`, and the
+holder found it in spam. This is a proved **no-gateway test commerce loop**,
+not real-payment, fulfillment, normal-inbox, custom-domain, or unreleased admin
+redirect-source acceptance. See the [dated evidence and remaining release
+checks](docs/environment-configuration.md#current-provider-handoff-2026-09-20).
+
+The earlier Resend message's **Insights** flagged missing DMARC. With the
+holder's authorization, a monitoring-only `_dmarc` TXT (`v=DMARC1; p=none;`)
+was published in the sending zone on 2026-09-20; the Cloudflare record list
+and a fresh public DNS lookup both showed it. No R2 key, Railway setting, or
+Pages deployment changed. One separately authorized new labeled contact test
+returned `201`; Resend now shows `Delivered` and its DMARC item under
+**Doing great** with `p=none`. The holder's screenshot places that newer
+contact test in **spam** too; the receiving mailbox's SPF/DKIM/DMARC verdict
+is still unknown. The monitoring policy alone did not solve inbox placement
+in this observation. Do not infer a single cause or change DNS again without
+examining redacted receiver authentication/spam-reason evidence. See the
+[mail deliverability follow-up](docs/environment-configuration.md#mail-deliverability-follow-up-dns-published).
+
+**Observed recovery record:** the [controlled deployment evidence](specs/changes/deployment-dashboard-ledger/evidence.md)
+separates the completed admin-to-cart-to-order/stock proof from the skipped
+customer notification and untested gateway work, and from the remote admin
+source-release check.
 
 ### Where to sign up and what to set
 
 | Service | Sign up at | Collect | Set on |
 |---|---|---|---|
-| Supabase | [supabase.com/dashboard](https://supabase.com/dashboard) — project page top-right **Connect** button has all three values (keys also under Settings → API Keys) | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Railway (+ Pages build for DB/auth) |
-| Cloudflare R2 | [dash.cloudflare.com](https://dash.cloudflare.com) → R2 | `R2_ACCOUNT_ID`, API token pair, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | Railway (+ `R2_PUBLIC_BASE_URL` on Pages) |
-| Resend | [resend.com](https://resend.com) | `RESEND_API_KEY`, verified domain for `RESEND_FROM` | Railway |
+| Supabase | [supabase.com/dashboard](https://supabase.com/dashboard) — project page top-right **Connect** button has all three values (keys also under Settings → API Keys) | `DATABASE_URL`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` | Railway; storefront Pages build needs the DB URI and public auth values; admin Pages needs public auth values only |
+| Cloudflare R2 | [dash.cloudflare.com](https://dash.cloudflare.com) → **儲存空間和資料庫（Storage & databases）** → **R2 物件儲存（R2 Object Storage）** | `R2_ACCOUNT_ID`, bucket-scoped Object Read & Write key pair, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | Railway; `R2_PUBLIC_BASE_URL` additionally goes to the storefront Pages **build** only |
+| Resend | [resend.com](https://resend.com) → **Domains** / **API Keys** | verified owned domain or subdomain, `RESEND_API_KEY`, `RESEND_FROM`, `CONTACT_NOTIFY_TO` | Railway only; no Pages or browser value |
 | Railway | [railway.app](https://railway.app) → Deploy from GitHub | Railway domain or `api.` subdomain | — |
 | Cloudflare Pages | dash.cloudflare.com → Workers & Pages | Pages domains, deploy hook URL | — |
 | ECPay (optional) | [vendor.ecpay.com.tw](https://vendor.ecpay.com.tw) (stage: [vendor-stage.ecpay.com.tw](https://vendor-stage.ecpay.com.tw)) | `MerchantID`, `HashKey`, `HashIV` | Railway |
 
 Key details that bite if missed:
 
-- **Supabase transaction pooler** (port 6543): append
-  `&default_query_exec_mode=simple_protocol` to `DATABASE_URL` — pgx
-  prepared statements need it. Direct connection (5432) does not.
+- **Supabase connection method:** this long-running Railway Go service uses
+  **Connect → Direct connection string → Shared pooler → Session mode → URI**
+  (the dashboard labels it `Session pooler`) as the IPv4-safe default. Enter
+  that URI directly as `DATABASE_URL` on Railway and
+  as an encrypted storefront Pages build secret; do not route it through a
+  Pages Function. Use direct connection only after verified Railway outbound
+  IPv6 or the Supabase IPv4 add-on. Transaction pooler is only for a future
+  short-lived/serverless runtime, where pgx needs
+  `default_query_exec_mode=simple_protocol`.
 - **Supabase Data API settings** (Project Settings → Data API): nothing
   in this architecture calls the auto-generated REST API — the browser
   never queries Supabase and the Go API connects over the postgres
@@ -115,6 +202,15 @@ Key details that bite if missed:
   tables**; enable **automatic RLS** as a harmless deny-by-default
   safety net (the `postgres` role bypasses RLS, so the backend is
   unaffected). Supabase Auth is a separate service and keeps working.
+- **Supabase Auth account is not an admin grant:** a successful sign-in
+  creates a session only. The Go API grants capabilities only when
+  `public.staff_members.supabase_user_id` exactly matches the Auth user ID,
+  its `status` is `active`, and its staff role is supported. It never
+  falls back to matching email. Provision the first active owner only with
+  current user authorization, then reload the public admin app and require
+  it to display `owner`; see
+  [`docs/environment-configuration.md`](docs/environment-configuration.md)
+  and the deployment skill for the field-by-field procedure.
 - **`SITE_THEME`** selects which theme `make site` builds and renders
   (`curatory` for this storefront; default `minimal-cart`).
 - **`SITE_ORIGIN`** is the single CORS-allowed browser origin — set it to
@@ -124,14 +220,47 @@ Key details that bite if missed:
   same-origin `/api/*` to `API_ORIGIN` (the Railway URL) and injects the
   header — browsers never learn the origin, and direct origin hits get
   403. No `api.` subdomain or Transform Rule is needed. `/healthz` is
-  exempt so Railway probes still work. Rotation is zero-outage: set
+  exempt so Railway probes still work. **Planned, uncompromised** rotation is zero-outage: set
   `EDGE_SECRET_PREVIOUS` to the outgoing value on Railway alongside the
-  new `EDGE_SECRET`, switch both Pages projects to the new value, then
-  remove `EDGE_SECRET_PREVIOUS` (see `docs/environment-configuration.md`).
-- **Admin SPA** needs `admin/public/_redirects` (`/* /index.html 200`,
-  already shipped). Leave `ADMIN_API_BASE` unset — it defaults to
-  same-origin `/api`, which the admin project's own Pages Function proxy
-  forwards to Railway.
+   new `EDGE_SECRET`, switch both Pages projects to the new value, then
+   remove `EDGE_SECRET_PREVIOUS` (see `docs/environment-configuration.md`).
+  For today's exposed Text value, never extend its validity with
+  `EDGE_SECRET_PREVIOUS`; use the emergency cutover in the checkpoint and
+  accept a short API interruption.
+- **Cloudflare secret type is a release gate:** the Cloudflare Add dialog may
+  default to **Text** (`文字`). For `DATABASE_URL` and `EDGE_SECRET`, select
+  **Secret** / **Encrypt** before entry and verify the saved row is encrypted.
+  A row with the right name but Text type is a compromised value: rotate it,
+  delete the row, and recreate it as a Secret; do not deploy or reuse it.
+- **Admin SPA** must not add `/* /index.html 200`: Cloudflare Pages rejects
+  that catch-all as an infinite loop. With no top-level `404.html`, Pages uses
+  its default SPA fallback for non-asset routes. Leave `ADMIN_API_BASE` unset
+  so it defaults to same-origin `/api`, which the admin project's own Pages
+  Function proxy forwards to Railway.
+- **R2 has five different source fields, not one generic setup step:**
+  `R2_ACCOUNT_ID` is the non-secret value under **R2 物件儲存（R2 Object Storage）
+  → 概觀（Overview）→ 帳戶詳細資訊（Account details）→ 帳戶 ID（Account ID）** and is
+  Railway Text. The Object Read & Write key pair comes from **管理 API 令牌
+  （Manage API Tokens）→ 帳戶 API 權杖（Account API Tokens）→ 建立 Account API
+  權杖（Create Account API Token）**, scoped to the one bucket,
+  and both values are Railway Secrets. `R2_PUBLIC_BASE_URL` is Text on Railway
+  and the storefront Pages build only; first save the narrow browser-upload
+  CORS rule. The Chinese-dashboard field map, deployment order, and failure
+  table are in
+  [`docs/environment-configuration.md`](docs/environment-configuration.md#r2-media-deployment).
+- **Resend has three different runtime roles:** first verify an owned domain or
+  sending subdomain in **Domains → Add Domain** (a `*.pages.dev` hostname is
+  not an owned DNS zone and cannot serve as the production sender). Copy every
+  generated DNS row into the matching Cloudflare zone, verify the domain, then
+  create an **API Keys → Create API Key** credential with **Sending access**
+  restricted to that domain. Put only `RESEND_API_KEY` in a Railway **Secret**;
+  put the matching sender such as `品牌 <orders@mail.example.com>` in Railway
+  `RESEND_FROM` **Text**. `CONTACT_NOTIFY_TO` is the private management inbox
+  for website contact-form notices, not the recipient for customer order
+  notices; keep it server-only and protected. The complete Chinese explanation
+  plus the English dashboard labels, DNS mapping, test boundary, and failure
+  table are in
+  [`docs/environment-configuration.md`](docs/environment-configuration.md#resend-mail-deployment).
 
 ### Where production configuration lives
 
@@ -154,20 +283,28 @@ table and the browser-safe allowlist.
    build, so `DATABASE_URL` must be reachable from Pages builds.
 2. **Admin (second Pages project):** build command
    `npm --prefix admin ci && npm --prefix admin run build:only`, output
-   `admin/dist`.
+   `admin/dist`. It needs `AUTH_MODE`, `SUPABASE_URL`, and
+   `SUPABASE_PUBLISHABLE_KEY`; it does not need `DATABASE_URL`.
 3. **API proxy (both projects):** repo-root `functions/api/[[path]].js`
    is picked up by every Pages project. Set **runtime** env vars
    `API_ORIGIN` (Railway URL) and `EDGE_SECRET` (same value as Railway)
-   under each project's Settings → Environment variables — these are not
+   under each project's Settings → Variables and Secrets — these are not
    build vars and never enter a bundle.
-4. **Publish trigger (alternative):**
+4. **Catalog freshness and publish trigger:** the curatory storefront's
+   Vue islands fetch the live, same-origin `/api/products` route after
+   hydration, so an active product can immediately appear in the
+   browser's shop/cart/checkout flow even when the first static HTML
+   fallback still reflects the prior renderer pass. Wait for hydration
+   before diagnosing a missing product.
+5. **Static/SEO refresh (alternative):**
    `go run ./server/tools/publish` renders `dist/` as a pre-check
    (aborting on failure with the existing dist preserved), then POSTs
    the Pages **deploy hook** URL from `CF_DEPLOY_HOOK_URL`, which makes
    Pages rebuild from the connected Git branch — that build runs
    `make site` and renders from the production database. No dist upload
-   happens. Admin publish actions only flip content state in the
-   database; run `tools/publish` from CI or manually to take them live.
+   happens. Use this from CI or manually when the static no-JavaScript/SEO
+   snapshot must refresh; the deploy hook is not required for the hydrated
+   no-payment commerce smoke flow.
 
 ## Repository map
 

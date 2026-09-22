@@ -1,0 +1,189 @@
+{
+  "change_id": "deployment-dashboard-ledger",
+  "revision": 25,
+  "status": "Applying",
+  "decision_authority": "Repository owner/user",
+  "approval_basis": "The user requested the full Railway/Pages/Supabase/R2/Resend deployment flow, skill, and guide across the 2026-09-16 walkthrough, including detailed handoffs, first-owner authorization, and no-payment commerce smoke. On 2026-09-19 the user required a de-identified skill and chose Cloudflare Pages development URLs as temporary test origins. On 2026-09-20 the holder confirmed a new encrypted edge credential, entered R2/Resend Railway values, and authorized the Railway and Pages deployments. The holder subsequently authorized a labeled R2 smoke image upload and product association, and requested a personal-info/key audit of skill and docs. The holder later identified the owner-controlled management recipient and authorized one labeled contact notification test after a new Railway deployment. The holder confirmed the unique test message arrived in their spam folder. The holder then supplied a Resend Emails screenshot showing the matching test subject with Delivered status. The user asked to improve spam placement and allowed local skill/document changes without a commit. The following instruction authorized the already described Cloudflare DNS/DMARC step; one monitoring-only TXT record was published and publicly resolved. No R2 key or mail code was changed, and the instruction does not authorize copying secrets, a blind resend, or releasing the still-local redirect-source repair. The holder subsequently confirmed the current private management destination and authorized exactly one new labeled post-DMARC contact test; it returned 201 and the matching Resend event was Delivered. Mailbox placement and receiver authentication are still pending. Read-only live checkout data exposed zero public payment methods. The user explicitly authorized a publicly visible test-only manual/no-charge option and one marked order with holder-entered controlled details, without gateway payment, fulfillment, cancellation/restock, source publishing, or Git commit.",
+  "repository_baseline": "1665e08327a4656a0e3457058f4ee7c5fd8ac182",
+  "supersedes": [
+    "project-deployment-browser-skill"
+  ],
+  "applies_to": [
+    ".ai/scope.json",
+    "admin/public/_redirects",
+    "README.md",
+    "docs/deployment-guide.html",
+    "docs/environment-configuration.md",
+    "skills/site-deployment-browser/SKILL.md",
+    "skills/site-deployment-browser/references/**",
+    "specs/changes/deployment-dashboard-ledger/**"
+  ],
+  "requirements": [
+    "REQ-001",
+    "REQ-002",
+    "REQ-003",
+    "REQ-004",
+    "REQ-005",
+    "REQ-006",
+    "REQ-007",
+    "REQ-008"
+  ],
+  "acceptance": [
+    "AC-001",
+    "AC-002",
+    "AC-003",
+    "AC-004",
+    "AC-005",
+    "AC-006",
+    "AC-007",
+    "AC-008"
+  ],
+  "strict_evidence": true,
+  "evidence_requirements": {
+    "AC-002": [
+      "security-review"
+    ],
+    "AC-003": [
+      "security-review"
+    ],
+    "AC-004": [
+      "security-review"
+    ],
+    "AC-005": [
+      "security-review"
+    ],
+    "AC-006": [
+      "security-review"
+    ],
+    "AC-007": [
+      "security-review"
+    ],
+    "AC-008": [
+      "security-review"
+    ]
+  },
+  "evidence": {
+    "REQ-001": {
+      "observed_revision": 25,
+      "proof": "The deployment skill and its worksheet contain no live account, user, project, branch, hostname, bucket, email, or deployment receipt; they derive targets per installation. README and deployment guides retain this installation's dated non-secret observations, exact test Pages URLs, pending blocks, and no credential literals.",
+      "status": "passed"
+    },
+    "AC-001": {
+      "observed_revision": 25,
+      "proof": "The installation-specific ledger records the Active Railway deployment, successful storefront/admin retries, fresh 200/403/200/200 statuses, and authenticated R2 image upload/product/public-fetch proof. It keeps mail and unreleased admin source repair separate. The reusable skill contains no actual deployment identities.",
+      "status": "passed"
+    },
+    "REQ-002": {
+      "observed_revision": 25,
+      "proof": "The reusable skill derives each installation's chosen branch and requires independent Railway/Pages source alignment, GitHub App/member access checks, deployed-commit proof, and no railway up shortcut; this installation's guide records staging and its current non-secret target.",
+      "status": "passed"
+    },
+    "AC-002": {
+      "observed_revision": 25,
+      "proof": "The current Railway service retained staging and its new deployment e500ca98 is Active; both Pages Production retries used staging commit bac7c78. The recovery documentation preserves the identity/cache/support escalation boundary and makes public routing a separate final hop. Security review receipt: receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "REQ-003": {
+      "observed_revision": 25,
+      "proof": "The de-identified worksheet maps Supabase, Railway, storefront/admin Pages build and Function destinations, correct Secret/Text types, Session pooler URI, source/deploy order, four endpoint checks, no-payment smoke, and emergency exposed-secret cutover. Current-site values/status remain only in the guide and ledger.",
+      "status": "passed"
+    },
+    "AC-003": {
+      "observed_revision": 25,
+      "proof": "The holder rotated the formerly exposed edge value, confirmed encrypted Secret type in both Pages Functions and the same new value at Railway, and authorized the Railway + two Pages redeployments. All became successful/Active on 2026-09-20, followed by fresh 200/403/200/200 checks. These do not prove R2 or mail. Security review receipt: receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "REQ-004": {
+      "observed_revision": 25,
+      "proof": "The invalid tracked catch-all redirect was removed locally and the local admin build emits no redirect asset, but the new remote retry still used commit bac7c78 without that deletion. A public deep link worked once; the repaired source has not shipped.",
+      "status": "pending"
+    },
+    "AC-004": {
+      "observed_revision": 25,
+      "proof": "The 2026-09-20 public deep link returned 200 and displayed 商品, but the admin retry did not include the local `_redirects` deletion. After the source release, confirm the invalid redirect warning is absent and a clean-session deep link works. Security review receipt: receipts/security-review.md.",
+      "status": "pending",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "REQ-005": {
+      "observed_revision": 25,
+      "proof": "The skill, canonical refresh sheet, README, environment guide, and HTML guide distinguish Supabase Auth from staff authorization; require an exact UID-to-active-staff-role mapping; prohibit email fallback; require current confirmation before first-owner creation or promotion; and require a fresh public-admin role check.",
+      "status": "passed"
+    },
+    "AC-005": {
+      "observed_revision": 25,
+      "proof": "The first authenticated account was denied while `public.staff_members` was empty. With current explicit authorization, one active owner row was linked to the exact Auth user ID; a new public admin session displayed `owner` and protected controls. No credential was recorded. Security review receipt: receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "REQ-006": {
+      "observed_revision": 25,
+      "proof": "The bilingual R2 worksheet maps sources, narrow token/CORS/public origin, destinations, deploy order, and presign→PUT→verify→product/public-fetch proof without a site-specific bucket. It now covers actual-byte MIME/extension mismatches and records no secret or full object key. The live media path is proved on the temporary test origins.",
+      "status": "passed"
+    },
+    "AC-006": {
+      "observed_revision": 25,
+      "proof": "With explicit test-upload authorization, a non-sensitive correctly named JPEG copy completed authenticated presign, browser R2 PUT, API verify, and association with the labeled smoke product. A fresh admin readback retained the verified image and the storefront image loaded from the public R2 development hostname at 864 × 1152. No credential, presigned URL, or full object key was recorded. Security review receipt: receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "REQ-007": {
+      "observed_revision": 25,
+      "proof": "The reusable bilingual Resend worksheet maps owned-domain DNS, Verified status, restricted Sending key, Railway-only destinations, contact/order recipient distinction, bounded delivery proof, and evidence-led spam/DMARC diagnosis with explicit DNS permission. The holder confirmed mailbox arrival in spam and supplied a matching Resend Emails row showing Delivered.",
+      "status": "passed"
+    },
+    "AC-007": {
+      "observed_revision": 25,
+      "proof": "The owner-selected sending domain is Verified. After the holder explicitly identified an owner-controlled management recipient and authorized one test, Railway deployment 7e9ab485 became Active, origin health and storefront products returned 200, and exactly one labeled contact POST returned 201. The holder confirmed the unique marker arrived in spam, then supplied a Resend Emails screenshot showing that same test subject with Delivered status. This proves the approved flow's provider outcome and actual mailbox arrival; spam placement is recorded separately as a deliverability-quality finding. The recipient literal, key, screenshot, and email-share URL stay out of repository evidence, and the test was sent once. Security review receipt: receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    },
+    "REQ-008": {
+      "observed_revision": 25,
+      "proof": "The de-identified skill and worksheet cover an authorized single-row manual test method, public API/quote proof, holder-entered order with narrow readback, and an enabled normal order-placed template prerequisite. They distinguish order creation from payment/fulfillment, prohibit blind retry of a skipped empty-rendered notification, and require separate consent for a second order/recipient. Installation docs record non-sensitive state only.",
+      "status": "passed"
+    },
+    "AC-008": {
+      "observed_revision": 25,
+      "proof": "The first holder order was pending/unpaid, with one item and stock 3 to 2; its missing-template notification was skipped, not resent. After owner approval of one enabled normal `order_placed` template, the holder submitted a second controlled order. Narrow readback found two orders total, latest pending/unpaid `manual_test`, one item, total NT$61, stock 2 to 1. Its sole order notification was `sent:mail` with nonempty rendered content and zero errors. The Resend subject matched the holder's open order page in memory and showed Delivered. A later holder-provided spam-folder screenshot showed the matching second-order message: mailbox arrival is confirmed in spam, not normal inbox. Buyer-note markers were absent. No customer data, full ID, token, screenshot, or message content is retained. Security review receipt: receipts/security-review.md.",
+      "status": "passed",
+      "receipts": [
+        {
+          "kind": "security-review",
+          "path": "receipts/security-review.md"
+        }
+      ]
+    }
+  }
+}

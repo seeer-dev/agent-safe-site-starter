@@ -88,7 +88,7 @@
     五個服務、一份 checklist。照順序走完全部就能上線。
     所有 secret 只設在平台端的環境變數，<strong>不進這個 repo、不進任何檔案</strong>。
   </p>
-  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-15（API 改走 Pages Function 同源代理、Supabase 新版 Connect/API Keys 頁面、Data API 開關建議、publish 流程與 EDGE_SECRET 零中斷輪換程序）</small></p>
+  <p class="sub" style="margin-top:.5rem"><small>文件更新：2026-09-20（Railway／Pages 代理及 R2 商品圖片已實測；聯絡測試信抵達垃圾郵件，Resend 顯示 Delivered，正常收件匣投遞待改善）</small></p>
 </header>
 
 <div class="arch">Cloudflare Pages ── 靜態前台 (dist/) + 後台 SPA
@@ -104,9 +104,55 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
   <div class="step-num">A</div>
   <div class="step-body">
     <h2>Agent 協作跑通模式 <span class="tag">登入 handoff + 安全取值</span></h2>
+    <p>這份說明保留本次安裝的公開測試網址，不保存個人帳號、UID 或密鑰。可重用的 agent 流程見 <code>skills/site-deployment-browser/SKILL.md</code>。目前以 <a href="https://agent-safe-site-starter.pages.dev/" target="_blank" rel="noopener">前台 Pages 測試網址</a> 與 <a href="https://agent-safe-site-starter-admin.pages.dev/" target="_blank" rel="noopener">後台 Pages 測試網址</a> 驗收；edge 代理、R2 商品圖片、Resend <code>Delivered</code> 事件與測試信抵達垃圾郵件均已證實。正常收件匣投遞品質及後續 source release 檢查仍待處理；金流未測。</p>
     <div class="card">
-      <div class="note"><strong>本次實際部署目標：</strong>Supabase organization <code>ailazytech</code>（ref <code>ntrysovsjzjiqfbobdai</code>）；project <code>agent-safe-site-starter</code>（ref <code>wcjqrwchajqdyarhsriw</code>）；project URL <code>https://wcjqrwchajqdyarhsriw.supabase.co</code>；區域 <code>Southeast Asia (Singapore) ap-southeast-1</code>。這些識別資訊保留原值寫入紀錄，secret 只記變數名稱、來源位置與目的地。</div>
-      <div class="note"><strong>本次已取得的非 secret 狀態：</strong>Supabase Auth 使用者 <code>ailazytech@gmail.com</code>（UID <code>68a03370-56ee-413a-8097-950e629ee46a</code>）已存在；Cloudflare account ID <code>304aea33c544c2730e9fcd141dba420a</code> 的 R2 bucket <code>agent-safe-site-starter-assets</code> 已建立，位於 APAC，公開存取關閉且尚未綁 custom domain；Railway workspace <code>ailazytech's Projects</code> 已建立 project <code>zealous-connection</code>（ID <code>359501a3-fd3e-4669-ab1e-547df21a5b56</code>），production environment（ID <code>6fbe5189-1322-4075-a1c0-ed874b8857b3</code>）內的 service <code>agent-safe-site-starter</code>（ID <code>30a26c3a-4160-4dae-99d8-d8da64c2acea</code>）首次 GitHub deployment 已顯示 <code>Deployment successful</code>；服務目前仍是 unexposed、US West、1 replica。截圖已取得並只保留在本次操作紀錄，不寫入 repo。</div>
+      <div class="note"><strong>2026-09-20 部署階段快照（後續媒體補驗見下方）：</strong>持有人已把前後台 Pages Production Function 的 <code>EDGE_SECRET</code> 設為加密 Secret，並確認 Railway 使用同一個新值。Railway 9 筆 staged changes 已套用；新部署 <code>e500ca98-93d7-4e95-867c-e6377232e20f</code> 為 Active，19 個 service variables 含五個 R2 與三個 Resend 名稱。前台 Pages 重試部署 <code>cba35b37-9dc3-4e5c-a6c5-065f5e018c4e</code> 與後台 <code>ca05ef2b-1788-4518-bb7f-f58c98e17207</code> 均由 <code>staging</code> commit <code>bac7c78</code> 成功。完成後 <code>GET</code> Railway <code>/healthz</code> = 200、未帶 edge 憑證直打 <code>/api/products</code> = 403、前台／後台 Pages 同源 <code>/api/products</code> = 200／200。後台 <code>/res/minimal-cart-products</code> 直接載入一次為 200 並顯示「商品」，但本機 <code>admin/public/_redirects</code> 的刪除仍未釋出。當時 R2 bucket/CORS/測試 URL 與已上線變數只算設定證據；Resend <code>已驗證寄信網域</code> 已 Verified，但寄信事件及收件仍未驗證。不能以部署成功取代媒體與郵件的實測。</div>
+      <div class="note"><strong>本次實際部署目標：</strong>持有人在 Supabase、Railway 與 Cloudflare 控制台選定同一站點的專案及環境；本文件不保存個人信箱、Auth UID、組織或帳戶識別碼。取值入口與目的地見下方表格。</div>
+      <div class="note"><strong>2026-09-16 歷史快照：</strong>Supabase Auth 帳號、Railway staging 來源與兩個 Pages 專案當時已建立；個人信箱、Auth UID 和 Cloudflare 帳戶識別碼不保存在部署文件。早期狀態已由 2026-09-20 的實查取代。</div>
+      <div class="note"><strong>2026-09-19 已解決的安全事件：</strong>當時前台 Pages 正式環境變數 <code>EDGE_SECRET</code> 曾是<strong>文字（Text）</strong>。持有人後來產生全新值、把前台重建為加密<strong>秘密（Secret）</strong>，同步更新 Railway 和後台，並於 2026-09-20 完成三處部署與四個端點的重驗。沒有把暴露舊值放入 <code>EDGE_SECRET_PREVIOUS</code>，agent 不複製或記錄密鑰。</div>
+      <div class="note"><strong>2026-09-19 歷史實查：</strong>當時 R2、Railway 媒體欄位與 Resend 網域尚未完成；此狀態已由上方 2026-09-20 紀錄取代，不能拿舊狀態判斷目前部署。</div>
+      <div class="note"><strong>2026-09-20 媒體補驗（取代上方「R2 待實測」的較早快照）：</strong>取得當下授權後，後台上傳非敏感測試圖，依序完成 presign、R2 PUT、API verify；儲存到已標示的測試商品後重新開啟確認關聯，前台 <code>/shop/</code> 圖片從公開 R2 開發網域載入且尺寸為 864 × 1152。原始示範資產副檔名雖為 <code>.png</code>，內容卻是 JPEG；第一次 presign 因 <code>.jpg</code> 與瀏覽器 MIME <code>image/png</code> 不一致被拒。只用正確 <code>.jpg</code> 副檔名的暫存副本測試，未改原檔或放寬伺服器驗證。寄信測試尚未送出：請先由持有人確認 <code>CONTACT_NOTIFY_TO</code> 的實際管理收件人，再另行授權一次標示清楚的測試。</div>
+      <div class="note"><strong>2026-09-20 聯絡通知補驗（取代上方「尚未送出」快照）：</strong>持有人已指定並授權一個由其控制的管理收件地址；未在文件中保存該地址或任何 key。Railway 新部署 <code>7e9ab485-9dc9-4d72-868f-89fa21cadd48</code> 為 Active；origin <code>/healthz</code> 與前台同源 <code>/api/products</code> 均回 200。一筆明確標記的 <code>POST /api/contact</code> 回 201，沒有重送。這證明詢問已存入且目前設定的 mail sender 回傳成功；若 <code>RESEND_API_KEY</code> 為空，程式會用 log sender，因此 201 不等於 Resend 事件或收件匣送達。Resend 儀表板事件讀取逾時，仍需看 Emails／Logs 與持有人收件匣；不得盲目再次提交，因為每次 POST 都會新增詢問。</div>
+      <div class="note"><strong>2026-09-20 收件補驗：</strong>持有人確認唯一測試標記與訊息已抵達其信箱的<strong>垃圾郵件</strong>，不是一般收件匣。這足以證明這筆通知實際送到指定信箱，但不證明正常收件匣投遞率；Resend <strong>Emails／Logs</strong> 仍因儀表板逾時未能獨立查證。不要重送同一個測試；正式釋出前另行檢查寄件網域的驗證狀態與投遞事件，勿從單一垃圾郵件結果推斷確切原因。此紀錄不包含持有人的收件地址。</div>
+      <div class="note"><strong>2026-09-20 Resend 事件補驗（取代上方事件待查狀態）：</strong>持有人提供 Resend <strong>Emails</strong> 列表畫面；同一筆測試主旨顯示 <strong>Delivered</strong>。這補上了供應商投遞事件，且與先前持有人在垃圾郵件匣找到唯一測試標記相符。<code>Delivered</code> 不表示進一般收件匣；垃圾郵件投遞仍待排查。畫面中的私人收件地址、郵件內容與任何分享連結均不存入文件，也沒有再次寄信。</div>
+      <div class="note warn"><strong>2026-09-20 垃圾郵件原因排查（DNS 尚未發布）：</strong>同封信的 Resend <strong>Emails → Insights</strong> 明確提示 <strong>No DMARC record found</strong>。所選寄件網域的 Cloudflare <strong>DNS → 記錄（Records）</strong> 沒有 <code>_dmarc</code>，公開 DNS TXT 查詢亦不存在。郵件程式已同時附 HTML 與純文字版本，沒有證據指向程式內容是唯一原因。已在 Cloudflare 表單預填一筆 <strong>TXT</strong>、名稱 <code>_dmarc</code>、內容 <code>v=DMARC1; p=none;</code>、TTL 自動，但<strong>未按儲存</strong>；這份本機文件不會發布 DNS。持有人明確同意發布後，才儲存並驗證公開 DNS；後續新信須另行授權，並分別核對 DMARC 驗證與一般／垃圾郵件落點。<code>p=none</code> 是監測政策，並非保證進一般收件匣。不要填入未建立的 <code>rua</code> 報告信箱，也不要逕自改為 <code>quarantine</code> 或 <code>reject</code>。</div>
+      <div class="note"><strong>2026-09-20 DMARC DNS 已發布（取代上方「尚未發布」快照）：</strong>持有人授權後，在寄件網域的 Cloudflare <strong>網站 → DNS → 記錄（Records）</strong> 儲存一筆 <code>_dmarc</code> TXT，內容 <code>v=DMARC1; p=none;</code>、TTL 自動。Cloudflare 清單出現新記錄，公開 DNS TXT 查詢也回相同值。這是監測政策；舊信的 Insights 和垃圾郵件落點是歷史結果，不會被追溯改寫。這一步沒有動 R2 API 權杖、Railway、Pages 或程式碼，也不需因 DNS-only 變更重新部署。尚未寄新信，故新信的 SPF／DKIM／DMARC 結果與一般收件匣落點未驗證；先取得另一次寄信同意並確認實際收件人，再做一次帶標記測試，不盲目重送聯絡表單。</div>
+      <div class="note"><strong>2026-09-20 DMARC 後單封新信補驗：</strong>持有人再次確認管理收件人並授權後，先確認前台同源商品 API 回 200，再送出唯一一筆標記 <code>DEPLOYMENT_DMARC_20260920_B1</code> 的聯絡測試；<code>POST /api/contact</code> 回 201。Resend <strong>Emails</strong> 顯示這封新信 <strong>Delivered</strong>；其 <strong>Insights → Include valid DMARC record</strong> 已列在 <strong>Doing great</strong>，顯示 <code>p=none</code>。這是 Resend 辨識新 DNS 政策，不等於收件端的 <code>dmarc=pass</code>，也不等於進一般收件匣。尚待持有人確認新信在一般／垃圾郵件匣及 SPF／DKIM／DMARC 摘要。沒有再次重送，也不保存私人地址或完整標頭。</div>
+      <div class="note warn"><strong>2026-09-20 完整購物閉環的新阻塞：</strong>新查的前台 <code>/api/storefront/bootstrap</code> 有兩種可用配送方式，但 <code>payment_methods</code> 為空；獨立的 <code>GET /api/payment-methods</code> 也回零筆。前台結帳必須選付款方式，Go quote／訂單會拒絕缺少或未 ready 的方式；先前只走到 checkout 第一步，<strong>沒有成立訂單</strong>。後台「商店 → 付款方式」目前只能編輯既有列，空清單不能直接新增。持有人需決定並授權哪一種線下／測試付款方式可公開顯示，才能使用由持有人自行輸入的測試聯絡／配送資料建立一筆標記訂單。訂單會寫入資料庫、扣庫存並在成立後嘗試通知；取消與補庫存須另行驗證，不可把它說成無副作用。金流請款、出貨未在本次授權內。</div>
+      <div class="note"><strong>2026-09-20 測試付款已補齊（取代上方空清單阻塞）：</strong>持有人同意公開測試站加入明確標示「測試用人工付款（不請款）」的選項。所選 Supabase 專案 <strong>SQL Editor／SQL 編輯器 → New query／新增查詢</strong> 先以非敏感欄位查得付款表零列，後以碰撞檢查僅新增一筆 <code>pm-manual-smoke</code>／<code>manual_test</code>，<code>sandbox</code>、<code>ready</code>、<code>enabled=true</code>、費用 0；查詢回傳該列。前台 Pages <code>GET /api/payment-methods</code> 和 bootstrap 各顯示唯一選項。無個資的 <code>POST /api/quote</code> 對 1 件 smoke 商品與配送 <code>s2s</code> 回小計 NT$1、配送 NT$60、付款費用 0、總額 NT$61。商品下單前庫存 3、已售 0。這是資料庫設定，無須重新部署 Railway／Pages；<strong>報價成功不是成立訂單</strong>。目前仍待持有人自行在前台填可控資料、送出一次標記訂單，再查後台／庫存／通知。不要誤認已付款或已出貨。</div>
+      <div class="note warn"><strong>2026-09-20 持有人已下單（取代上方「待送出」狀態），通知尚未打通：</strong>從持有人提供的前台訂單頁，對指定訂單只查非敏感欄位：一筆訂單、1 件 smoke 商品、<code>pending</code>／<code>unpaid</code>、<code>manual_test</code>，小計 NT$1、持有人所選配送 NT$120、總額 NT$121。這與先前另一配送方式的 NT$61 報價不同且合理。商品庫存 3 → 2，已售計數仍為 0；建議的 buyer-note 標記未填，不因此重建訂單。<code>order_placed</code> 通知日誌僅一筆 <code>skipped</code>，原因 <code>template not found</code>；正式資料庫的 <code>notification_templates</code> 表為空。這一筆沒有送到 Resend。補建範本不會自動補寄；目前後台「重試」複製原日誌的空白主旨／內容，仍會略過，不能盲點。須先授權可如實說明「未付款／不請款／不出貨」的範本與可控收件人，再另行同意第二筆測試單（會再扣 1 件）才能驗證自動訂單信。此紀錄不保存姓名、手機、Email、地址或完整查單憑證。</div>
+      <div class="note"><strong>2026-09-20 正式訂單成立模板已啟用（取代上方「缺模板」的現況）：</strong>持有人選擇一般顧客文案並在儲存前確認：主旨 <code>【質選所】訂單成立通知 {{order_id}}</code>，內文使用 <code>{{customer_name}}</code>、<code>{{order_id}}</code>、<code>{{total}}</code>；告知訂單已收到及金額，付款／配送以訂單查詢為準，不把訂單建立寫成已付款或已出貨。公開後台 <strong>通知（Notifications）→ 通知模板（Notification templates）</strong> 寫入後顯示唯一一筆 <code>order_placed</code>、<strong>啟用</strong>。這是資料庫設定，不需 Railway／Pages 重新部署，亦沒有因儲存而寄信。第一筆訂單的 <code>skipped</code> 日誌仍是歷史失敗；不能按「重試」補寄空白內容。尚待另外授權由持有人自行提交第二筆可控收件人的測試訂單，再分別驗證新日誌、Resend 事件與收件匣；目前不可稱自動訂單信已驗收。</div>
+      <div class="note"><strong>本次安裝的取值入口：</strong><a href="https://railway.com/dashboard" target="_blank" rel="noopener">Railway Dashboard</a> → 選站點 service → Variables；<a href="https://dash.cloudflare.com/" target="_blank" rel="noopener">Cloudflare Dashboard</a> → Workers &amp; Pages／R2；<a href="https://resend.com/domains" target="_blank" rel="noopener">Resend Domains</a> 與 <a href="https://resend.com/api-keys" target="_blank" rel="noopener">API Keys</a>。先在各平台選對帳戶與環境，勿從其他人的文件抄 ID；可重用流程見部署技能與 operator worksheet。</div>
+      <div class="note"><strong>2026-09-16 值更新狀態：</strong>憑證持有人已直接完成資料庫與 edge credential 交接，沒有把值交給 agent 或寫入 repo。Railway 已套用 13 項 staged changes，deployment <code>c904769a-d36e-4a8b-8581-251f56d79b7b</code> 顯示成功；Variables 介面顯示 11 個 service-variable 名稱（9 個 non-secret，加上 <code>DATABASE_URL</code> 與 <code>EDGE_SECRET</code>）。storefront retry deployment <code>580ffc26-8d3b-46ec-8e4a-f912d9c4b348</code> 與 admin retry deployment <code>87d0566f-ce84-4828-9699-97f1fa1c3997</code> 都成功。實際值只存在各平台控制台，本文件只記變數名稱、來源與目的地，不建立環境變數 commit。</div>
+      <div class="note"><strong>已完成的 edge、媒體與通知實收驗證：</strong>Railway <code>/healthz</code> 回 200；未帶 hop credential 直打 Railway <code>/api/products</code> 回 403；storefront 與 admin Pages 的 <code>/api/products</code> 各自回 200。已用 active smoke 商品跑到前台購物車與 checkout 第一步；後台圖檔上傳完成 presign、R2 PUT、API verify 與商品關聯，前台圖片確實載入。標記測試信實際抵達垃圾郵件，Resend Emails 顯示 <code>Delivered</code>；一般收件匣投遞仍待改善，不得宣稱正式投遞品質已達標。</div>
+      <div class="note warn"><strong>Git source 對齊與 public routing 已完成，尚有驗收邊界。</strong>Pages production 與現用 Railway service source 都是 <code>staging</code>，但它們是獨立設定。admin retry build 使用的遠端 commit 尚未包含本機刪除 <code>admin/public/_redirects</code> 的變更；由使用者釋出 source 後仍須確認 warning 消失與無登入狀態的 deep link。R2 圖片、Resend <code>Delivered</code> 事件及測試信抵達垃圾郵件已證實；正常收件匣投遞品質仍待查核。</div>
+      <div class="note"><strong>首次後台授權已驗證：</strong>Auth 帳號曾可成功登入、但因 <code>public.staff_members</code> 沒有對應列而被安全拒絕。取得當下授權後，已用精確 Auth UID 建立一筆 active owner 連結；重新載入公開 admin 後台已顯示 <code>owner</code>。這不會揭露任何密碼或 credential，也不表示可依 email 自動授權後續帳號。</div>
+      <div class="note"><strong>商品到訂單／庫存與第二筆自動通知已實測：</strong>owner 已建立 active、明確標示的 smoke 商品；公開 <code>/shop/</code> 的初始靜態 fallback 會暫時保留上次 render 的 0 件數字，等 curatory island hydration 後它透過同源 <code>/api/products</code> 顯示商品。購物車、checkout、權威報價與持有人實際下單已通；付款維持未付，沒有金流請款。第一筆通知因缺範本被略過；啟用正常範本後的第二筆已有 <code>sent:mail</code> 與 Resend <code>Delivered</code>。收件匣落點尚待確認。若只要刷新無 JS／SEO 的靜態快照，才另走 <code>tools/publish</code> + deploy hook。</div>
+      <div class="note"><strong>2026-09-20 第二筆訂單追驗：</strong>持有人在正常 <code>order_placed</code> 範本啟用後，於前台 Pages 自行提交第二筆受控訂單。只讀回查確認總訂單數為 2，最新一筆為 <code>pending</code>／<code>unpaid</code>、<code>manual_test</code>、1 件測試商品，商品 NT$1 加配送 NT$60，合計 NT$61；庫存從 2 降為 1。該筆只有一則 <code>order_placed</code> 日誌，狀態 <code>sent:mail</code>，已渲染主旨／內容且無錯誤；Resend Emails 中相同訂單主旨為 <strong>Delivered</strong>，與持有人開啟的訂單頁編號在記憶體內比對一致。持有人隨後提供垃圾郵件匣截圖，該筆訂單信與先前兩封聯絡測試信均在其中：實際抵達已證實，但<strong>一般收件匣投遞未過關</strong>。買家備註的建議標記未出現，不能當作佐證；文件不保存完整訂單編號、客戶資料、郵件內容或查單憑證。收件端 SPF／DKIM／DMARC 判定及垃圾郵件原因仍未知；不能只憑 <code>Delivered</code> 或監控用 <code>p=none</code> 推斷原因。第一筆缺範本的 skipped 日誌沒有補寄；未建立第三筆、未請款、未出貨或補庫存。</div>
+      <div class="note"><strong>目前結論：Cloudflare Pages 測試網址的「不走金流」購物閉環已通。</strong>後台 owner 上架測試商品與 R2 圖片 → 前台即時商品、購物車、結帳與後端報價 → 持有人送出 <code>manual_test</code> 未付款訂單 → 資料庫建單且庫存扣 1 → 正常 <code>order_placed</code> 範本自動寄信 → Resend <code>Delivered</code> → 收件者在垃圾郵件看到訂單信。上方「付款方式空白」與「第一筆缺通知範本」是已排除的<strong>歷史阻塞</strong>，不是現在的測試站狀態。未驗收項目分開列：一般收件匣投遞、實際金流／已付款與出貨、正式自訂網域、靜態 SEO 快照刷新，以及尚未釋出的 admin redirect 原始碼修正。測試付款公開可見，上正式站前須停用或替換；目前不要把此測試結果稱為正式營運上線。</div>
+      <h3>本次實際排障速查</h3>
+      <table>
+        <tr><th>看到的狀況</th><th>確認原因</th><th>可重做的處理與驗收</th><th>目前狀態</th></tr>
+        <tr><td>Railway 仍連 <code>main</code>／branch 清單載入失敗</td><td>Pages 與 Railway 各自保存 Git source；切換 Railway 帳號／workspace 後，GitHub integration 對應也會改變。</td><td>先鎖定目前 workspace、project、environment、service；確認 source 是 <code>staging</code>、Auto Deploy 開啟，且成功 deployment 詳情明確標示 GitHub <code>staging</code> commit。</td><td>已驗證</td></tr>
+        <tr><td>Railway 只有 Supabase 公開設定，沒有資料庫／edge 值</td><td><code>DATABASE_URL</code> 與 <code>EDGE_SECRET</code> 是 current service 的 deploy gate，不會由 <code>SUPABASE_URL</code> 或 publishable key 自動推得。</td><td>持有人直接填 Shared/Session pooler URI 與 edge secret；確認兩個名稱存在後才 Apply staged changes／部署。</td><td>已驗證；不記錄值</td></tr>
+        <tr><td>直打 Railway <code>/api/products</code> 是 403</td><td>沒有經過 Pages Function 的請求缺少 edge hop credential；這是 origin 保護預期行為。</td><td>用 <code>/healthz = 200</code>、直打 products <code>= 403</code>、storefront/admin Pages products 各自 <code>= 200</code> 一起驗收。</td><td>已驗證</td></tr>
+        <tr><td>已登入但顯示「此帳號無管理員權限」</td><td>Supabase Auth session 不等於後台授權；初始 <code>staff_members</code> 沒有精確 UID 的 active owner 列。</td><td>取得當下授權後建立 exact-UID active owner，重新載入公開 admin，要求伺服器顯示 <code>owner</code>；不能用 email 補授權。</td><td>已驗證</td></tr>
+        <tr><td>新上架商品在前台第一眼看起來是 0 件</td><td>靜態 fallback 是上次 render；curatory island hydration 後才由同源 <code>/api/products</code> 取得即時資料。</td><td>等待商品卡片／數量 hydration 後再加購物車、到 checkout 首步。只有要刷新無 JS／SEO 靜態快照才跑 <code>tools/publish</code> + deploy hook。</td><td>已驗證到付款前</td></tr>
+        <tr><td>配送方式可選，但付款方式空白</td><td>付款方式是獨立的 <code>public.payment_methods</code> 設定；空表使前台無法報價或建立訂單，後台空清單只有編輯沒有新增。</td><td>先取得持有人同意公開顯示測試付款；在正確 Supabase 專案 <strong>SQL Editor／SQL 編輯器</strong> 只查必要欄位；空表時僅插入一筆 <code>manual_test</code>／sandbox／ready／enabled／零費用並回查。確認 Pages <code>/api/payment-methods</code> 與 bootstrap 各僅一筆，再做無個資 <code>/api/quote</code>。</td><td>付款、報價、訂單及扣庫存已驗證</td></tr>
+        <tr><td>訂單成立，卻沒有收到訂單信</td><td>第一筆成立時正式資料庫的 <code>notification_templates</code> 為空；其 <code>order_placed</code> 日誌是 <code>skipped/template not found</code>，未呼叫 Resend。開發環境 seed 不會自動帶入正式資料庫。</td><td>持有人已在授權後台 <strong>通知（Notifications）→ 通知模板（Notification templates）→ 新增（Create）</strong> 建立正常文案且啟用的 <code>order_placed</code>。第二筆受控訂單已驗證 <code>sent:mail</code> 與 Resend <code>Delivered</code>，並由持有人確認抵達垃圾郵件。舊 skipped 日誌主旨／內容為空，按「重試」只會產生另一 skipped。若要改善收件匣落點，先看收件端去識別化的 SPF／DKIM／DMARC 判定與垃圾郵件原因；勿盲目重寄或修改 DNS。</td><td>第二筆寄送、投遞、垃圾郵件落點已驗；正常收件匣未過</td></tr>
+        <tr><td>admin 還有 <code>/* /index.html 200</code> infinite-loop warning</td><td>目前遠端 build 的 commit 仍早於本機刪除 <code>admin/public/_redirects</code>。</td><td>下一次使用者釋出 <code>staging</code> 後，確認 warning 消失，並直接請求一個 admin deep link 回 <code>200</code>。</td><td>待 source release</td></tr>
+      </table>
+      <h3>人工測試付款 → 訂單的安全驗收</h3>
+      <ol>
+        <li>在正確 Supabase <strong>SQL Editor／SQL 編輯器 → New query／新增查詢</strong> 選 <strong>Primary Database／主要資料庫</strong>；先讀 <code>public.payment_methods</code> 的 <code>id, method, provider_label, environment, readiness_status, enabled, fee</code>。有合適既有列時改用後台「商店（Store）→ 付款方式（Payment methods）」的編輯，不要新增重複列。空表且已獲同意時，才做單筆防碰撞 INSERT，填唯一非敏感 ID、<code>manual_test</code>、<code>測試用人工付款（不請款）</code>、<code>sandbox</code>、<code>ready</code>、<code>true</code>、<code>fee=0</code>、目前 Unix 秒數；要求 <code>RETURNING</code> 回查。不要查訂單個資或擷取管理員 token。</li>
+        <li>在前台 Pages 驗 <code>GET /api/payment-methods</code> 與 <code>/api/storefront/bootstrap</code> 各只有該方法，再以現存商品 SKU、可用配送 ID 和 <code>payment_method=manual_test</code> 呼叫無寫入的 <code>POST /api/quote</code>，記下總額和零手續費。這步不需要重新部署，也不算訂單。</li>
+        <li>持有人從 <a href="https://agent-safe-site-starter.pages.dev/checkout/" target="_blank" rel="noopener">前台結帳</a> 自行填可控姓名、09 開頭手機、Email、真實可控配送資料；付款選「測試用人工付款（不請款）」；在買家備註填不含個資的唯一測試標記。核對金額後只按一次送出；若逾時，先查後台是否已有相同標記，不要盲目重送。</li>
+        <li>若本次要驗收訂單信，在下單<strong>之前</strong>先查 <code>notification_templates</code> 的 <code>order_placed</code> 是否存在、啟用且主旨／內容非空。開發 seed 的範本不會自動進正式資料庫；取得持有人對文案及未來自動通知的同意後，在後台 <strong>通知 → 通知模板 → 新增</strong> 建立一般顧客文案。可使用 <code>{{customer_name}}</code>、<code>{{order_id}}</code>、<code>{{total}}</code>，但不要照搬開發 seed 的「盡快出貨」承諾；訂單成立不等於已付款或已出貨。本次已建立並啟用唯一 <code>order_placed</code>，後續安裝仍須自行核對。只改 DB 範本無需重新部署。</li>
+        <li>在授權的後台／SQL 查該標記，僅記必要訂單狀態、<code>pending</code>／<code>unpaid</code>、方法、數量、總額；比對商品庫存，再查 order notification log／Resend 事件。成功下單會保留聯絡／配送個資並扣庫存；通知在交易後盡力發送，即使失敗訂單也不回滾。若是 <code>skipped/template not found</code>，後補範本不會自動補寄；此系統的「重試」沿用空白渲染內容，仍會略過。先取得另一次訂單授權，不要盲目重試或改寫日誌。不要寫入收件人、地址、查單 token、郵件內容。付款請款、改已付款、取消補庫存與出貨均須另行授權。</li>
+      </ol>
+      <div class="note warn">測試付款方法目前對公開 Pages 測試站可見；前台靜態文案另宣稱信用卡／LINE Pay／貨到付款，但尚未配置或驗證，不可據此對外承諾。正式上線前停用或替換此方法並校正文案；此步不屬於已完成的金流驗收。</div>
+      <p>這是本專案 2026-09-16 的實測紀錄；完整欄位來源、填寫位置、secret 型別與 stop conditions 請看 <code>skills/site-deployment-browser/references/deployment-value-refresh.md</code>。</p>
+
       <p>若由 Codex 協助跑完整部署，使用 <code>skills/site-deployment-browser</code>。瀏覽器要用乾淨、可控制的部署用 profile 或由你明確交給 agent 的分頁；登入、MFA、CAPTCHA、密碼管理器一律由你操作，登入完成後再交回 agent 進入內頁取值與驗證。</p>
 
       <div class="note warn">
@@ -118,16 +164,16 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr>
           <td>Supabase</td>
           <td>Project → Connect、Settings → API Keys、Authentication → Users、Project Settings → Data API</td>
-          <td><code>DATABASE_URL</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code>、管理員帳號、Data API/RLS 開關</td>
+          <td><code>DATABASE_URL</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code>、登入帳號與精確 UID→<code>staff_members</code> owner 對應、Data API/RLS 開關</td>
           <td>Railway；Pages build 需要的公開/建置值</td>
-          <td>pooler URL 已加 <code>default_query_exec_mode=simple_protocol</code>；Data API 關、auto expose 關、automatic RLS 開</td>
+          <td>Railway 的長駐 Go service 選 <strong>Shared pooler → Session mode → URI</strong>（dashboard 顯示為 <code>Session pooler</code>）；只有未來改為短暫 serverless runtime 時才選 Transaction pooler 並加 <code>default_query_exec_mode=simple_protocol</code>；Data API 關、auto expose 關、automatic RLS 開</td>
         </tr>
         <tr>
           <td>Cloudflare R2</td>
-          <td>Cloudflare Dashboard → R2 Object Storage → bucket、Manage R2 API Tokens</td>
-          <td><code>R2_ACCOUNT_ID</code>、bucket、Object Read/Write token pair、<code>R2_PUBLIC_BASE_URL</code></td>
-          <td>Railway；<code>R2_PUBLIC_BASE_URL</code> 也設到 Pages build</td>
-          <td>bucket public URL 可載圖；token scope 只限指定 bucket</td>
+          <td>Cloudflare Dashboard → <strong>儲存空間和資料庫（Storage &amp; databases）</strong> → <strong>R2 物件儲存（R2 Object Storage）</strong></td>
+          <td><code>R2_ACCOUNT_ID</code>、指定 bucket 的 Object Read/Write key pair、<code>R2_BUCKET</code>、<code>R2_PUBLIC_BASE_URL</code>、瀏覽器上傳 CORS</td>
+          <td>Railway；<code>R2_PUBLIC_BASE_URL</code> 另設 storefront Pages <strong>build</strong></td>
+          <td>token scope 只限指定 bucket；CORS 只允許 admin origin 的 <code>PUT</code></td>
         </tr>
         <tr>
           <td>Resend</td>
@@ -190,8 +236,8 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <table>
         <tr><th>值</th><th>在哪裡拿</th><th>設到</th></tr>
         <tr><td><code>DATABASE_URL</code><span class="secret">SECRET</span></td>
-            <td><strong>Connect</strong> → Type 選 <code>postgres</code>（或 URI）→ <strong>Transaction pooler</strong> 分頁那串 <code>aws-*.pooler.supabase.com:6543</code>，<code>[YOUR-PASSWORD]</code> 換成建專案時設的 DB password。長得像 <code>postgresql://postgres.xxxx:[密碼]@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres</code></td>
-            <td>Railway + Pages build</td></tr>
+            <td><strong>Connect</strong> → <strong>Direct connection string</strong> → Connection Method 選 <strong>Session pooler</strong>（Supabase 的 Shared pooler / Session mode）→ 格式選 <code>URI</code>。這個 Railway Go API 是長駐程序，使用有界的 <code>database/sql</code>/<code>pgx</code> 連線池；以 shared session pooler（通常是 port 5432）作為 IPv4-safe 預設。直接複製對話框顯示的完整 URI，但只由持有資料庫密碼的人貼入 Railway。</td>
+            <td>Railway；若靜態 render 真的需要 production DB，只能在對應 Pages build secret 直接輸入，不能拿 Pages Functions 當轉交位置</td></tr>
         <tr><td><code>SUPABASE_URL</code></td>
             <td><strong>Connect</strong> → App Frameworks 分頁顯示的 <code>https://xxxx.supabase.co</code>；或 Settings → API 頁的 Project URL</td>
             <td>Railway + Pages + browser</td></tr>
@@ -201,14 +247,18 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       </table>
 
       <div class="note warn">
-        <strong>Transaction pooler 必加參數：</strong>若用 pooler（port 6543）字串，尾端要加
-        <code>&amp;default_query_exec_mode=simple_protocol</code> — pgx 的 prepared statement 在
-        transaction 模式下需要它。用 direct connection（port 5432）則不用。
+        <strong>本專案的連線方式是 Session pooler，不是 Transaction pooler：</strong>Railway 是長駐 Go service，先選
+        <strong>Shared pooler → Session mode → URI</strong>（dashboard 顯示為 <code>Session pooler</code>），並原樣使用 Supabase 顯示的字串，不自行加
+        <code>default_query_exec_mode=simple_protocol</code>。只有未來把 runtime 改成短暫／serverless 連線時，才選 Transaction pooler（port 6543）並加該參數；若已明確啟用且驗證 Railway outbound IPv6，才可改選 direct connection。選擇依據見
+        <a href="https://supabase.com/docs/guides/database/connecting-to-postgres" target="_blank" rel="noopener">Supabase connection guide</a>。
       </div>
 
-      <h3>建管理員帳號</h3>
+      <h3>建立登入帳號與後台 owner</h3>
       <ul>
         <li>Authentication → Users → <strong>Add user → Create new user</strong>，填後台登入用的 email + 密碼。</li>
+        <li><strong>登入帳號不等於後台權限：</strong>Go API 只會用 Auth User ID 精確比對 <code>public.staff_members.supabase_user_id</code>；該列還必須是 <code>active</code>，並有支援的 <code>role_label</code>（例如 <code>owner</code>）。它不會以 email 補比對。</li>
+        <li>第一次若 Auth 使用者已存在但 <code>public.staff_members</code> 是空的，進 Table Editor → <code>public.staff_members</code>，先取得當下明確授權再建立唯一 owner 列：唯一 staff ID、預定 display name/email、精確 Auth User ID、<code>role_label = owner</code>、<code>status = active</code>、目前的 <code>updated_unix</code>。這是正式權限異動，不能由部署或 email 相同推定。</li>
+        <li>回到公開 admin Pages，以同一登入 session 重新載入；只有伺服器顯示 <code>owner</code> 且受保護控制項出現，才可建立／上架 smoke test 商品。若仍顯示沒有管理員權限，檢查精確 UID、目前 Supabase 資料庫、migrations 與 active 狀態，不能繞過後端 resolver。</li>
         <li>若要 Google / LINE 登入：Authentication → Sign In / Providers 開啟，OAuth client secret 設在 Supabase 後台（<strong>不是</strong>環境變數）。</li>
       </ul>
 
@@ -236,21 +286,44 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <h3>申請 / 控制台</h3>
       <p><a class="signup" href="https://dash.cloudflare.com" target="_blank" rel="noopener">dash.cloudflare.com →</a> 註冊後左側 R2 Object Storage（需綁付款方式，免費額度內不收費）。</p>
 
-      <h3>要蒐集的資訊</h3>
+      <h3>中英文後台逐欄位取值 <small>Chinese ↔ English</small></h3>
+      <p>每個選單名稱都寫成<strong>中文（English）</strong>：Cloudflare 切成中文時看前半段，切成英文時看括號內名稱；欄位用途與型別不變。</p>
       <table>
-        <tr><th>值</th><th>在哪裡拿</th><th>設到</th></tr>
-        <tr><td><code>R2_ACCOUNT_ID</code><span class="secret">SECRET</span></td>
-            <td>R2 Overview 右側的 Account ID</td><td>Railway</td></tr>
+        <tr><th>值</th><th>Cloudflare 後台（中文／English）</th><th>複製什麼</th><th>設到哪裡／型別</th></tr>
+        <tr><td><code>R2_ACCOUNT_ID</code></td>
+            <td><strong>儲存空間和資料庫（Storage &amp; databases）</strong> → <strong>R2 物件儲存（R2 Object Storage）</strong> → <strong>概觀（Overview）</strong> → <strong>帳戶詳細資訊（Account details）</strong> → <strong>帳戶 ID（Account ID）</strong></td>
+            <td>顯示的 Account ID</td><td>Railway <strong>Text</strong>；這是帳戶識別碼，不是 secret</td></tr>
         <tr><td><code>R2_ACCESS_KEY_ID</code><span class="secret">SECRET</span></td>
-            <td rowspan="2">R2 → Manage R2 API Tokens → Create API token（Object Read &amp; Write，指定 bucket）— secret 只顯示一次</td>
-            <td>Railway</td></tr>
-        <tr><td><code>R2_SECRET_ACCESS_KEY</code><span class="secret">SECRET</span></td><td>Railway</td></tr>
-        <tr><td><code>R2_BUCKET</code></td><td>建的 bucket 名稱</td><td>Railway</td></tr>
+            <td rowspan="2"><strong>R2 物件儲存（R2 Object Storage）</strong> → <strong>概觀（Overview）</strong> → <strong>管理 API 令牌（Manage API Tokens）</strong> → <strong>帳戶 API 權杖（Account API Tokens）</strong> → <strong>建立 Account API 權杖（Create Account API Token）</strong>。權限選 <strong>Object Read &amp; Write</strong>，限制為<strong>只套用指定 bucket</strong> <code>agent-safe-site-starter-assets</code>。</td>
+            <td>完成頁的 <strong>Access Key ID</strong></td><td>Railway <strong>Secret</strong></td></tr>
+        <tr><td><code>R2_SECRET_ACCESS_KEY</code><span class="secret">SECRET</span></td><td>只顯示一次的 <strong>Secret Access Key</strong></td><td>Railway <strong>Secret</strong>；不進 chat、文件或 Pages</td></tr>
+        <tr><td><code>R2_BUCKET</code></td><td><strong>R2 物件儲存（R2 Object Storage）</strong> → <strong>概觀（Overview）</strong> → 表格欄位 <strong>貯體（Buckets）</strong></td><td><code>agent-safe-site-starter-assets</code></td><td>Railway <strong>Text</strong></td></tr>
         <tr><td><code>R2_PUBLIC_BASE_URL</code></td>
-            <td>bucket → Settings → Public access：開 <code>r2.dev</code> 子網域，或綁自訂網域</td>
-            <td>Railway + Pages build</td></tr>
+            <td><code>agent-safe-site-starter-assets</code> → <strong>設定（Settings）</strong> → <strong>公用開發 URL（Public Development URL）</strong> → <strong>啟用（Enable）</strong>（測試）；正式上線改 <strong>自訂網域（Custom Domains）</strong> → <strong>新增（Add）</strong></td>
+            <td>Cloudflare 顯示的 Public Bucket URL／已連線自訂網域，<strong>去掉結尾 <code>/</code></strong></td>
+            <td>Railway <strong>Text</strong> + storefront Pages <strong>Production build Text</strong>；不設 admin 或 Pages Function</td></tr>
       </table>
-      <div class="note">建議綁自訂子網域（如 <code>img.你的網域</code>）取代 r2.dev — 品牌一致、可過自己網域的快取規則。</div>
+      <div class="note"><strong>API token 是一組憑證：</strong>兩個 key 都直接由持有人貼到 Railway 的 Secret 欄位。不要改用全帳號 user token，也不要把它們放到 Cloudflare Pages。<code>r2.dev</code> 只給測試；正式圖片請完成 Custom Domain 的 DNS／公開存取確認後，再同時換 Railway 與 storefront build 的 <code>R2_PUBLIC_BASE_URL</code> 並重新部署。</div>
+      <h3>瀏覽器直傳必填 CORS</h3>
+      <p>Bucket <code>agent-safe-site-starter-assets</code> → <strong>設定（Settings）</strong> → <strong>CORS 原則（CORS Policy）</strong> → <strong>新增（Add）</strong>，貼入後按<strong>儲存（Save）</strong>：</p>
+      <pre><code>[
+  {
+    "AllowedOrigins": ["https://agent-safe-site-starter-admin.pages.dev"],
+    "AllowedMethods": ["PUT"],
+    "AllowedHeaders": ["Content-Type"],
+    "ExposeHeaders": ["ETag"],
+    "MaxAgeSeconds": 3600
+  }
+]</code></pre>
+      <div class="note">admin 改用自訂網域時，只替換 <code>AllowedOrigins</code> 為完整 HTTPS origin；不要用 <code>*</code>。後台先向 API 取得短效 presign，再直接 PUT 到 R2，瀏覽器不會也不該取得 R2 key。</div>
+      <h3>R2 的部署與驗收順序</h3>
+      <ol>
+        <li>先儲存 CORS，測試環境再在 <strong>公用開發 URL（Public Development URL）</strong> 依 Cloudflare 提示輸入 <code>allow</code>，取得 <code>r2.dev</code> URL。</li>
+        <li>持有人建立 bucket-scoped Account API token，五個 <code>R2_*</code> 變數依上表填入 Railway；兩個 key 是 Secret，其餘三個是 Text。</li>
+        <li>Railway 按 <strong>Deploy</strong>，等待新的 deployment 成功；storefront Pages 的 Production <strong>build</strong> 只補 <code>R2_PUBLIC_BASE_URL</code>，再觸發新的 storefront deployment。</li>
+        <li>以有 <code>media.upload</code> 權限的後台帳號上傳非敏感 JPEG/PNG/GIF，必須依序驗證 presign → R2 PUT → API verify → <code>verified/product-images/</code> → 商品關聯 → 前台公開圖片。任一段缺失都不能說 R2 已打通。</li>
+        <li>上傳前核對檔案 magic bytes、副檔名和瀏覽器 MIME。若 presign 回「副檔名與 Content-Type 不符」，先查示範圖是否其實是 JPEG；以正確副檔名的非敏感暫存副本測試，不改寫原始素材、不放寬 API 驗證。記錄圖片載入尺寸，不記錄完整 verified key 或短效簽名 URL。</li>
+      </ol>
     </div>
   </div>
 </div>
@@ -266,17 +339,19 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
 
       <h3>設定步驟</h3>
       <ul>
-        <li>Domains → <strong>Add Domain</strong>：輸入你的網域，照畫面在 DNS（Cloudflare）加 SPF / DKIM 記錄，等 Verify。</li>
-        <li>API Keys → <strong>Create API Key</strong>（Sending access）。</li>
+        <li><strong>Domains → Add Domain</strong>：選可控制 DNS 的自有網域或寄信 subdomain（例如 <code>mail.你的網域</code>）；<code>*.pages.dev</code> 不能驗證為 production sender。</li>
+        <li>Resend 目前以英文 UI 為主：按畫面生成的每一列 DNS，回 Cloudflare <strong>網站（Websites）→ DNS → 記錄（Records）→ 新增記錄（Add record）</strong> 完整填入。SPF／DKIM 都要存在；若有 CNAME，選 <strong>僅 DNS（DNS only）</strong>，不要開 proxy。</li>
+        <li>回 Resend 按 <strong>Verify DNS Records</strong>，只在 domain 顯示 <strong>Verified</strong> 後，才到 <strong>API Keys → Create API Key</strong> 建 key。</li>
+        <li>key 選 <strong>Sending access</strong>；若畫面可選 domain，限制為剛驗證的 domain。不要選 Full access，也不要把 key 貼到 Pages 或 chat。</li>
       </ul>
 
       <table>
         <tr><th>值</th><th>內容</th><th>設到</th></tr>
-        <tr><td><code>RESEND_API_KEY</code><span class="secret">SECRET</span></td><td>建立的 API key（只顯示一次）</td><td>Railway</td></tr>
-        <tr><td><code>RESEND_FROM</code></td><td><code>質選所 &lt;orders@你的網域&gt;</code>（網域須已驗證）</td><td>Railway</td></tr>
-        <tr><td><code>CONTACT_NOTIFY_TO</code></td><td>客服通知收件信箱</td><td>Railway</td></tr>
+        <tr><td><code>RESEND_API_KEY</code><span class="secret">SECRET</span></td><td>建立的 key（只顯示一次）；直接由持有人輸入</td><td>Railway <strong>Secret</strong></td></tr>
+        <tr><td><code>RESEND_FROM</code></td><td><code>品牌名稱 &lt;orders@已驗證網域&gt;</code>；<code>@</code> 後必須與 Verified domain／subdomain 完全一致</td><td>Railway <strong>Text</strong>，server-only</td></tr>
+        <tr><td><code>CONTACT_NOTIFY_TO</code><span class="secret">SECRET</span></td><td>站方控制的聯絡表單管理收件信箱；不是 customer order recipient</td><td>Railway <strong>Secret</strong>，server-only</td></tr>
       </table>
-      <div class="note">沒設 <code>RESEND_API_KEY</code> 不會壞 — 通知會記成 log 不寄出，之後可在後台「通知日誌」一鍵重試。</div>
+      <div class="note">程式在沒有 <code>RESEND_API_KEY</code> 時會改用 log sender；有 key 但沒有正確 <code>RESEND_FROM</code> 仍不算完成。部署後先確認 <code>/healthz</code>；真實聯絡表單／訂單信會發送外部 email，需當下確認。聯絡表單會先保存再寄信，失敗時先查 Resend <strong>Emails / Logs</strong>，不要盲目重送。</div>
     </div>
   </div>
 </div>
@@ -290,7 +365,22 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <h3>申請 / 部署</h3>
       <p><a class="signup" href="https://railway.app" target="_blank" rel="noopener">railway.app →</a> New Project → Deploy from GitHub Repo → 選這個 repo。<code>railway.toml</code> 已配好 Docker build、部署前自動 <code>migrate</code>、<code>/healthz</code> 健康檢查。</p>
 
+      <h3>讓 Railway 跟 Pages 使用同一個 Git 分支</h3>
+      <div class="note"><strong>目標：</strong>前台 Pages production branch 與現用 Railway production service source 都使用 <code>staging</code>。兩者各自儲存設定，改 Pages 不會改 Railway；同一個 repo 也能連到多個 Railway workspace。</div>
+      <div class="note"><strong>先鎖定實際部署目標：</strong>在動任何設定前，記下目前 console 選中的 workspace、project ID、production environment ID、service ID、repo、source branch 與 service 是否已有 public domain。切換 Railway 帳號或 workspace 後，舊 service 的 domain、變數與健康檢查結果一律只能當歷史紀錄，不能直接套到新 service。</div>
+      <ol>
+        <li>先唯讀確認遠端分支與提交：<code>git ls-remote --heads origin main staging</code>。本次成功部署的來源是 <code>staging</code> commit <code>1665e08</code>；日後操作仍要重新查 ref，不把這個 SHA 當固定值。</li>
+        <li>Railway service → <strong>Settings</strong> → <strong>Service Source / GitHub</strong>，把 trigger branch 設成 <code>staging</code>。若出現 <strong>Apply n changes</strong>，先確認變更內容是 <code>Branch: main → staging</code>；source 下拉顯示 <code>staging</code> 本身還不代表已儲存。</li>
+        <li><strong>Deploy Changes</strong> 會套用 production source 並啟動部署，必須在按下前取得使用者確認。完成後應同時看到 source <code>staging</code>、Auto Deploy 已啟用、最新 deployment 顯示 <code>Deployment successful</code>，而 Details 的 <code>Deployed via GitHub</code> 指向正確 repo、branch 與 SHA。</li>
+        <li>在 Deploy Logs 確認程序已監聽設定的 port。service 有 public domain 才能驗證 <code>/healthz</code>；若仍顯示 <code>Unexposed service</code>，明確記為「部署成功、但公網 health 尚未驗證」，不要誤報成 end-to-end 完成。</li>
+        <li>最後才驗證 Cloudflare Pages：Pages production branch 應為 <code>staging</code>，且 Production Function 的 <code>API_ORIGIN</code> 必須指向<strong>現用</strong> Railway public origin。建立 Railway domain 或更新 <code>API_ORIGIN</code> 都會改 provider state，要各自取得確認；完成後驗證 Pages <code>/api/products</code> 回 200，direct Railway <code>/api/products</code> 在 <code>EDGE_SECRET</code> 啟用時回 403。</li>
+        <li>若 branch picker 無法載入，或 Source 還顯示 <code>main</code> 但控制項被停用並標示 <code>Auto deploy unavailable</code>，先到 Account Settings → Account Integrations → GitHub，確認 Railway GitHub App 對 <code>seeer-dev/agent-safe-site-starter</code> 有 repo access，且沒有 pending permission update。確認至少一位 Railway 專案成員已連結有 contributor access 的 GitHub 帳號，並比對 Railway identity、repo owner 與 Railway App installation owner；這是整合／快取問題，不代表 <code>staging</code> 不存在。</li>
+      </ol>
+      <div class="note warn"><strong>控制台無法使用時的 fallback：</strong>只有在 Railway CLI 已安裝、已登入且已取得使用者確認時，才使用 <code>railway service source connect --repo seeer-dev/agent-safe-site-starter --branch staging --project &lt;current-project-id&gt; --environment &lt;current-production-environment-id&gt; --service &lt;current-service-id&gt;</code>。三個 ID 必須從目前選中的 console target 複製，不能沿用另一個帳號／workspace 的值。它會改 service source；若 Railway 將變更列為 staged，仍要透過已確認的 <strong>Deploy Changes</strong> 套用。不要用 <code>railway up</code> 取代，因為它上傳本機工作目錄，無法證明 Git source 已對齊；也不要自動安裝或登入 CLI。</div>
+      <div class="note warn"><strong><code>Auto deploy unavailable</code> 的處理：</strong>先確認至少一位 Railway project member 的已連結 GitHub 帳號有 contributor access，且 Railway GitHub identity 與 repo/App installation identity 都可用，再可在專案畫布走 Add → GitHub Repository → Refresh 讓 Railway 重整 repo cache，回來檢查 Source。這是 provider 操作，執行前要確認；不要直接斷開 source 或重裝 App。若仍維持停用，記錄<strong>現用</strong> project、environment、service ID、repo、目前 branch、目標 <code>staging</code>、banner、最後部署狀態及每個未部署 commit 的 SHA／UTC 時間，交給 Railway support 要求重新註冊 GitHub installation mapping。CLI 若回報 repo authorization、project member 或 credentials 錯誤，也要先解掉這個對應問題。</div>
+
       <h3>Variables 分頁設這些</h3>
+      <div class="note warn"><strong>每個 Railway service 都有自己的 Variables。</strong>切換帳號／workspace 或建立新 service 後，逐一核對下列變數名稱與目的地；不要把舊 service 的 runtime 值複製進文件、chat、commit 或另一個 service。變更值與儲存後重新部署都要在 action-time 取得確認。</div>
       <table>
         <tr><th>變數</th><th>值</th></tr>
         <tr><td><code>APP_ENV</code></td><td><code>production</code></td></tr>
@@ -302,8 +392,9 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr><td><code>AUTH_MODE</code></td><td><code>supabase</code></td></tr>
         <tr><td><code>SUPABASE_URL</code> / <code>SUPABASE_PUBLISHABLE_KEY</code></td><td>步驟 1 拿到的</td></tr>
         <tr><td><code>SUPABASE_VERIFIER_MODE</code></td><td><code>remote</code>（預設；jwks 模式見文件取捨）</td></tr>
-        <tr><td><code>R2_*</code> 五件</td><td>步驟 2 拿到的<span class="secret">SECRET</span></td></tr>
-        <tr><td><code>RESEND_*</code> + <code>CONTACT_NOTIFY_TO</code></td><td>步驟 3 拿到的<span class="secret">SECRET</span></td></tr>
+        <tr><td><code>R2_ACCOUNT_ID</code>、<code>R2_BUCKET</code>、<code>R2_PUBLIC_BASE_URL</code></td><td>步驟 2 各自來源；三格是文字。最後一格無尾端 <code>/</code>，且還要設到 storefront Pages build。</td></tr>
+        <tr><td><code>R2_ACCESS_KEY_ID</code>、<code>R2_SECRET_ACCESS_KEY</code><span class="secret">SECRET</span></td><td>步驟 2 的 bucket-scoped Account API token；兩格都要是 Railway Secret。</td></tr>
+        <tr><td><code>RESEND_API_KEY</code><span class="secret">SECRET</span>、<code>RESEND_FROM</code>、<code>CONTACT_NOTIFY_TO</code><span class="secret">SECRET</span></td><td>步驟 3：key 與私人管理收件人是 Railway Secret；sender 是 Railway Text，且必須精確使用 Resend Verified domain／subdomain。</td></tr>
         <tr><td><code>EDGE_SECRET</code><span class="secret">SECRET</span></td><td>自己生一個 32+ 字元隨機字串，兩個 Pages 專案的環境變數用同一個值（步驟 5）</td></tr>
         <tr><td><code>CF_DEPLOY_HOOK_URL</code><span class="secret">SECRET</span></td><td>步驟 5 在 Pages 建完 Deploy Hook 後回填</td></tr>
         <tr><td><code>ECPAY_*</code> 四件</td><td>要上金流才設（見下方）；全留空就停用</td></tr>
@@ -332,9 +423,9 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr><th>設定</th><th>值</th></tr>
         <tr><td>Build command</td><td><code>npm --prefix site/themes/curatory ci &amp;&amp; make site</code>（Cloudflare 是乾淨 build 容器，先安裝 theme 依賴，再照 <code>SITE_THEME</code> 建 bundle 與 render）</td></tr>
         <tr><td>Output directory</td><td><code>dist</code></td></tr>
-        <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL=https://你的網域</code>、<code>PUBLIC_API_BASE=https://你的網域</code>、<code>R2_PUBLIC_BASE_URL</code>、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）</td></tr>
+        <tr><td>環境變數</td><td><code>APP_ENV=production</code>、<code>SITE_THEME=curatory</code>、<code>PUBLIC_SITE_URL=https://你的網域</code>、<code>PUBLIC_API_BASE=https://你的網域</code>、<code>R2_PUBLIC_BASE_URL</code>（R2 公開圖片啟用後才填；文字、無尾端 <code>/</code>）、<code>DB_DRIVER=postgres</code>、<code>DATABASE_URL</code><span class="secret">SECRET</span>（render 需要讀 DB）、Supabase 三件（<code>AUTH_MODE</code>/<code>SUPABASE_URL</code>/<code>SUPABASE_PUBLISHABLE_KEY</code>，這三個會進 browser bundle — 是公開值）。<strong>不要放 R2 key pair。</strong></td></tr>
       </table>
-      <div class="note"><strong>Functions 環境變數（兩個專案都要設）：</strong>Pages 專案 → Settings → <strong>Variables and Secrets</strong> → Add（<em>不是</em> build 變數）→ <code>API_ORIGIN</code> = Railway 的 <code>https://xxx.up.railway.app</code>、<code>EDGE_SECRET</code><span class="secret">SECRET</span> = 跟 Railway 同值。保存後重新部署，設定才會進入 Function。repo 根的 <code>functions/api/[[path]].js</code> 會攔截 <code>/api/*</code>、注入 secret 後轉發 — 瀏覽器全程打同源，看不到 Railway 網域。</div>
+      <div class="note"><strong>Functions 環境變數（每個會部署 Function 的 Pages 專案都要設）：</strong>Pages 專案 → Settings → <strong>Variables and Secrets</strong> → Add（<em>不是</em> build 變數）→ <code>API_ORIGIN</code> = Railway 的 <code>https://xxx.up.railway.app</code>、<code>EDGE_SECRET</code><span class="secret">SECRET</span> = 跟 Railway 同值。保存後重新部署，設定才會進入 Function。storefront 與 admin 各有獨立的 Functions environment；本次 storefront origin 已轉向現用 Railway、admin origin 已儲存但仍需要下一次部署，兩個 project 的 edge credential 都要由持有者直接輸入。以第 7 步四個 endpoint 的結果為準，不以「變數存在」當成功。repo 根的 <code>functions/api/[[path]].js</code> 會攔截 <code>/api/*</code>、注入 secret 後轉發 — 瀏覽器全程打同源，看不到 Railway 網域。</div>
 
       <h3>後台 SPA（第二個 Pages 專案）</h3>
       <table>
@@ -343,13 +434,13 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <tr><td>Output directory</td><td><code>admin/dist</code></td></tr>
         <tr><td>環境變數</td><td>Supabase 三件；<code>ADMIN_API_BASE</code> <strong>留空</strong>（預設同源 <code>/api</code>，由這個專案的 Pages Function 轉發 — 所以這個專案也要設 <code>API_ORIGIN</code> + <code>EDGE_SECRET</code>）</td></tr>
       </table>
-      <div class="note">SPA 路由需要 <code>admin/dist/_redirects</code> 寫 <code>/* /index.html 200</code> — 若檔案不存在請在 repo 補上。</div>
+      <div class="note">admin Pages 不需要 catch-all <code>_redirects</code>。此 build 沒有頂層 <code>404.html</code> 時，Cloudflare Pages 會自動把非 asset 的導航交給 SPA；不要加入 <code>/* /index.html 200</code>，目前的 Pages validator 會把它判定為無限迴圈並忽略。重新部署後直接請求一個後台子路徑，預期仍回 200。</div>
 
       <h3>Deploy Hook（發布迴路）</h3>
       <ul>
         <li>前台 Pages 專案 → Settings → <strong>Builds</strong> → <strong>Add deploy hook</strong> → 建立，拿 URL。Cloudflare 介面若顯示 Builds &amp; deployments，仍是在同一個 Builds 區塊。</li>
         <li>回填 Railway 的 <code>CF_DEPLOY_HOOK_URL</code>。<code>tools/publish</code> 的流程：先在本地 render <code>dist/</code> 做預檢（失敗即中止、保留舊 dist）→ 成功後 POST hook，讓 Pages 從 Git 分支重建 — Pages build 內的 <code>make site</code> 會用 production DB 重新 render，<strong>整個流程不上傳 dist</strong>。</li>
-        <li>後台的內容「發布」按鈕只把 DB 草稿標記為 published，<strong>不會自動觸發</strong>上述流程 — 內容要上線，由 CI 或人工執行 <code>go run ./server/tools/publish</code>，或直接 push 觸發 Git build。</li>
+        <li>後台的內容「發布」按鈕只把 DB 草稿標記為 published，<strong>不會自動觸發</strong>上述流程 — 內容要刷新無 JS／SEO 的靜態輸出，由 CI 或人工執行 <code>go run ./server/tools/publish</code>，或直接 push 觸發 Git build。curatory 商品島在 hydration 後會直接讀同源 API，所以 active 商品的購物車／checkout smoke flow 不必等待這個靜態 rebuild。</li>
       </ul>
     </div>
   </div>
@@ -368,7 +459,147 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         <li><strong>不需要 api. 子網域、不需要 Transform Rule</strong> — repo 根的 <code>functions/api/[[path]].js</code> 已把 <code>/api/*</code> 轉發到 <code>API_ORIGIN</code> 並注入 <code>EDGE_SECRET</code>。</li>
         <li><strong>驗證邊緣閉環：</strong><code>curl https://你的網域/api/products</code> 回 200（經 Function 注入 secret）；<code>curl https://xxx.up.railway.app/api/products</code> 直打回 403 — 這代表 Railway origin 只接受經過 Pages 的流量。</li>
       </ul>
-      <div class="note warn"><strong>EDGE_SECRET 輪換零中斷三步驟：</strong>① Railway 設 <code>EDGE_SECRET_PREVIOUS</code><span class="secret">SECRET</span> = 舊值、<code>EDGE_SECRET</code> = 新值，重新部署 — origin 過渡期同時接受新舊兩值，Pages 還在送舊值也不受影響 → ② 兩個 Pages 專案的 <code>EDGE_SECRET</code> 改成新值並重新部署 → ③ 確認邊緣全送新值後，移除 Railway 的 <code>EDGE_SECRET_PREVIOUS</code> 並重新部署。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。<strong>注意：</strong><code>EDGE_SECRET_PREVIOUS</code> 只為輪換窗口存在，完成後務必移除 — 留著等於兩組憑證長期有效。</div>
+      <div class="note warn"><strong>僅限未暴露憑證：EDGE_SECRET 例行零中斷輪換：</strong>① Railway 設 <code>EDGE_SECRET_PREVIOUS</code><span class="secret">SECRET</span> = 舊值、<code>EDGE_SECRET</code> = 新值，重新部署 — origin 過渡期同時接受新舊兩值，Pages 還在送舊值也不受影響 → ② 兩個 Pages 專案的 <code>EDGE_SECRET</code> 改成新值並重新部署 → ③ 確認邊緣全送新值後，移除 Railway 的 <code>EDGE_SECRET_PREVIOUS</code> 並重新部署。<code>/healthz</code> 已豁免，Railway healthcheck 不受影響。<strong>注意：</strong><code>EDGE_SECRET_PREVIOUS</code> 只為輪換窗口存在，完成後務必移除 — 留著等於兩組憑證長期有效。</div><strong>目前 Text 暴露事件不可沿用舊值作為 PREVIOUS；應直接改三處 Secret 並接受短暫 API 中斷。</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ============ STEP 7 ============ -->
+<div class="step">
+  <div class="step-num">7</div>
+  <div class="step-body">
+    <h2>值更新與可重跑驗收 <span class="tag">發版時照這段重跑</span></h2>
+    <div class="card">
+      <p>這段把「資料從哪裡來、能否由 agent 寫入、寫完要在哪一層驗證」固定下來。每次換 Railway workspace、換 public domain、重建 Pages project，或要重新發版時都從這裡開始；不必從舊 service 複製任何 runtime 值。</p>
+
+      <h3>先做不改值的 inventory</h3>
+      <ol>
+        <li>確認遠端仍有 <code>main</code> 與 <code>staging</code>：<code>git ls-remote --heads origin main staging</code>。2026-09-16 歷史部署為 <code>1665e08</code>；2026-09-19 兩個遠端分支和本機 HEAD 已更新為 <code>bac7c78</code>。Railway 與兩個 Pages projects 的 production source 應指向 <code>staging</code>，但仍要各自核對最新 deployment，而不是固定比對舊 SHA。</li>
+        <li>記下<strong>現用</strong> Railway workspace、project、production environment、service、source branch 與 public origin。現用 origin 為 <code>https://agent-safe-site-starter-production.up.railway.app</code>；不要把以前 workspace 的 domain 或變數狀態視為這一個 service 已設定。</li>
+        <li>在三個目的地只記「變數名稱是 absent / staged / live」，不展開、不截圖、不複製 secret 值：Railway service、storefront Pages Functions、admin Pages Functions。</li>
+      </ol>
+
+      <h3>可直接重設的非 secret 值</h3>
+      <table>
+        <tr><th>目的地</th><th>變數</th><th>此專案的值規則</th><th>套用後驗證</th></tr>
+        <tr><td>Railway service</td><td><code>APP_ENV</code></td><td><code>production</code></td><td>最新 deployment 是 production GitHub <code>staging</code> build</td></tr>
+        <tr><td>Railway service</td><td><code>HTTP_ADDR</code></td><td><code>:8080</code>（程式預設也是這個值）</td><td>Deploy Log 顯示 <code>api listening on :8080</code></td></tr>
+        <tr><td>Railway service</td><td><code>DB_DRIVER</code></td><td><code>postgres</code></td><td>pre-deploy migrate 成功，API 能讀 products</td></tr>
+        <tr><td>Railway service</td><td><code>AUTH_MODE</code>、<code>SUPABASE_VERIFIER_MODE</code></td><td><code>supabase</code>、<code>remote</code></td><td>已登入後台可驗證 Supabase session</td></tr>
+        <tr><td>Railway service</td><td><code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code></td><td>目前 Supabase project 的 API 公開設定</td><td>前後台可初始化登入</td></tr>
+        <tr><td>Railway service</td><td><code>SITE_ORIGIN</code>、<code>PUBLIC_SITE_URL</code>、<code>PUBLIC_API_BASE</code></td><td>storefront public URL；目前是 <code>https://agent-safe-site-starter.pages.dev</code></td><td>瀏覽器維持同源 <code>/api/*</code></td></tr>
+        <tr><td>storefront + admin Pages Functions</td><td><code>API_ORIGIN</code></td><td>同一個現用 Railway public HTTPS origin；目前是 <code>https://agent-safe-site-starter-production.up.railway.app</code></td><td>各自重新部署後再測試各自的 <code>/api/products</code></td></tr>
+        <tr><td>admin Pages build</td><td><code>AUTH_MODE</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code></td><td>同一組 Supabase 公開設定；<code>ADMIN_API_BASE</code> 留空</td><td>後台打自己的同源 <code>/api</code>，不是直打 Railway</td></tr>
+      </table>
+
+      <div class="note"><strong>本次 Railway safe batch：</strong>已 staged 的 9 個值是 <code>APP_ENV</code>、<code>AUTH_MODE</code>、<code>DB_DRIVER</code>、<code>PUBLIC_API_BASE</code>、<code>PUBLIC_SITE_URL</code>、<code>SITE_ORIGIN</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code>、<code>SUPABASE_VERIFIER_MODE</code>。看到 <strong>Apply 9 changes</strong> 只代表待套用，不代表 live；可把 <code>HTTP_ADDR=:8080</code> 併入下一個非 secret change set。</div>
+
+      <h3>一定要由人直接輸入的值</h3>
+      <table>
+        <tr><th>變數</th><th>直接輸入到哪裡</th><th>為什麼不能從別處複製</th></tr>
+        <tr><td><code>DATABASE_URL</code><span class="secret">SECRET</span></td><td>Railway service；若 Pages build 需要 production DB render，也在對應 Pages build environment 直接輸入</td><td>是 PostgreSQL 連線字串；不可出現在 chat、文件、截圖、commit 或 browser log</td></tr>
+        <tr><td><code>EDGE_SECRET</code><span class="secret">SECRET</span></td><td>Railway service + storefront Pages Functions + admin Pages Functions</td><td>三處內容必須一致，但「一致」指持有者各自輸入同一值，不是 agent 從任一控制台讀出後轉貼</td></tr>
+        <tr><td><code>R2_*</code>、<code>CF_DEPLOY_HOOK_URL</code></td><td>Railway service</td><td>只有媒體或 publish hook 需要；不阻塞本次無金流的商品／購物車 smoke test</td></tr>
+        <tr><td><code>RESEND_API_KEY</code><span class="secret">SECRET</span>、<code>RESEND_FROM</code>、<code>CONTACT_NOTIFY_TO</code><span class="secret">SECRET</span></td><td>Railway service only</td><td>key 與私人通知信箱是 Secret；sender 是 Text 且必須精確符合 Resend Verified domain。不能設在 Pages。寄送真實信件是額外有副作用的驗收。</td></tr>
+        <tr><td><code>ECPAY_*</code></td><td>Railway service</td><td>本次測試不送金流，保持未設定；不可為了 smoke test 建 key 或提交交易</td></tr>
+      </table>
+
+      <h3>套用順序</h3>
+      <ol>
+        <li>先確認 source 與 public URL，再在 Railway 把上表非 secret 變數放進同一個 pending change set。</li>
+        <li>持有 secret 的人直接在 Railway 填入 <code>DATABASE_URL</code> 與 <code>EDGE_SECRET</code>，確認只回報「名稱已存在」，不回報內容。</li>
+        <li>套用 Railway 全部變更，等待 GitHub <code>staging</code> deployment 成功；<code>railway.toml</code> 的 pre-deploy <code>migrate</code> 必須成功，才進 health check。</li>
+        <li>在 storefront 與 admin Pages 的 <strong>Functions</strong>（不是 build 變數）各自設定 <code>API_ORIGIN</code>；持有 secret 的人直接填入同一個 <code>EDGE_SECRET</code>。</li>
+        <li>兩個 Pages project 都要重新部署。只存 Variables and Secrets 不會更新已存在的 Function deployment。</li>
+        <li>先跑四個 endpoint，再由已登入的後台建立或發布一筆明確標示的 smoke-test 商品，確認它出現在前台、能加入購物車並到達 checkout；停止在付款送出前。</li>
+      </ol>
+
+      <h3>四個 endpoint 的驗收表</h3>
+      <table>
+        <tr><th>請求</th><th>預期</th><th>代表什麼</th></tr>
+        <tr><td><code>GET https://agent-safe-site-starter-production.up.railway.app/healthz</code></td><td>200</td><td>Railway public route 與程序健康</td></tr>
+        <tr><td>直接 GET 同一 Railway origin 的 <code>/api/products</code>（不帶 hop header）</td><td>403</td><td>origin 拒絕繞過 Pages 的請求</td></tr>
+        <tr><td><code>GET https://agent-safe-site-starter.pages.dev/api/products</code></td><td>200</td><td>storefront Function 注入 edge credential 並到達 API</td></tr>
+        <tr><td><code>GET https://agent-safe-site-starter-admin.pages.dev/api/products</code></td><td>200</td><td>admin 也有自己的 Function proxy 與正確 runtime 變數</td></tr>
+      </table>
+
+      <h3>失敗時不要猜</h3>
+      <table>
+        <tr><th>現象</th><th>優先檢查</th></tr>
+        <tr><td>Railway <code>/healthz</code> 非 200</td><td>deployment 狀態、public domain、port 與非 secret deploy log</td></tr>
+        <tr><td>直打 API 是 500</td><td><code>DB_DRIVER</code>、人手輸入的 <code>DATABASE_URL</code>、pre-deploy migrate；這時尚未輪到 CORS</td></tr>
+        <tr><td>直打 API 是 200</td><td>Railway 尚未有有效 <code>EDGE_SECRET</code>；由持有者直接輸入後重新部署</td></tr>
+        <tr><td>Pages API 是 502</td><td>該 Pages Function 的 <code>API_ORIGIN</code> 缺失或格式不對；修正後重新部署該 project</td></tr>
+        <tr><td>Pages API 是 403、而直打也是 403</td><td>該 Pages project 的 <code>EDGE_SECRET</code> 缺失／不一致，或變數保存後尚未重新部署</td></tr>
+        <tr><td>前台成功、後台失敗</td><td>admin 是第二個 Pages project，有獨立的 Functions environment；逐項重設它的 <code>API_ORIGIN</code> 與 secret 並重新部署</td></tr>
+        <tr><td>media API 說 <code>R2 is not configured</code></td><td>Railway 的四個 R2 runtime 值至少少一個、空白，或仍未隨 deployment 生效；檢查名稱與最近 deployment，不讀出值</td></tr>
+        <tr><td>後台上傳在 R2 CORS/preflight 失敗</td><td>bucket 的 CORS 沒有儲存，或 exact admin origin／<code>PUT</code>／<code>Content-Type</code> 不一致；回第 2 步使用最小 JSON，不能放寬為 <code>*</code></td></tr>
+        <tr><td>presign 說副檔名與 <code>Content-Type</code> 不符</td><td>檢查檔案 magic bytes：<code>.png</code> 命名的檔案可能實際是 JPEG；用正確副檔名的測試副本，不要把格式錯誤當作 R2 key 失效或關閉 API 驗證。</td></tr>
+        <tr><td>已 verify 但前台圖片 404</td><td><code>R2_PUBLIC_BASE_URL</code>、public origin、商品圖片關聯或 storefront build 尚未更新；修正後重新部署 storefront</td></tr>
+      </table>
+
+      <div class="note warn"><strong>僅限未暴露憑證的例行 edge credential 輪換：</strong>先在 Railway 同時設新 <code>EDGE_SECRET</code> 與舊 <code>EDGE_SECRET_PREVIOUS</code> 並部署；再由持有者在兩個 Pages projects 輸入新值並重新部署；四個 endpoint 都通過後，移除 <code>EDGE_SECRET_PREVIOUS</code> 並再次部署。舊值只可存在於這個過渡窗口。</div><strong>目前 Text 暴露事件不可沿用舊值作為 PREVIOUS；應直接改三處 Secret 並接受短暫 API 中斷。</strong>
+    </div>
+  </div>
+</div>
+
+<!-- ============ DEPLOYMENT FILL SHEET ============ -->
+<div class="step">
+  <div class="step-num">7A</div>
+  <div class="step-body">
+    <h2>照表填完再部署 <span class="tag">來源 → 去處 → 驗收</span></h2>
+    <div class="card">
+      <div class="note warn"><strong>本次已完成部署，但每次後續釋出都要重新跑 stop conditions。</strong>少了 <code>DATABASE_URL</code> 或 <code>EDGE_SECRET</code>、Cloudflare 把任一 secret 儲成 Text、或 Pages Function 的 <code>API_ORIGIN</code> 不指向現用 Railway HTTPS origin 時，都不要按 Railway 的 <strong>Deploy</strong>。要啟用 R2 圖片時，還必須先有五個 R2 欄位、CORS 與 public URL；單一 endpoint、變數名稱或空 bucket 都不是 R2 打通證明。</div>
+
+      <h3>先在來源取得資料</h3>
+      <table>
+        <tr><th>變數</th><th>去哪裡取</th><th>誰處理</th><th>型別</th></tr>
+        <tr><td><code>DATABASE_URL</code></td><td>Supabase 專案右上 <strong>Connect</strong> → <strong>Direct connection string</strong> → <strong>Session pooler</strong>（Shared pooler / Session mode）→ <strong>URI</strong>。只替換畫面要求的資料庫密碼 placeholder；密碼含 <code>&amp;</code>、<code>#</code>、<code>?</code> 或空白時先 percent-encode，保留 Supabase 給的 host、port 與 query。</td><td>持有資料庫密碼的人直接輸入目的地；不經 chat、截圖、agent 或其他平台抄寫。</td><td><span class="secret">SECRET</span></td></tr>
+        <tr><td><code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code></td><td>同一個 Connect 視窗；或 Settings → <strong>API Keys</strong>。取 Project URL 與 <strong>Publishable key</strong>，不是 service-role key。</td><td>可安全填入指定平台。</td><td>公開設定</td></tr>
+        <tr><td><code>EDGE_SECRET</code></td><td>由持有人在密碼管理器／核准的 secret generator 產生一組新的高熵值並保存。</td><td>同一持有人直接填 Railway + storefront Function + admin Function 三格。</td><td><span class="secret">SECRET</span></td></tr>
+        <tr><td><code>R2_ACCOUNT_ID</code></td><td><strong>儲存空間和資料庫（Storage &amp; databases）</strong> → <strong>R2 物件儲存（R2 Object Storage）</strong> → <strong>概觀（Overview）</strong> → <strong>帳戶詳細資訊（Account details）</strong> → <strong>帳戶 ID（Account ID）</strong>。</td><td>可複製帳戶識別碼；不是憑證。</td><td>Railway Text</td></tr>
+        <tr><td><code>R2_ACCESS_KEY_ID</code>、<code>R2_SECRET_ACCESS_KEY</code></td><td><strong>R2 物件儲存（R2 Object Storage）</strong> → <strong>概觀（Overview）</strong> → <strong>管理 API 令牌（Manage API Tokens）</strong> → <strong>帳戶 API 權杖（Account API Tokens）</strong> → <strong>建立 Account API 權杖（Create Account API Token）</strong>；選 Object Read &amp; Write 並限 <code>agent-safe-site-starter-assets</code>。</td><td>持有人直接貼到 Railway；secret 只顯示一次，不能經 chat／截圖轉交。</td><td><span class="secret">SECRET</span></td></tr>
+        <tr><td><code>R2_BUCKET</code></td><td><strong>R2 物件儲存（R2 Object Storage）</strong> → <strong>概觀（Overview）</strong> → <strong>貯體（Buckets）</strong>。</td><td><code>agent-safe-site-starter-assets</code></td><td>Railway Text</td></tr>
+        <tr><td><code>R2_PUBLIC_BASE_URL</code></td><td>bucket → <strong>設定（Settings）</strong> → <strong>公用開發 URL（Public Development URL）</strong>（測試），或 <strong>自訂網域（Custom Domains）</strong>（正式）。</td><td>顯示的 public URL；移除結尾 <code>/</code>。</td><td>Railway Text + storefront Pages build Text</td></tr>
+      </table>
+
+      <h3>1. Railway：目前這個 service 的必填項</h3>
+      <p>Railway → workspace <code>gracious-liberation</code> → project <code>ff5c31fd-eb59-48f7-ad46-12b468e02e42</code> → Production → service <code>6fc1aea1-5efc-4ce0-9ccc-ef688d59f72c</code> → <strong>Variables</strong> → <strong>New Variable</strong>。先全部加入同一個 staged change set，暫時不要 Deploy。</p>
+      <table>
+        <tr><th>名稱</th><th>填什麼</th><th>型別／狀態</th></tr>
+        <tr><td><code>APP_ENV</code></td><td><code>production</code></td><td>文字；已 staged</td></tr>
+        <tr><td><code>DB_DRIVER</code></td><td><code>postgres</code></td><td>文字；已 staged</td></tr>
+        <tr><td><code>AUTH_MODE</code>、<code>SUPABASE_VERIFIER_MODE</code></td><td><code>supabase</code>、<code>remote</code></td><td>文字；已 staged</td></tr>
+        <tr><td><code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code></td><td>上表取得的 Project URL、Publishable key</td><td>公開設定；已 staged</td></tr>
+        <tr><td><code>SITE_ORIGIN</code>、<code>PUBLIC_SITE_URL</code>、<code>PUBLIC_API_BASE</code></td><td>三格都填 <code>https://agent-safe-site-starter.pages.dev</code>（不要尾端斜線）</td><td>文字；已 staged</td></tr>
+        <tr><td><code>HTTP_ADDR</code></td><td><code>:8080</code></td><td>可選；程式預設已是這個值</td></tr>
+        <tr><td><code>DATABASE_URL</code></td><td>上表的 Shared pooler / Session mode URI（dashboard: Session pooler）</td><td><span class="secret">SECRET</span>；缺少時禁止 Deploy</td></tr>
+        <tr><td><code>EDGE_SECRET</code></td><td>上表產生的同一組值</td><td><span class="secret">SECRET</span>；缺少時禁止 Deploy</td></tr>
+        <tr><td><code>R2_ACCOUNT_ID</code>、<code>R2_BUCKET</code>、<code>R2_PUBLIC_BASE_URL</code></td><td>上表各自來源；bucket 為 <code>agent-safe-site-starter-assets</code>，public URL 無尾端 <code>/</code></td><td>文字；要啟用 R2 圖片時三格都必填</td></tr>
+        <tr><td><code>R2_ACCESS_KEY_ID</code>、<code>R2_SECRET_ACCESS_KEY</code></td><td>同一個 bucket-scoped Account API token 的兩個欄位</td><td><span class="secret">SECRET</span>；要啟用 R2 圖片時兩格都必填</td></tr>
+      </table>
+
+      <h3>2. Cloudflare Pages：storefront 與 admin 要分開填</h3>
+      <p>兩個專案都走 Cloudflare → <strong>Workers &amp; Pages</strong> → 選專案 → <strong>Settings</strong> → <strong>Variables and Secrets</strong> → Production → <strong>Add</strong>。secret 勾選／按 <strong>Encrypt</strong> 再 Save。Pages 專案之間不會繼承變數。</p>
+      <table>
+        <tr><th>目的地</th><th>必填項</th><th>填什麼</th><th>注意</th></tr>
+        <tr><td>storefront <code>agent-safe-site-starter</code><br>build</td><td><code>APP_ENV</code>、<code>SITE_THEME</code>、<code>DB_DRIVER</code></td><td><code>production</code>、<code>curatory</code>、<code>postgres</code></td><td><code>make site</code> 會跑 Go renderer。</td></tr>
+        <tr><td>storefront build</td><td><code>DATABASE_URL</code></td><td>同一份 Shared pooler / Session mode URI（dashboard: Session pooler），由持有人直接填</td><td><span class="secret">SECRET</span>；加密。這是 build 用，不能拿 Function 變數取代。</td></tr>
+        <tr><td>storefront build</td><td><code>PUBLIC_SITE_URL</code>、<code>PUBLIC_API_BASE</code>、<code>AUTH_MODE</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code>、<code>R2_PUBLIC_BASE_URL</code></td><td>依 Railway 同名值填；R2 URL 是文字、無尾端 <code>/</code>，且只在 public product images 啟用後補上</td><td>前台靜態輸出與公開登入設定；不放 R2 key pair。</td></tr>
+        <tr><td>storefront Function</td><td><code>API_ORIGIN</code>、<code>EDGE_SECRET</code></td><td><code>https://agent-safe-site-starter-production.up.railway.app</code>；同一組 edge secret</td><td><code>API_ORIGIN</code> 是文字；secret 必須 Encrypt。這兩格只給 <code>functions/api/[[path]].js</code> runtime 用。</td></tr>
+        <tr><td>admin <code>agent-safe-site-starter-admin</code><br>build</td><td><code>AUTH_MODE</code>、<code>SUPABASE_URL</code>、<code>SUPABASE_PUBLISHABLE_KEY</code></td><td>與前台相同的公開設定</td><td><strong>不填 DATABASE_URL 或任何 R2 變數</strong>；admin 是 Vue-only build，<code>ADMIN_API_BASE</code> 留空以使用同源 <code>/api</code>。</td></tr>
+        <tr><td>admin Function</td><td><code>API_ORIGIN</code>、<code>EDGE_SECRET</code></td><td>與 storefront Function 完全相同</td><td>依然要在 admin 專案獨立輸入並 Encrypt secret。</td></tr>
+      </table>
+
+      <h3>3. 部署順序與完成碼</h3>
+      <ol>
+        <li>確認兩個 Pages 專案與 Railway source 都是 <code>staging</code>。要啟用 R2 時，先儲存最小 CORS JSON、啟用測試 public URL／完成核准的 Custom Domain，然後才填上表五個 R2 值。</li>
+        <li>回 Railway 檢查 staged change 的 Details：既有必填項加上 R2 圖片流程所需的五個名稱都要存在，再按 <strong>Deploy</strong> 一次。等待 <code>migrate</code> 與 deployment 成功，<code>/healthz</code> 必須回 200。</li>
+        <li>R2 public URL 變更時，storefront 觸發一次<strong>新的 Production deployment</strong>；只有改 Pages Function 值時才需要對應 project 的 Function deployment。前台 build 成功要輸出 <code>dist</code>，後台要輸出 <code>admin/dist</code>。</li>
+        <li>依序驗證：Railway <code>/healthz</code> = 200；直打 Railway <code>/api/products</code>（不帶 hop header）= 403；storefront <code>/api/products</code> = 200；admin <code>/api/products</code> = 200。</li>
+        <li>四項 edge endpoint 都通過後，再以有 <code>media.upload</code> 權限的後台跑圖片 presign → PUT → verify → 商品圖片 → 前台公開圖片。之後才進入商品 → 購物車 → checkout；不送出金流。</li>
+      </ol>
+      <div class="note">完整可重跑版在 repo 的 <code>skills/site-deployment-browser/SKILL.md</code> 與 <code>references/deployment-value-refresh.md</code>；技能不含本次帳號與網址，中文／English 後台取值、欄位目的地、部署順序、R2/Resend 驗收及緊急憑證處理皆以當次現場重新盤點。</div>
     </div>
   </div>
 </div>
@@ -413,19 +644,21 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
 
 <script>
 const ITEMS = [
-  ["Supabase 專案建立", "DATABASE_URL（pooler 記得加 simple_protocol）、URL、publishable key"],
-  ["Supabase 管理員帳號建立", "Authentication → Users → Add user"],
+  ["Supabase 專案建立", "DATABASE_URL（Railway 長駐 Go service：Shared pooler → Session mode → URI；dashboard 顯示為 Session pooler；只有 Transaction pooler 才加 simple_protocol）、URL、publishable key"],
+  ["Supabase 管理員帳號與 owner 授權", "Authentication → Users 建立登入；public.staff_members 以精確 UID 建 active owner（需當下確認）"],
   ["Supabase Data API 開關確認", "Data API 關、auto-expose 關、automatic RLS 開"],
-  ["R2 bucket + API token + 公開網域", "五個 R2_* 值備齊，bucket public access 已開"],
+  ["R2 bucket + API token + 公開網域", "bucket 已建立；public access、token 與公開 base URL 依上線需求完成設定"],
   ["Resend 網域驗證 + API key", "SPF/DKIM 全綠，RESEND_FROM 用已驗證網域"],
   ["Railway 部署成功", "/healthz 回 200、deploy log 的 migrate 完成。直打 /api/products 的預期碼取決於 EDGE_SECRET：設上前回 200、設上後回 403 都屬正常"],
+  ["Railway source branch 對齊", "Pages production 與現用 Railway source 都使用 staging；確認 Apply n changes 的 Branch main → staging，Deploy Changes 後在 Details 驗證 GitHub repo/branch/SHA"],
   ["Railway env 全設", "APP_ENV=production、SITE_ORIGIN、EDGE_SECRET、DB/AUTH/R2/Resend"],
   ["前台 Pages 建置成功", "make site 跑完、*.pages.dev 預覽正常、圖片與島都載入"],
-  ["後台 Pages 建置成功", "admin/dist 上線、_redirects 生效、可用 Supabase 帳號登入"],
+  ["後台 Pages 建置成功", "admin/dist 上線、任一後台子路徑回 200、可用 Supabase 帳號登入"],
   ["Deploy hook 串接", "Settings → Builds 建立 hook，CF_DEPLOY_HOOK_URL 已設，publish 流程會觸發 Pages 重建"],
   ["自訂網域綁定", "前台網域綁定並上 HTTPS（後台可綁 admin. 或用 pages.dev）"],
-  ["Pages Functions env（兩專案）", "API_ORIGIN=Railway URL、EDGE_SECRET=與 Railway 同值，設在 Variables and Secrets 非 build"],
-  ["EDGE_SECRET + Pages Function 生效", "https://你的網域/api/products 回 200、直打 Railway origin 回 403"],
+  ["Pages Functions env（兩專案）", "API_ORIGIN=現用且已公開的 Railway URL、EDGE_SECRET=與 Railway 同值，設在 Variables and Secrets 非 build；切換 Railway workspace 後不可沿用舊 origin"],
+  ["EDGE_SECRET + Pages Function 生效", "先確認 Railway public /healthz；https://你的網域/api/products 回 200、直打同一 Railway origin 回 403"],
+  ["後台 → 前台商品閉環（不送付款）", "owner 以精確 UID 授權後建 active smoke 商品；等待 /shop/ hydration 顯示商品，加入購物車並到 checkout；不填客戶資料、不建單、不付款"],
   ["下單 → 通知 → 後台閉環", "正式環境下一筆測試單：訂單出現在後台、通知寄出/記 log"],
   ["（選配）ECPay stage 實測一筆", "callback 對帳、訂單轉 paid、瀏覽器返回頁狀態正確"],
 ];
