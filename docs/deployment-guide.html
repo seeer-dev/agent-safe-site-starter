@@ -363,7 +363,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
     <h2>Railway <span class="tag">Go API</span></h2>
     <div class="card">
       <h3>申請 / 部署</h3>
-      <p><a class="signup" href="https://railway.app" target="_blank" rel="noopener">railway.app →</a> New Project → Deploy from GitHub Repo → 選這個 repo。<code>railway.toml</code> 已配好 Docker build、部署前自動 <code>migrate</code>、<code>/healthz</code> 健康檢查。</p>
+      <p><a class="signup" href="https://railway.app" target="_blank" rel="noopener">railway.app →</a> New Project → Deploy from GitHub Repo → 選這個 repo。repo 附 <code>railway.toml</code> 記錄預期設定（Docker build、pre-deploy <code>migrate</code>、<code>/healthz</code> 健康檢查、restart 上限 3)，但 <strong>Config-as-code 只在服務建立初期可啟用；既有服務若從未啟用，Railway 不會讀這個檔案</strong>。請在 Service → Settings 對照 <code>railway.toml</code> 手動設定：Build 選 Dockerfile、<strong>Deploy → Add pre-deploy step 輸入 <code>migrate</code></strong>、Healthcheck path <code>/healthz</code>、Restart policy ON_FAILURE / max retries 3。以 Settings 頁實際顯示為準，不以檔案存在為準。</p>
 
       <h3>讓 Railway 跟 Pages 使用同一個 Git 分支</h3>
       <div class="note"><strong>目標：</strong>前台 Pages production branch 與現用 Railway production service source 都使用 <code>staging</code>。兩者各自儲存設定，改 Pages 不會改 Railway；同一個 repo 也能連到多個 Railway workspace。</div>
@@ -402,7 +402,9 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
 
       <div class="note">
         部署完先驗證：<code>curl https://&lt;railway-domain&gt;/healthz</code> 回 200、
-        Railway deploy log 裡 migrate 跑完。<code>/api/products</code> 直打會回
+        deploy log 的 pre-deploy step 印出 <code>migrations applied (postgres)</code>。
+        若沒有這行，代表 Settings 沒設 pre-deploy step（Config-as-code 未啟用時
+        <code>railway.toml</code> 不會被讀取），資料表會缺最新 migration。<code>/api/products</code> 直打會回
         <strong>403</strong> — 正常，那代表 <code>EDGE_SECRET</code> 擋住未經邊緣的流量；
         瀏覽器是經由 Pages Function 注入 secret 才進得來。Railway 只需要預設的
         <code>*.up.railway.app</code> 網域，<strong>不用綁 api. 子網域</strong>。
@@ -508,7 +510,7 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
       <ol>
         <li>先確認 source 與 public URL，再在 Railway 把上表非 secret 變數放進同一個 pending change set。</li>
         <li>持有 secret 的人直接在 Railway 填入 <code>DATABASE_URL</code> 與 <code>EDGE_SECRET</code>，確認只回報「名稱已存在」，不回報內容。</li>
-        <li>套用 Railway 全部變更，等待 GitHub <code>staging</code> deployment 成功；<code>railway.toml</code> 的 pre-deploy <code>migrate</code> 必須成功，才進 health check。</li>
+        <li>套用 Railway 全部變更，等待 GitHub <code>staging</code> deployment 成功；Service Settings → Deploy 設定的 pre-deploy <code>migrate</code> 必須在 deploy log 印出 <code>migrations applied (postgres)</code>，才進 health check。</li>
         <li>在 storefront 與 admin Pages 的 <strong>Functions</strong>（不是 build 變數）各自設定 <code>API_ORIGIN</code>；持有 secret 的人直接填入同一個 <code>EDGE_SECRET</code>。</li>
         <li>兩個 Pages project 都要重新部署。只存 Variables and Secrets 不會更新已存在的 Function deployment。</li>
         <li>先跑四個 endpoint，再由已登入的後台建立或發布一筆明確標示的 smoke-test 商品，確認它出現在前台、能加入購物車並到達 checkout；停止在付款送出前。</li>
@@ -649,7 +651,7 @@ const ITEMS = [
   ["Supabase Data API 開關確認", "Data API 關、auto-expose 關、automatic RLS 開"],
   ["R2 bucket + API token + 公開網域", "bucket 已建立；public access、token 與公開 base URL 依上線需求完成設定"],
   ["Resend 網域驗證 + API key", "SPF/DKIM 全綠，RESEND_FROM 用已驗證網域"],
-  ["Railway 部署成功", "/healthz 回 200、deploy log 的 migrate 完成。直打 /api/products 的預期碼取決於 EDGE_SECRET：設上前回 200、設上後回 403 都屬正常"],
+  ["Railway 部署成功", "/healthz 回 200、deploy log 的 pre-deploy migrate 印出 migrations applied (postgres)。直打 /api/products 的預期碼取決於 EDGE_SECRET：設上前回 200、設上後回 403 都屬正常"],
   ["Railway source branch 對齊", "Pages production 與現用 Railway source 都使用 staging；確認 Apply n changes 的 Branch main → staging，Deploy Changes 後在 Details 驗證 GitHub repo/branch/SHA"],
   ["Railway env 全設", "APP_ENV=production、SITE_ORIGIN、EDGE_SECRET、DB/AUTH/R2/Resend"],
   ["前台 Pages 建置成功", "make site 跑完、*.pages.dev 預覽正常、圖片與島都載入"],

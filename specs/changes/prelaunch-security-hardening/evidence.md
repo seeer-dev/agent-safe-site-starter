@@ -99,7 +99,9 @@ Live round executed against `849678a` (staging → Railway + both Pages):
 - Unguarded `POST /api/orders/fake-id/payments/ecpay` → 400 (handler reached; DB reachable).
 - Guarded POSTs (`/api/contact`, `/api/quote`) → uniform 503 `service_unavailable`; 65 sequential quote POSTs never returned 429.
 
-**Finding:** the guard is reaching `limiter.Allow` (identity resolves — missing/malformed key would be 403) but the shared store errors on every call → `abuse_buckets` is missing or unwritable in production Postgres, i.e. migration 019 did not apply during Railway `preDeployCommand`. This is the designed fail-closed posture (public writes are refused, zero side effects), but it currently takes contact/comment/quote/order endpoints offline. Holder action required: check the Railway deploy log's `migrate` step output, or re-run `railway run migrate` / apply `db/migrations/postgres/019_abuse_control.sql` via Supabase SQL editor, then re-run the 429 checks.
+**Finding (root cause confirmed by holder):** the guard reaches `limiter.Allow` (identity resolves — missing/malformed key would be 403) but the shared store errors on every call → `abuse_buckets` missing in production Postgres. Root cause: **the Railway service has never had Config-as-code enabled — `railway.toml` (including `preDeployCommand = ["migrate"]`, healthcheck, watch paths, restart retries) is never read**; Railway's deploy log starts the API directly and Configuration → Code shows none of the file's settings. Migration 019 itself is fine; no code change needed. This is the designed fail-closed posture (public writes refused, zero side effects), but it takes contact/comment/quote/order endpoints offline until the table exists.
+
+**Fix path (holder, dashboard):** Railway → Service → Settings → Deploy → Add pre-deploy step → `migrate` → save → redeploy. Deploy log must show `migrations applied (postgres)`. Then re-run: in-quota `POST /api/quote` malformed body → 400 (handler reached); over-quota → 429 + `Retry-After`. `docs/deployment-guide.html` was corrected so the runbook no longer claims `railway.toml` is auto-applied.
 
 **Still pending (holder/provider actions):**
 
