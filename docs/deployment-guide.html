@@ -409,6 +409,15 @@ Railway (Go API) ──► Supabase PostgreSQL + Auth
         瀏覽器是經由 Pages Function 注入 secret 才進得來。Railway 只需要預設的
         <code>*.up.railway.app</code> 網域，<strong>不用綁 api. 子網域</strong>。
       </div>
+
+      <h3>Migration 卡在 duplicate / already exists 時</h3>
+      <ol>
+        <li>停止重跑。到 Supabase <strong>SQL Editor（SQL 編輯器）→ New query（新增查詢）</strong>，只讀取 <code>public.schema_migrations</code> 的 <code>version</code> 與 <code>applied_unix</code>；先確認是這個 Railway service 使用的專案。</li>
+        <li>逐一打開 repo 的 <code>db/migrations/postgres/</code> 中「ledger 缺少」的檔案，使用 <code>information_schema</code> / <code>pg_catalog</code> 核對該檔案的全部 table、column 型別／NULL／default、index、constraint、rename/drop 清理結果。只看到一個同名欄位不算完成。</li>
+        <li>任一結構不吻合就停止，不可補 ledger；應另外做 reviewed forward migration。只有全部吻合、且資料庫持有人明確批准後，才能用 <code>ON CONFLICT DO NOTHING</code> 把「已經完整套用」的精確檔名補進 <code>schema_migrations</code>。下一個尚未執行的 migration 不得一起補。</li>
+        <li>重新部署同一版，log 必須出現 <code>migrations applied (postgres)</code>。再核對新 migration 的 ledger、table 與 index，最後才做 HTTP smoke。</li>
+      </ol>
+      <div class="note warn"><strong>本專案 limiter 驗收：</strong>在新的 1 分鐘 bucket，用不會寫入資料的 malformed <code>POST /api/quote</code>；前 60 次應進 handler 回 <code>400</code>，之後回 <code>429</code> 並帶 <code>Retry-After</code>，整批不可出現 <code>503</code>。若仍是 <code>503</code>，檢查 <code>abuse_buckets</code> 與 <code>idx_abuse_buckets_window</code>，不要調高限制或製造聯絡／留言／訂單資料。完整安全 SQL 樣板見 <code>skills/site-deployment-browser/references/deployment-value-refresh.md</code>。</div>
     </div>
   </div>
 </div>

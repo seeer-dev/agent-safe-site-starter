@@ -103,9 +103,18 @@ Live round executed against `849678a` (staging → Railway + both Pages):
 
 **Fix path (holder, dashboard):** Railway → Service → Settings → Deploy → Add pre-deploy step → `migrate` → save → redeploy. Deploy log must show `migrations applied (postgres)`. Then re-run: in-quota `POST /api/quote` malformed body → 400 (handler reached); over-quota → 429 + `Retry-After`. `docs/deployment-guide.html` was corrected so the runbook no longer claims `railway.toml` is auto-applied.
 
+## Holder-authorized live checklist — migration recovery and round 2
+
+- The first effective pre-deploy stopped on `011_order_version.sql` because `orders.version` already existed while `schema_migrations` ended at `010`.
+- A metadata-only Supabase audit compared every missing `011`–`018` migration with its complete table/column signature, indexes/constraints, and cleanup markers. All expected effects matched; no business/customer rows were read.
+- With the owner's explicit choice of the guarded repair path, exactly the already-applied `011`–`018` filenames were added to `schema_migrations`. Migration `019` was deliberately not marked applied because `abuse_buckets` was absent.
+- The same Git revision was redeployed. Railway's pre-deploy printed `migrations applied (postgres)` and the API started normally. Post-deploy metadata checks found ledger entry `019_abuse_control.sql`, table `abuse_buckets`, and index `idx_abuse_buckets_window`.
+- Through the storefront Pages proxy, 65 malformed non-persisting `POST /api/quote` requests returned `400` × 60 followed by `429` × 5; the next 429 carried `Retry-After`. There were zero `503` responses. Malformed contact/order probes also reached their normal handlers without a limiter-store 503.
+- Result: the migration/limiter-store blocker is closed and the public mutation paths are no longer offline. The temporary one-minute quote bucket was consumed by the proof and self-expired; no contact, comment, order, payment, email, or customer data was created by this round.
+
 **Still pending (holder/provider actions):**
 
-- Post-migration replay: 4+ contact POSTs → 429 + `Retry-After`; Turnstile absent-token → 403 (requires `TURNSTILE_SECRET_KEY` on Railway + `TURNSTILE_SITE_KEY` in the Pages build env); direct-origin hit without edge credential → 403.
+- Turnstile absent-token → 403 (requires `TURNSTILE_SECRET_KEY` on Railway + `TURNSTILE_SITE_KEY` in the Pages build env); direct-origin hit without edge credential → 403.
 - R2 custom domain (REQ-007/AC-008): create the custom domain + optional transform for `nosniff`, point `R2_PUBLIC_BASE_URL` at it, run bounded HEAD/GET twice for Content-Type/immutable/nosniff/cache transition, then update the storefront CSP origin.
 - `MANUAL_TEST_CHECKOUT_UNTIL` remains unset for release; final acceptance replay (REQ-009/AC-010) after the above.
 
@@ -121,7 +130,7 @@ Live round executed against `849678a` (staging → Railway + both Pages):
 | REQ-006 | passed | vitest 5.0.1/vite 7.3.6/plugin-vue 6.0.9; happy-dom >=20.8.9 override; audit 0 vulns; 254 tests pass. |
 | REQ-007 | pending | R2 custom domain + nosniff transform are holder/provider actions; live checklist item 2. |
 | REQ-008 | passed | 29 placeholder substitutions in docs; residual scan clean; pages.dev retained as documented proof. |
-| REQ-009 | pending | Local gates green (verify ok); live round 1 executed — admin CSP live, fail-closed posture confirmed; 429 replay blocked on prod migration 019 (holder action). |
+| REQ-009 | pending | Local gates green; live admin/header checks passed; production migration drift was audited/repaired and bounded quote replay returned 400 × 60 then 429 × 5 with `Retry-After` and zero 503. Final release gate still depends on the remaining custom-R2/Turnstile items. |
 | AC-001 | passed | Shared-instance limiter test + stamped-identity/peer-hash guard tests + Turnstile-required tests pass; replica-consistent via shared DB. Live multi-replica spot-check listed. Security review receipt: receipts/security-review.md. |
 | AC-002 | passed | Rejection-before-persistence tests for contact/comment/order; 429+Retry-After; 503 on store/verifier failure. Security review receipt: receipts/security-review.md. |
 | AC-003 | passed | Absent/malformed/expired/over-cap windows disable manual_test in tests; inside-window availability verified; value never bundled. Security review receipt: receipts/security-review.md. Consumer reachability receipt: receipts/consumer-reachability.md. |
@@ -131,4 +140,4 @@ Live round executed against `849678a` (staging → Railway + both Pages):
 | AC-007 | passed | npm audit 0 high/critical; tests/typecheck/build pass; no advisories suppressed. Security review receipt: receipts/security-review.md. |
 | AC-008 | pending | Holder must create R2 custom domain and run bounded header/cache checks (checklist item 2). |
 | AC-009 | passed | Fresh-tree scans find no installation identifiers; instructions keep per-installation placeholders; pages.dev URLs documented as proof. Security review receipt: receipts/security-review.md. Production content audit receipt: receipts/production-content-audit.md. |
-| AC-010 | pending | Local loop verified; final live acceptance awaits holder authorization. |
+| AC-010 | pending | The no-gateway Pages test loop remains functional and the shared limiter is now live; final security-release acceptance still awaits the custom-R2/Turnstile evidence required above. |

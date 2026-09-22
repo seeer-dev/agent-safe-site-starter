@@ -81,7 +81,7 @@ An existing root `.env` still works and is still read — you do not have to mig
 
 - **Site:** Cloudflare Pages (static `dist/` from the Go renderer)
 - **Admin:** Cloudflare Pages, second project (`admin/dist` Vue SPA)
-- **API:** Railway Go container (`Dockerfile` + `railway.toml`; migrations run as a pre-deploy command)
+- **API:** Railway Go container (`Dockerfile` + `railway.toml`; migrations run as a pre-deploy command). Existing Railway services may ignore `railway.toml` when Config-as-code was never enabled, so verify the effective **Settings → Deploy → `migrate`** step and its `migrations applied (postgres)` log line.
 - **Database:** Supabase PostgreSQL
 - **Auth:** Supabase Auth
 - **Files:** Cloudflare R2

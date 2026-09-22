@@ -38,6 +38,43 @@ This backend is a persistent Go process with a bounded PostgreSQL pool. **Sessio
 
 `CF_DEPLOY_HOOK_URL` and `ECPAY_*` are optional. Leave ECPay unset for no-payment test. Do not use Railway Raw Editor for agent-mediated secret transfer. Review complete staged set before Deploy; configured pre-deploy migration must succeed.
 
+### Railway migration path and guarded ledger-drift recovery
+
+Railway's checked-in `railway.toml` is an intended configuration record, not proof that an existing service consumes it. In the selected service:
+
+1. Open **Settings → Config-as-code**. If the page offers **Add File Path** or explains that this legacy path can no longer be enabled, and no active config path is shown, assume the file is ignored.
+2. Open **Settings → Deploy → Add pre-deploy step** and enter exactly `migrate`. Save, review the staged changes, and apply only the intended pre-deploy change with current deployment authorization.
+3. In the new deployment's logs, require the pre-deploy phase to print `migrations applied (postgres)` before the API starts. An Active deployment without this line proves only that the process started; it does not prove the schema is current.
+
+If pre-deploy stops on `already exists`, `duplicate column`, or another object collision while `public.schema_migrations` is behind, do not keep redeploying and do not immediately insert ledger rows. That combination can mean a historical manual/partial schema application. Use this recovery gate:
+
+1. In the **selected Supabase project → SQL Editor → New query**, first run a read-only ledger query:
+
+   ```sql
+   SELECT version, applied_unix
+   FROM public.schema_migrations
+   ORDER BY version;
+   ```
+
+2. For every migration file missing from the ledger, read that exact file under `db/migrations/postgres/` and audit **all** of its effects in `information_schema` and `pg_catalog`: tables, columns and their type/null/default, indexes/unique constraints, foreign keys/checks, and any rename/drop cleanup. A single matching column is not enough. Query metadata only; do not dump business or customer rows.
+3. If any expected effect is absent or differs, stop. Repair through a reviewed forward migration or another explicitly authorized database recovery; falsely marking the version applied would hide a broken schema.
+4. Only when every missing version is structurally complete and the owner authorizes production metadata repair, backfill exactly those already-applied filenames. Use database time, an idempotent conflict guard, and inspect the returned versions:
+
+   ```sql
+   INSERT INTO public.schema_migrations (version, applied_unix)
+   SELECT audited_version, EXTRACT(EPOCH FROM NOW())::BIGINT
+   FROM unnest(ARRAY[
+     '<already-applied-migration.sql>'
+   ]) AS missing(audited_version)
+   ON CONFLICT (version) DO NOTHING
+   RETURNING version;
+   ```
+
+   Replace the placeholder only with filenames whose full effects were just audited. Do not include the next unapplied migration. For example, never record `019_abuse_control.sql` when `abuse_buckets` or `idx_abuse_buckets_window` is absent; let the next `migrate` run create them.
+5. Redeploy the same Git revision. Require `migrations applied (postgres)`, then confirm the ledger contains the newly executed migration and its expected table/index before HTTP testing.
+
+For this project, a bounded no-side-effect limiter proof uses malformed requests to `/api/quote`: the first 60 requests in a fresh one-minute bucket reach the handler and return `400`; subsequent requests return `429` with `Retry-After`. No request in that run may return `503`. A `503` from guarded POSTs means the limiter store or verifier still failed; inspect migration/table readiness rather than raising limits. This test consumes that anonymous edge bucket until its one-minute window expires, so wait for reset before another quote/form smoke. Use malformed payloads only—never create orders, contacts, or comments just to prove the limiter.
+
 ### Cloudflare Pages — each project's Settings → Variables and Secrets → Production
 
 The two projects do not inherit each other's rows. Check build versus Function use in current implementation/dashboard.

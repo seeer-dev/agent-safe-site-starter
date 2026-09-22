@@ -44,6 +44,36 @@ Resend Emails rows showed `Delivered`. Normal-inbox placement remains open. The
 [de-identified skill](../skills/site-deployment-browser/SKILL.md) and its
 worksheet require another installation's agent to discover its own values.
 
+### Railway migration recovery checkpoint (2026-09-22)
+
+The public write paths were temporarily fail-closed: guarded contact, comment,
+quote, and order requests returned `503` because PostgreSQL did not contain
+`abuse_buckets`. The selected Railway service had never enabled Config-as-code,
+so the checked-in `railway.toml` and its `preDeployCommand = ["migrate"]` were
+not effective service configuration. The working setting is **Service →
+Settings → Deploy → Add pre-deploy step → `migrate`**; the deployment log, not
+the repository file, is the proof that it ran.
+
+The first effective pre-deploy then exposed an older ledger drift: production
+`public.schema_migrations` ended at `010`, while the schema already contained
+the complete effects of migrations `011` through `018`. A read-only audit
+checked every table, column signature, index/constraint, and migration cleanup
+marker for those eight files. Only after all effects matched, the owner chose
+the guarded metadata-repair path: add exactly the already-applied `011`–`018`
+filenames to the ledger, leaving `019` absent. The next Railway redeploy ran
+`migrate`, printed `migrations applied (postgres)`, and created migration 019's
+`abuse_buckets` table and `idx_abuse_buckets_window` index normally.
+
+Post-recovery smoke used malformed, non-persisting quote requests through the
+Pages proxy: 60 reached the handler and returned `400`, the next five returned
+`429`, and the response included `Retry-After`; none returned `503`. Malformed
+contact/order requests also reached normal handlers without a limiter-store
+`503`. This proves the shared limiter store is live and the public mutation
+paths are no longer offline. It does not authorize another order, email,
+payment, fulfillment, or production-domain release. The reusable, de-identified
+decision gate and SQL placeholder are in the
+[deployment worksheet](../skills/site-deployment-browser/references/deployment-value-refresh.md#railway-migration-path-and-guarded-ledger-drift-recovery).
+
 | Layer | Observed now | Still required |
 |---|---|---|
 | Railway + Pages proxy | On 2026-09-20 the holder confirmed a fresh common edge credential and encrypted **Secret／秘密** in both Pages Production Functions. Railway's 9 staged changes were applied; the new deployment `<railway-deployment-id>` became Active/Online. It now lists 19 service variables, including the database, edge, five R2, and three Resend names, with no staged changes. Storefront retry `<storefront-pages-deployment-id>` and admin retry `<admin-pages-deployment-id>` both succeeded from `staging` commit `bac7c78`. After both succeeded: origin health 200; uncredentialed direct products 403; storefront/admin Pages products 200/200. | This proves the encrypted edge cutover and proxy paths, not the correctness of unseen R2/Resend credential values. Recheck all four codes after the next release or value rotation. |

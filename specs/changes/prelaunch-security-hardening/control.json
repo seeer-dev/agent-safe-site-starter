@@ -146,7 +146,7 @@
     },
     "REQ-009": {
       "status": "pending",
-      "proof": "Local gates green (verify ok); live round 1 executed — admin CSP live, fail-closed posture confirmed; 429 replay blocked on prod migration 019 (holder action).",
+      "proof": "Local gates green; live admin/header checks passed; production migration drift was audited/repaired and bounded quote replay returned 400 × 60 then 429 × 5 with `Retry-After` and zero 503. Final release gate still depends on the remaining custom-R2/Turnstile items.",
       "observed_revision": 3
     },
     "AC-001": {
@@ -260,7 +260,7 @@
     },
     "AC-010": {
       "status": "pending",
-      "proof": "Local loop verified; final live acceptance awaits holder authorization.",
+      "proof": "The no-gateway Pages test loop remains functional and the shared limiter is now live; final security-release acceptance still awaits the custom-R2/Turnstile evidence required above.",
       "observed_revision": 3
     }
   }
