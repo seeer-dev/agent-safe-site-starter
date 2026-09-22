@@ -508,6 +508,29 @@ commerce proof remain recorded. Five boundaries remain:
   neither code, DNS, template, nor credentials were changed. No repeat
   inquiry, third order, retry, payment, fulfillment, or Git commit occurred.
 
+### Revision 25 source release and fallback acceptance (2026-09-22)
+
+- The local work was committed as `847c025` (storefront bloom mark and
+  transition curtain, a separately accepted change) and `a96f2a6` (this
+  ledger, the de-identified deployment skill, the updated guides, and the
+  `admin/public/_redirects` deletion), then pushed `bac7c78..a96f2a6` to
+  `staging`. The `prelaunch-security-hardening` draft remained untracked
+  and was not included.
+- Storefront Pages rebuilt and began serving the new `a96f2a6` curtain
+  markup within about 90 seconds of the push, confirming Auto Deploy
+  picked up the released source. The admin build's content is unchanged
+  apart from the absent `_redirects`, so no public marker distinguishes
+  its new deployment; Auto Deploy remained enabled from the recorded
+  source settings.
+- A clean-session request to
+  `https://agent-safe-site-starter-admin.pages.dev/res/minimal-cart-products`
+  returned `200` on three consecutive checks after the release; admin root
+  returned `200` and admin `/api/products` returned `200`. The deployed
+  commit contains no `admin/public/_redirects`, so the infinite-loop
+  warning has no source in this build; the dashboard build-log line itself
+  remains holder-visible only. REQ-004 and AC-004 are recorded passed on
+  this evidence.
+
 ## Traceability
 
 | Gate | Status | Proof |
@@ -518,8 +541,8 @@ commerce proof remain recorded. Five boundaries remain:
 | AC-002 | passed | The current Railway service retained staging and its new deployment e500ca98 is Active; both Pages Production retries used staging commit bac7c78. The recovery documentation preserves the identity/cache/support escalation boundary and makes public routing a separate final hop. Security review receipt: receipts/security-review.md. |
 | REQ-003 | passed | The de-identified worksheet maps Supabase, Railway, storefront/admin Pages build and Function destinations, correct Secret/Text types, Session pooler URI, source/deploy order, four endpoint checks, no-payment smoke, and emergency exposed-secret cutover. Current-site values/status remain only in the guide and ledger. |
 | AC-003 | passed | The holder rotated the formerly exposed edge value, confirmed encrypted Secret type in both Pages Functions and the same new value at Railway, and authorized the Railway + two Pages redeployments. All became successful/Active on 2026-09-20, followed by fresh 200/403/200/200 checks. These do not prove R2 or mail. Security review receipt: receipts/security-review.md. |
-| REQ-004 | pending | The invalid tracked catch-all redirect was removed locally and the local admin build emits no redirect asset, but the new remote retry still used commit bac7c78 without that deletion. A public deep link worked once; the repaired source has not shipped. |
-| AC-004 | pending | The 2026-09-20 public deep link returned 200 and displayed 商品, but the admin retry did not include the local `_redirects` deletion. After the source release, confirm the invalid redirect warning is absent and a clean-session deep link works. Security review receipt: receipts/security-review.md. |
+| REQ-004 | passed | The invalid tracked catch-all redirect was removed, the local admin build emits no redirect asset or top-level 404.html, and the repair shipped in commit a96f2a6 pushed bac7c78..a96f2a6 to staging on 2026-09-22. The storefront Pages rebuild served the new a96f2a6 curtain markup within ~90 seconds of push, confirming Auto Deploy built the released source. |
+| AC-004 | passed | After the a96f2a6 release, a clean-session request to https://agent-safe-site-starter-admin.pages.dev/res/minimal-cart-products returned 200 on three consecutive checks, admin root returned 200, and admin /api/products returned 200. The deployed commit contains no admin/public/_redirects, so the infinite-loop warning has no source in this build; the dashboard build-log line itself remains holder-visible only. Security review receipt: receipts/security-review.md. |
 | REQ-005 | passed | The skill, canonical refresh sheet, README, environment guide, and HTML guide distinguish Supabase Auth from staff authorization; require an exact UID-to-active-staff-role mapping; prohibit email fallback; require current confirmation before first-owner creation or promotion; and require a fresh public-admin role check. |
 | AC-005 | passed | The first authenticated account was denied while `public.staff_members` was empty. With current explicit authorization, one active owner row was linked to the exact Auth user ID; a new public admin session displayed `owner` and protected controls. No credential was recorded. Security review receipt: receipts/security-review.md. |
 | REQ-006 | passed | The bilingual R2 worksheet maps sources, narrow token/CORS/public origin, destinations, deploy order, and presign→PUT→verify→product/public-fetch proof without a site-specific bucket. It now covers actual-byte MIME/extension mismatches and records no secret or full object key. The live media path is proved on the temporary test origins. |
